@@ -10,6 +10,9 @@ spring:
       ddl-auto: update
     show-sql: true
 
+jwt:
+  secret: dev-only-secret-key-do-not-use-in-production-minimum-32-chars
+
 logging:
   level:
     com.github.mamuriapp: DEBUG
