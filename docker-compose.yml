@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: mamuri-postgres
+    environment:
+      POSTGRES_DB: mamuri
+      POSTGRES_USER: mamuri
+      POSTGRES_PASSWORD: mamuri
+    ports:
+      - "5433:5432"
+    volumes:
+      - mamuri-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mamuri -d mamuri"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mamuri-postgres-data:
