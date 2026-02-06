@@ -135,5 +135,6 @@ Responses should be:
 If uncertain, ask clarifying questions instead of guessing.
 
 ---
+IMPORTANT: All responses and questions must be in Korean (한국어).
 
 End of [CLAUDE.md](http://CLAUDE.md)
