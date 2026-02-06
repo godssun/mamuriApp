@@ -1,15 +1,23 @@
 package com.github.mamuriapp.ai.service;
 
+import com.github.mamuriapp.ai.config.AiProperties;
 import com.github.mamuriapp.ai.dto.AiCommentResponse;
 import com.github.mamuriapp.ai.entity.AiComment;
+import com.github.mamuriapp.ai.provider.LlmProvider;
+import com.github.mamuriapp.ai.provider.LlmResponse;
 import com.github.mamuriapp.ai.repository.AiCommentRepository;
 import com.github.mamuriapp.diary.entity.Diary;
 import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * AI 코멘트 서비스.
@@ -22,6 +30,22 @@ public class AiCommentService {
 
     private final AiCommentRepository aiCommentRepository;
     private final SafetyCheckService safetyCheckService;
+    private final LlmProvider llmProvider;
+    private final AiProperties aiProperties;
+
+    private String promptTemplate;
+
+    @PostConstruct
+    void loadPromptTemplate() {
+        String path = "prompts/ai_comment_" + aiProperties.getPromptVersion() + ".txt";
+        try {
+            promptTemplate = new ClassPathResource(path)
+                    .getContentAsString(StandardCharsets.UTF_8);
+            log.info("프롬프트 템플릿 로드 완료: {}", path);
+        } catch (IOException e) {
+            throw new IllegalStateException("프롬프트 템플릿을 찾을 수 없습니다: " + path, e);
+        }
+    }
 
     /**
      * 일기에 대한 AI 코멘트를 생성한다.
@@ -35,17 +59,25 @@ public class AiCommentService {
         boolean isSafe = safetyCheckService.check(diary);
 
         String content;
+        String modelName;
+
         if (!isSafe) {
             content = "힘든 시간을 보내고 계시는군요. "
                     + "혼자 감당하지 않아도 괜찮아요. "
-                    + "전문적인 도움을 받을 수 있는 곳에 연락해 보시는 건 어떨까요?";
+                    + "전문적인 도움을 받을 수 있는 곳에 연락해 보시는 건 어떨까요? "
+                    + "(자살예방상담전화 1393, 정신건강위기상담전화 1577-0199)";
+            modelName = "safety-override";
         } else {
-            content = callExternalAi(diary);
+            LlmResponse response = callLlm(diary);
+            content = response.content();
+            modelName = response.modelName();
         }
 
         AiComment aiComment = AiComment.builder()
                 .diary(diary)
                 .content(content)
+                .modelName(modelName)
+                .promptVersion(aiProperties.getPromptVersion())
                 .build();
         aiCommentRepository.save(aiComment);
 
@@ -74,34 +106,34 @@ public class AiCommentService {
      */
     @Transactional
     public AiCommentResponse retryComment(Long diaryId, Diary diary) {
-        String content = callExternalAi(diary);
+        LlmResponse response = callLlm(diary);
 
         AiComment aiComment = aiCommentRepository.findByDiaryId(diaryId)
                 .map(existing -> {
-                    existing.updateContent(content);
+                    existing.updateContent(response.content());
                     return existing;
                 })
                 .orElseGet(() -> AiComment.builder()
                         .diary(diary)
-                        .content(content)
+                        .content(response.content())
+                        .modelName(response.modelName())
+                        .promptVersion(aiProperties.getPromptVersion())
                         .build());
 
         aiCommentRepository.save(aiComment);
         return AiCommentResponse.from(aiComment);
     }
 
-    /**
-     * 외부 LLM API를 호출하여 공감 코멘트를 생성한다.
-     * TODO: 실제 LLM API 연동 구현
-     *
-     * @param diary 일기 엔티티
-     * @return 생성된 코멘트 텍스트
-     */
-    private String callExternalAi(Diary diary) {
-        // TODO: 외부 LLM API 호출 구현
-        // - 사용자 설정(톤)을 반영한 프롬프트 조립
-        // - HTTP 클라이언트를 통한 API 호출
-        // - 타임아웃 및 에러 처리
-        throw new CustomException(ErrorCode.AI_SERVICE_ERROR);
+    private LlmResponse callLlm(Diary diary) {
+        String diaryContent = truncate(diary.getContent(), aiProperties.getMaxInputChars());
+        String prompt = promptTemplate.replace("{{content}}", diaryContent);
+        return llmProvider.generate(prompt, aiProperties.getMaxOutputTokens());
+    }
+
+    private String truncate(String text, int maxChars) {
+        if (text == null || text.length() <= maxChars) {
+            return text;
+        }
+        return text.substring(0, maxChars);
     }
 }

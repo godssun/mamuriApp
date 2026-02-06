@@ -31,14 +31,22 @@ public class AiComment {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "model_name")
+    private String modelName;
+
+    @Column(name = "prompt_version")
+    private String promptVersion;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Builder
-    public AiComment(Diary diary, String content) {
+    public AiComment(Diary diary, String content, String modelName, String promptVersion) {
         this.diary = diary;
         this.content = content;
+        this.modelName = modelName;
+        this.promptVersion = promptVersion;
     }
 
     /**
