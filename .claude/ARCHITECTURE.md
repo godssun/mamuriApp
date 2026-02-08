@@ -76,15 +76,25 @@
 
 ## Database Design (MVP)
 
-- users
+### 테이블 구조
 
-- diaries
+**users**
+- id, email, password, nickname, refresh_token, created_at, updated_at
 
-- ai_comments
+**diaries**
+- id, user_id, title, content, **diary_date** (DATE), created_at, updated_at
+- `diary_date`: 일기가 속한 날짜 (사용자 선택, 기본값 오늘)
+- `created_at`: 실제 작성 시점 (시스템 자동)
+- 인덱스: (user_id, diary_date DESC), (diary_date)
 
-- user_settings
+**ai_comments**
+- id, diary_id, content, model_name, prompt_version, created_at
 
-- safety_events (optional, MVP-lite)
+**user_settings**
+- id, user_id, ai_tone, ai_enabled
+
+**safety_events** (optional, MVP-lite)
+- id, diary_id, event_type, confidence_score, action_taken, created_at
 
 ---
 
@@ -103,6 +113,67 @@
 6. AI comment saved
 
 7. Response returned to client
+
+### Sequence Diagram
+
+```
+┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+│  Mobile  │     │  Backend │     │    DB    │     │ LLM API  │
+└────┬─────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
+     │                │                │                │
+     │ POST /diaries  │                │                │
+     │ {title,content}│                │                │
+     ├───────────────>│                │                │
+     │                │                │                │
+     │                │ INSERT diary   │                │
+     │                ├───────────────>│                │
+     │                │                │                │
+     │                │    diary_id    │                │
+     │                │<───────────────┤                │
+     │                │                │                │
+     │                │ Safety Check   │                │
+     │                ├────┐           │                │
+     │                │    │ (local)   │                │
+     │                │<───┘           │                │
+     │                │                │                │
+     │                │ Generate Comment                │
+     │                │ {prompt, settings}              │
+     │                ├───────────────────────────────>│
+     │                │                │                │
+     │                │           AI response           │
+     │                │<───────────────────────────────┤
+     │                │                │                │
+     │                │ INSERT ai_comment               │
+     │                ├───────────────>│                │
+     │                │                │                │
+     │  {diary, aiComment}             │                │
+     │<───────────────┤                │                │
+     │                │                │                │
+```
+
+### AI Failure Flow
+
+```
+┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+│  Mobile  │     │  Backend │     │    DB    │     │ LLM API  │
+└────┬─────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
+     │                │                │                │
+     │                │ Generate Comment                │
+     │                ├───────────────────────────────>│
+     │                │                │                │
+     │                │         ❌ Timeout/Error        │
+     │                │<───────────────────────────────┤
+     │                │                │                │
+     │  {diary, aiComment: null}       │                │
+     │<───────────────┤                │                │
+     │                │                │                │
+     │ POST /diaries/{id}/ai-comment/retry              │
+     ├───────────────>│                │                │
+     │                │                │                │
+     │                │ (Retry LLM call)                │
+     │                ├───────────────────────────────>│
+     │                │                │                │
+```
 
 ---
 

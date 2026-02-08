@@ -70,6 +70,38 @@ immediate, empathetic responses from an AI friend.
 
 ---
 
+## AI Tone Settings
+
+사용자가 선택 가능한 AI 말투 설정:
+
+| 값 | 설명 | 특징 |
+|----|------|------|
+| `warm` | 따뜻하고 공감하는 (기본값) | 부드러운 위로, 감정 반영 중심 |
+| `calm` | 차분하고 안정적인 | 담담한 톤, 안정감 제공 |
+| `cheerful` | 밝고 긍정적인 | 에너지 있는 격려, 희망적 메시지 |
+
+### 톤별 응답 예시
+
+**warm (기본값)**
+```
+"오늘 하루 많이 힘드셨겠어요. 그런 마음이 드는 건 당연해요.
+충분히 쉬시면서 자신을 돌봐주세요."
+```
+
+**calm**
+```
+"힘든 하루를 보내셨군요. 감정은 자연스러운 것이에요.
+잠시 쉬어가도 괜찮습니다."
+```
+
+**cheerful**
+```
+"오늘 힘드셨지만, 그래도 하루를 보내셨네요! 내일은 분명
+조금 더 나은 하루가 될 거예요. 오늘도 수고하셨어요!"
+```
+
+---
+
 ## Privacy & Transparency
 
 - Users are explicitly informed that AI generates comments

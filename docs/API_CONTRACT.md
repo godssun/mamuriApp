@@ -107,9 +107,16 @@
 ```json
 {
   "title": "오늘의 일기",
-  "content": "오늘 하루는 정말 힘들었다..."
+  "content": "오늘 하루는 정말 힘들었다...",
+  "diaryDate": "2024-02-07"
 }
 ```
+
+| 필드 | 필수 | 설명 |
+|------|------|------|
+| title | O | 제목 (최대 100자) |
+| content | O | 내용 |
+| diaryDate | X | 일기 날짜 (YYYY-MM-DD). 미입력 시 오늘. 미래 날짜 불가. |
 
 **Response** (201):
 ```json
@@ -119,6 +126,7 @@
     "id": 1,
     "title": "오늘의 일기",
     "content": "오늘 하루는 정말 힘들었다...",
+    "diaryDate": "2024-02-07",
     "aiComment": {
       "id": 1,
       "content": "힘든 하루를 보내셨군요. 그런 감정을 느끼는 건 당연해요...",
@@ -135,6 +143,19 @@
 ### GET /diaries
 일기 목록 조회
 
+**Query Parameters** (선택):
+| 파라미터 | 설명 |
+|----------|------|
+| year | 연도 (month와 함께 사용) |
+| month | 월 (1-12, year와 함께 사용) |
+
+- `year`와 `month`를 모두 지정하면 해당 월의 일기만 조회
+- 미지정 시 전체 일기 조회 (최신순)
+
+**예시**:
+- `GET /diaries` - 전체 일기
+- `GET /diaries?year=2024&month=2` - 2024년 2월 일기
+
 **Response** (200):
 ```json
 {
@@ -144,15 +165,39 @@
       "id": 1,
       "title": "오늘의 일기",
       "content": "오늘 하루는 정말 힘들었다...",
-      "aiComment": {
-        "id": 1,
-        "content": "힘든 하루를 보내셨군요...",
-        "createdAt": "2024-02-07T10:30:00"
-      },
+      "diaryDate": "2024-02-07",
+      "aiComment": null,
       "createdAt": "2024-02-07T10:30:00",
       "updatedAt": "2024-02-07T10:30:00"
     }
   ]
+}
+```
+
+> 목록 조회 시 `aiComment`는 null로 반환됩니다. 상세 조회에서 확인하세요.
+
+---
+
+### GET /diaries/calendar
+캘린더용 일기 날짜 목록 조회
+
+**Query Parameters** (필수):
+| 파라미터 | 설명 |
+|----------|------|
+| year | 연도 |
+| month | 월 (1-12) |
+
+**예시**: `GET /diaries/calendar?year=2024&month=2`
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "year": 2024,
+    "month": 2,
+    "datesWithDiaries": ["2024-02-01", "2024-02-03", "2024-02-07"]
+  }
 }
 ```
 
@@ -169,6 +214,7 @@
     "id": 1,
     "title": "오늘의 일기",
     "content": "오늘 하루는 정말 힘들었다...",
+    "diaryDate": "2024-02-07",
     "aiComment": {
       "id": 1,
       "content": "힘든 하루를 보내셨군요...",
@@ -189,9 +235,16 @@
 ```json
 {
   "title": "수정된 제목",
-  "content": "수정된 내용"
+  "content": "수정된 내용",
+  "diaryDate": "2024-02-06"
 }
 ```
+
+| 필드 | 필수 | 설명 |
+|------|------|------|
+| title | O | 제목 (최대 100자) |
+| content | O | 내용 |
+| diaryDate | X | 일기 날짜. 미입력 시 기존 유지. 미래 날짜 불가. |
 
 **Response** (200): 일기 상세와 동일
 
