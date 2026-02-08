@@ -2,6 +2,7 @@ package com.github.mamuriapp.diary.service;
 
 import com.github.mamuriapp.ai.dto.AiCommentResponse;
 import com.github.mamuriapp.ai.service.AiCommentService;
+import com.github.mamuriapp.diary.dto.DiaryCalendarResponse;
 import com.github.mamuriapp.diary.dto.DiaryCreateRequest;
 import com.github.mamuriapp.diary.dto.DiaryResponse;
 import com.github.mamuriapp.diary.dto.DiaryUpdateRequest;
@@ -16,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 /**
@@ -45,10 +48,15 @@ public class DiaryService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+        LocalDate diaryDate = request.getDiaryDate() != null
+                ? request.getDiaryDate()
+                : LocalDate.now();
+
         Diary diary = Diary.builder()
                 .user(user)
                 .title(request.getTitle())
                 .content(request.getContent())
+                .diaryDate(diaryDate)
                 .build();
         diaryRepository.save(diary);
 
@@ -63,15 +71,52 @@ public class DiaryService {
     }
 
     /**
-     * 사용자의 일기 목록을 조회한다.
+     * 사용자의 일기 목록을 일기 날짜 기준으로 조회한다.
      *
      * @param userId 사용자 ID
      * @return 일기 응답 목록
      */
     public List<DiaryResponse> getList(Long userId) {
-        return diaryRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+        return diaryRepository.findByUserIdOrderByDiaryDateDescCreatedAtDesc(userId).stream()
                 .map(DiaryResponse::from)
                 .toList();
+    }
+
+    /**
+     * 사용자의 특정 월 일기 목록을 조회한다.
+     *
+     * @param userId 사용자 ID
+     * @param year   연도
+     * @param month  월
+     * @return 일기 응답 목록
+     */
+    public List<DiaryResponse> getListByMonth(Long userId, int year, int month) {
+        YearMonth yearMonth = YearMonth.of(year, month);
+        LocalDate startDate = yearMonth.atDay(1);
+        LocalDate endDate = yearMonth.atEndOfMonth();
+
+        return diaryRepository.findByUserIdAndDiaryDateBetween(userId, startDate, endDate).stream()
+                .map(DiaryResponse::from)
+                .toList();
+    }
+
+    /**
+     * 캘린더용 일기가 있는 날짜 목록을 조회한다.
+     *
+     * @param userId 사용자 ID
+     * @param year   연도
+     * @param month  월
+     * @return 캘린더 응답
+     */
+    public DiaryCalendarResponse getCalendar(Long userId, int year, int month) {
+        YearMonth yearMonth = YearMonth.of(year, month);
+        LocalDate startDate = yearMonth.atDay(1);
+        LocalDate endDate = yearMonth.atEndOfMonth();
+
+        List<LocalDate> dates = diaryRepository.findDiaryDatesByUserIdAndPeriod(
+                userId, startDate, endDate);
+
+        return DiaryCalendarResponse.of(year, month, dates);
     }
 
     /**
@@ -98,7 +143,7 @@ public class DiaryService {
     @Transactional
     public DiaryResponse update(Long userId, Long diaryId, DiaryUpdateRequest request) {
         Diary diary = findUserDiary(userId, diaryId);
-        diary.update(request.getTitle(), request.getContent());
+        diary.update(request.getTitle(), request.getContent(), request.getDiaryDate());
         return DiaryResponse.from(diary);
     }
 

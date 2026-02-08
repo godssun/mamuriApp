@@ -5,6 +5,7 @@ import com.github.mamuriapp.diary.entity.Diary;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -17,6 +18,7 @@ public class DiaryResponse {
     private Long id;
     private String title;
     private String content;
+    private LocalDate diaryDate;
     private AiCommentResponse aiComment;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -32,6 +34,7 @@ public class DiaryResponse {
                 diary.getId(),
                 diary.getTitle(),
                 diary.getContent(),
+                diary.getDiaryDate(),
                 null,
                 diary.getCreatedAt(),
                 diary.getUpdatedAt()
@@ -50,6 +53,7 @@ public class DiaryResponse {
                 diary.getId(),
                 diary.getTitle(),
                 diary.getContent(),
+                diary.getDiaryDate(),
                 aiComment,
                 diary.getCreatedAt(),
                 diary.getUpdatedAt()

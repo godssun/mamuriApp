@@ -1,5 +1,6 @@
 package com.github.mamuriapp.diary.controller;
 
+import com.github.mamuriapp.diary.dto.DiaryCalendarResponse;
 import com.github.mamuriapp.diary.dto.DiaryCreateRequest;
 import com.github.mamuriapp.diary.dto.DiaryResponse;
 import com.github.mamuriapp.diary.dto.DiaryUpdateRequest;
@@ -44,15 +45,46 @@ public class DiaryController {
 
     /**
      * 일기 목록을 조회한다.
+     * year와 month가 모두 제공되면 해당 월의 일기만 조회한다.
      *
      * @param authentication 인증 정보
+     * @param year           연도 (선택)
+     * @param month          월 (선택)
      * @return 일기 목록
      */
     @GetMapping
     public ResponseEntity<ApiResponse<List<DiaryResponse>>> getList(
-            Authentication authentication) {
+            Authentication authentication,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
         Long userId = (Long) authentication.getPrincipal();
-        return ResponseEntity.ok(ApiResponse.success(diaryService.getList(userId)));
+
+        List<DiaryResponse> response;
+        if (year != null && month != null) {
+            response = diaryService.getListByMonth(userId, year, month);
+        } else {
+            response = diaryService.getList(userId);
+        }
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * 캘린더용 일기 날짜 목록을 조회한다.
+     *
+     * @param authentication 인증 정보
+     * @param year           연도
+     * @param month          월
+     * @return 일기가 있는 날짜 목록
+     */
+    @GetMapping("/calendar")
+    public ResponseEntity<ApiResponse<DiaryCalendarResponse>> getCalendar(
+            Authentication authentication,
+            @RequestParam int year,
+            @RequestParam int month) {
+        Long userId = (Long) authentication.getPrincipal();
+        return ResponseEntity.ok(
+                ApiResponse.success(diaryService.getCalendar(userId, year, month)));
     }
 
     /**

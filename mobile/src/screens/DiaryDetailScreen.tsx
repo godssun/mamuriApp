@@ -81,14 +81,25 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
     );
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDiaryDate = (dateString: string) => {
     const date = new Date(dateString);
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const day = date.getDate();
     const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
     const weekday = weekdays[date.getDay()];
-    return `${year}년 ${month}월 ${day}일 (${weekday})`;
+    return `${year}년 ${month}월 ${day}일 ${weekday}요일`;
+  };
+
+  const formatCreatedAt = (dateString: string) => {
+    const date = new Date(dateString);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours < 12 ? '오전' : '오후';
+    const hour12 = hours % 12 || 12;
+    return `${month}월 ${day}일 ${ampm} ${hour12}:${minutes}`;
   };
 
   if (isLoading) {
@@ -118,9 +129,10 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
       >
-        <Text style={styles.date}>{formatDate(diary.createdAt)}</Text>
+        <Text style={styles.diaryDate}>{formatDiaryDate(diary.diaryDate)}</Text>
         <Text style={styles.title}>{diary.title}</Text>
         <Text style={styles.diaryContent}>{diary.content}</Text>
+        <Text style={styles.createdAt}>작성: {formatCreatedAt(diary.createdAt)}</Text>
 
         <View style={styles.aiSection}>
           <View style={styles.aiHeader}>
@@ -200,10 +212,11 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
-  date: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 12,
+  diaryDate: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#2D2D2D',
+    marginBottom: 16,
   },
   title: {
     fontSize: 26,
@@ -215,6 +228,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2D2D2D',
     lineHeight: 28,
+    marginBottom: 16,
+  },
+  createdAt: {
+    fontSize: 12,
+    color: '#999',
     marginBottom: 32,
   },
   aiSection: {

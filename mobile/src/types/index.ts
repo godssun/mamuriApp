@@ -33,6 +33,7 @@ export interface Diary {
   id: number;
   title: string;
   content: string;
+  diaryDate: string; // YYYY-MM-DD
   aiComment: AiComment | null;
   createdAt: string;
   updatedAt: string;
@@ -41,11 +42,19 @@ export interface Diary {
 export interface DiaryCreateRequest {
   title: string;
   content: string;
+  diaryDate?: string; // YYYY-MM-DD (선택적, 기본값 오늘)
 }
 
 export interface DiaryUpdateRequest {
   title: string;
   content: string;
+  diaryDate?: string; // YYYY-MM-DD (선택적)
+}
+
+export interface DiaryCalendarResponse {
+  year: number;
+  month: number;
+  datesWithDiaries: string[]; // YYYY-MM-DD[]
 }
 
 // 설정

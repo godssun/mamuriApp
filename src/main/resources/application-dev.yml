@@ -1,14 +1,18 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/mamuriapp_dev
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    url: jdbc:postgresql://localhost:5433/mamuri
+    username: mamuri
+    password: mamuri
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
 
 jwt:
   secret: dev-only-secret-key-do-not-use-in-production-minimum-32-chars
@@ -16,4 +20,4 @@ jwt:
 logging:
   level:
     com.github.mamuriapp: DEBUG
-    org.springframework.security: DEBUG
+    org.flywaydb: DEBUG

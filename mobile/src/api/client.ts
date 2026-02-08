@@ -7,6 +7,7 @@ import {
   Diary,
   DiaryCreateRequest,
   DiaryUpdateRequest,
+  DiaryCalendarResponse,
   AiComment,
   UserSettings,
 } from '../types';
@@ -132,6 +133,14 @@ export const authApi = {
 export const diaryApi = {
   async getList(): Promise<Diary[]> {
     return request<Diary[]>('/diaries');
+  },
+
+  async getListByMonth(year: number, month: number): Promise<Diary[]> {
+    return request<Diary[]>(`/diaries?year=${year}&month=${month}`);
+  },
+
+  async getCalendar(year: number, month: number): Promise<DiaryCalendarResponse> {
+    return request<DiaryCalendarResponse>(`/diaries/calendar?year=${year}&month=${month}`);
   },
 
   async getDetail(id: number): Promise<Diary> {
