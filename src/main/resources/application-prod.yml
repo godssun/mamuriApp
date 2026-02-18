@@ -8,9 +8,3 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: false
-
-logging:
-  level:
-    com.github.mamuriapp: INFO
-    org.springframework.security: WARN

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- ===== Dev 프로필 ===== -->
+    <springProfile name="dev">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} [%X{traceId:---------}] [user:%X{userId:-anon}] %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <!-- Hibernate SQL (show-sql 대체) -->
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+        <!-- 바인드 파라미터 값 표시 -->
+        <logger name="org.hibernate.orm.jdbc.bind" level="TRACE"/>
+
+        <!-- 앱 로거 -->
+        <logger name="com.github.mamuriapp" level="DEBUG"/>
+
+        <!-- Flyway -->
+        <logger name="org.flywaydb" level="DEBUG"/>
+
+        <!-- Spring Security (디버깅 시에만 활성화) -->
+        <logger name="org.springframework.security" level="WARN"/>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- ===== Prod 프로필 ===== -->
+    <springProfile name="prod">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{traceId:---------}] [user:%X{userId:-}] %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <!-- Prod에서는 SQL 로깅 OFF -->
+        <logger name="org.hibernate.SQL" level="OFF"/>
+        <logger name="org.hibernate.orm.jdbc.bind" level="OFF"/>
+
+        <!-- 앱 로거 -->
+        <logger name="com.github.mamuriapp" level="INFO"/>
+
+        <!-- Spring Security -->
+        <logger name="org.springframework.security" level="WARN"/>
+
+        <root level="WARN">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+</configuration>

@@ -1,5 +1,6 @@
 package com.github.mamuriapp.global.config;
 
+import com.github.mamuriapp.global.logging.RequestLoggingFilter;
 import com.github.mamuriapp.global.security.JwtAuthenticationEntryPoint;
 import com.github.mamuriapp.global.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final RequestLoggingFilter requestLoggingFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
@@ -46,6 +48,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated())
+                .addFilterBefore(requestLoggingFilter,
+                        UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class);
 
