@@ -29,6 +29,12 @@ public class User {
     @Column(nullable = false)
     private String nickname;
 
+    @Column(name = "ai_name")
+    private String aiName = "마음이";
+
+    @Column(name = "max_level", nullable = false)
+    private int maxLevel = 1;
+
     @Column(name = "refresh_token")
     private String refreshToken;
 
@@ -41,10 +47,11 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Builder
-    public User(String email, String password, String nickname) {
+    public User(String email, String password, String nickname, String aiName) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
+        this.aiName = (aiName != null && !aiName.isBlank()) ? aiName : "마음이";
     }
 
     /**
@@ -54,5 +61,15 @@ public class User {
      */
     public void updateRefreshToken(String refreshToken) {
         this.refreshToken = refreshToken;
+    }
+
+    public void updateAiName(String aiName) {
+        this.aiName = aiName;
+    }
+
+    public void updateMaxLevel(int level) {
+        if (level > this.maxLevel) {
+            this.maxLevel = level;
+        }
     }
 }
