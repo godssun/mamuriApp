@@ -1,6 +1,5 @@
 package com.github.mamuriapp.user.service;
 
-import com.github.mamuriapp.diary.repository.DiaryRepository;
 import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
 import com.github.mamuriapp.user.dto.CompanionResponse;
@@ -20,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class CompanionService {
 
     private final UserRepository userRepository;
-    private final DiaryRepository diaryRepository;
 
     /**
      * AI 친구 프로필을 조회한다.
@@ -32,7 +30,7 @@ public class CompanionService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        long diaryCount = diaryRepository.countByUserId(userId);
+        long diaryCount = user.getDiaryCount();
         int calculatedLevel = calculateLevel(diaryCount);
         int level = Math.max(calculatedLevel, user.getMaxLevel());
 
@@ -57,7 +55,7 @@ public class CompanionService {
 
         user.updateAiName(aiName);
 
-        long diaryCount = diaryRepository.countByUserId(userId);
+        long diaryCount = user.getDiaryCount();
         int calculatedLevel = calculateLevel(diaryCount);
         int level = Math.max(calculatedLevel, user.getMaxLevel());
 

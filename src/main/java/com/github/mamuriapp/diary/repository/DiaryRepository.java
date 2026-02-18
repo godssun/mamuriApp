@@ -86,4 +86,14 @@ public interface DiaryRepository extends JpaRepository<Diary, Long> {
             @Param("date") LocalDate date);
 
     long countByUserId(Long userId);
+
+    /**
+     * Diary와 User를 JOIN FETCH로 한 번에 조회한다.
+     *
+     * @param id     일기 ID
+     * @param userId 사용자 ID
+     * @return 일기 Optional (User 즉시 로드)
+     */
+    @Query("SELECT d FROM Diary d JOIN FETCH d.user WHERE d.id = :id AND d.user.id = :userId")
+    Optional<Diary> findByIdAndUserIdWithUser(@Param("id") Long id, @Param("userId") Long userId);
 }

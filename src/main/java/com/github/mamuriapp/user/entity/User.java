@@ -35,6 +35,9 @@ public class User {
     @Column(name = "max_level", nullable = false)
     private int maxLevel = 1;
 
+    @Column(name = "diary_count", nullable = false)
+    private long diaryCount = 0;
+
     @Column(name = "refresh_token")
     private String refreshToken;
 
@@ -70,6 +73,16 @@ public class User {
     public void updateMaxLevel(int level) {
         if (level > this.maxLevel) {
             this.maxLevel = level;
+        }
+    }
+
+    public void incrementDiaryCount() {
+        this.diaryCount++;
+    }
+
+    public void decrementDiaryCount() {
+        if (this.diaryCount > 0) {
+            this.diaryCount--;
         }
     }
 }

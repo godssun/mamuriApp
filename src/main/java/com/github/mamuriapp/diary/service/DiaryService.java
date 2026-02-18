@@ -63,10 +63,10 @@ public class DiaryService {
                 .diaryDate(diaryDate)
                 .build();
         diaryRepository.save(diary);
+        user.incrementDiaryCount();
 
         // 레벨업 감지
-        long newDiaryCount = diaryRepository.countByUserId(userId);
-        int newLevel = CompanionService.calculateLevel(newDiaryCount);
+        int newLevel = CompanionService.calculateLevel(user.getDiaryCount());
         DiaryResponse.LevelUpInfo levelUpInfo = null;
 
         if (newLevel > oldLevel) {
@@ -183,6 +183,11 @@ public class DiaryService {
     @Transactional
     public void delete(Long userId, Long diaryId) {
         Diary diary = findUserDiary(userId, diaryId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        user.decrementDiaryCount();
+
         diaryRepository.delete(diary);
     }
 
