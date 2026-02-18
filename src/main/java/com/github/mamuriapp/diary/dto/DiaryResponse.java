@@ -20,8 +20,19 @@ public class DiaryResponse {
     private String content;
     private LocalDate diaryDate;
     private AiCommentResponse aiComment;
+    private LevelUpInfo levelUp;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    /**
+     * 레벨업 정보.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class LevelUpInfo {
+        private int oldLevel;
+        private int newLevel;
+    }
 
     /**
      * 엔티티를 DTO로 변환한다 (AI 코멘트 없이).
@@ -35,6 +46,7 @@ public class DiaryResponse {
                 diary.getTitle(),
                 diary.getContent(),
                 diary.getDiaryDate(),
+                null,
                 null,
                 diary.getCreatedAt(),
                 diary.getUpdatedAt()
@@ -55,6 +67,28 @@ public class DiaryResponse {
                 diary.getContent(),
                 diary.getDiaryDate(),
                 aiComment,
+                null,
+                diary.getCreatedAt(),
+                diary.getUpdatedAt()
+        );
+    }
+
+    /**
+     * 엔티티를 DTO로 변환한다 (AI 코멘트 + 레벨업 정보 포함).
+     *
+     * @param diary       일기 엔티티
+     * @param aiComment   AI 코멘트 응답
+     * @param levelUpInfo 레벨업 정보 (nullable)
+     * @return DiaryResponse
+     */
+    public static DiaryResponse of(Diary diary, AiCommentResponse aiComment, LevelUpInfo levelUpInfo) {
+        return new DiaryResponse(
+                diary.getId(),
+                diary.getTitle(),
+                diary.getContent(),
+                diary.getDiaryDate(),
+                aiComment,
+                levelUpInfo,
                 diary.getCreatedAt(),
                 diary.getUpdatedAt()
         );

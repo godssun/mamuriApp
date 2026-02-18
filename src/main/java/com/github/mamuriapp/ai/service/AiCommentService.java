@@ -51,11 +51,12 @@ public class AiCommentService {
      * 일기에 대한 AI 코멘트를 생성한다.
      * 안전 검사를 먼저 수행하고, 위기 신호 시 안전 메시지로 대체한다.
      *
-     * @param diary 코멘트를 생성할 일기
+     * @param diary    코멘트를 생성할 일기
+     * @param userName 사용자 닉네임 (프롬프트 개인화용)
      * @return AI 코멘트 응답
      */
     @Transactional
-    public AiCommentResponse generateComment(Diary diary) {
+    public AiCommentResponse generateComment(Diary diary, String userName) {
         boolean isSafe = safetyCheckService.check(diary);
 
         String content;
@@ -68,7 +69,7 @@ public class AiCommentService {
                     + "(자살예방상담전화 1393, 정신건강위기상담전화 1577-0199)";
             modelName = "safety-override";
         } else {
-            LlmResponse response = callLlm(diary);
+            LlmResponse response = callLlm(diary, userName);
             content = response.content();
             modelName = response.modelName();
         }
@@ -100,13 +101,14 @@ public class AiCommentService {
     /**
      * AI 코멘트를 재생성한다 (재시도).
      *
-     * @param diaryId 일기 ID
-     * @param diary   일기 엔티티
+     * @param diaryId  일기 ID
+     * @param diary    일기 엔티티
+     * @param userName 사용자 닉네임
      * @return 재생성된 AI 코멘트 응답
      */
     @Transactional
-    public AiCommentResponse retryComment(Long diaryId, Diary diary) {
-        LlmResponse response = callLlm(diary);
+    public AiCommentResponse retryComment(Long diaryId, Diary diary, String userName) {
+        LlmResponse response = callLlm(diary, userName);
 
         AiComment aiComment = aiCommentRepository.findByDiaryId(diaryId)
                 .map(existing -> {
@@ -124,9 +126,11 @@ public class AiCommentService {
         return AiCommentResponse.from(aiComment);
     }
 
-    private LlmResponse callLlm(Diary diary) {
+    private LlmResponse callLlm(Diary diary, String userName) {
         String diaryContent = truncate(diary.getContent(), aiProperties.getMaxInputChars());
-        String prompt = promptTemplate.replace("{{content}}", diaryContent);
+        String prompt = promptTemplate
+                .replace("{{userName}}", userName != null ? userName : "친구")
+                .replace("{{content}}", diaryContent);
         return llmProvider.generate(prompt, aiProperties.getMaxOutputTokens());
     }
 

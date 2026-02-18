@@ -7,6 +7,8 @@ import com.github.mamuriapp.diary.repository.DiaryRepository;
 import com.github.mamuriapp.global.dto.ApiResponse;
 import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
+import com.github.mamuriapp.user.entity.User;
+import com.github.mamuriapp.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,6 +25,7 @@ public class AiController {
 
     private final AiCommentService aiCommentService;
     private final DiaryRepository diaryRepository;
+    private final UserRepository userRepository;
 
     /**
      * AI 코멘트를 재생성한다 (재시도).
@@ -41,7 +44,10 @@ public class AiController {
         Diary diary = diaryRepository.findByIdAndUserId(diaryId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DIARY_NOT_FOUND));
 
-        AiCommentResponse response = aiCommentService.retryComment(diaryId, diary);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        AiCommentResponse response = aiCommentService.retryComment(diaryId, diary, user.getNickname());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

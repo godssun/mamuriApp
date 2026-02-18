@@ -12,6 +12,7 @@ import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
 import com.github.mamuriapp.user.entity.User;
 import com.github.mamuriapp.user.repository.UserRepository;
+import com.github.mamuriapp.user.service.CompanionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class DiaryService {
     private final DiaryRepository diaryRepository;
     private final UserRepository userRepository;
     private final AiCommentService aiCommentService;
+    private final CompanionService companionService;
 
     /**
      * 새로운 일기를 작성한다.
@@ -48,6 +50,8 @@ public class DiaryService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+        int oldLevel = user.getMaxLevel();
+
         LocalDate diaryDate = request.getDiaryDate() != null
                 ? request.getDiaryDate()
                 : LocalDate.now();
@@ -60,14 +64,24 @@ public class DiaryService {
                 .build();
         diaryRepository.save(diary);
 
+        // 레벨업 감지
+        long newDiaryCount = diaryRepository.countByUserId(userId);
+        int newLevel = CompanionService.calculateLevel(newDiaryCount);
+        DiaryResponse.LevelUpInfo levelUpInfo = null;
+
+        if (newLevel > oldLevel) {
+            user.updateMaxLevel(newLevel);
+            levelUpInfo = new DiaryResponse.LevelUpInfo(oldLevel, newLevel);
+        }
+
         AiCommentResponse aiComment = null;
         try {
-            aiComment = aiCommentService.generateComment(diary);
+            aiComment = aiCommentService.generateComment(diary, user.getNickname());
         } catch (Exception e) {
             log.warn("AI 코멘트 생성 실패 (diaryId={}): {}", diary.getId(), e.getMessage());
         }
 
-        return DiaryResponse.of(diary, aiComment);
+        return DiaryResponse.of(diary, aiComment, levelUpInfo);
     }
 
     /**
@@ -117,6 +131,19 @@ public class DiaryService {
                 userId, startDate, endDate);
 
         return DiaryCalendarResponse.of(year, month, dates);
+    }
+
+    /**
+     * 사용자의 특정 날짜 일기 목록을 조회한다.
+     *
+     * @param userId 사용자 ID
+     * @param date   조회 날짜
+     * @return 일기 응답 목록
+     */
+    public List<DiaryResponse> getListByDate(Long userId, LocalDate date) {
+        return diaryRepository.findByUserIdAndDiaryDate(userId, date).stream()
+                .map(DiaryResponse::from)
+                .toList();
     }
 
     /**
