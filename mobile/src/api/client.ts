@@ -139,6 +139,10 @@ export const diaryApi = {
     return request<Diary[]>(`/diaries?year=${year}&month=${month}`);
   },
 
+  async getListByDate(date: string): Promise<Diary[]> {
+    return request<Diary[]>(`/diaries?date=${date}`);
+  },
+
   async getCalendar(year: number, month: number): Promise<DiaryCalendarResponse> {
     return request<DiaryCalendarResponse>(`/diaries/calendar?year=${year}&month=${month}`);
   },
