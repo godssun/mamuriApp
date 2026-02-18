@@ -22,6 +22,24 @@ export interface LoginRequest {
   password: string;
 }
 
+// AI 친구
+export interface CompanionProfile {
+  aiName: string;
+  level: number;
+  diaryCount: number;
+  nextLevelDiaryCount: number;
+  maxLevel: boolean;
+}
+
+export interface CompanionUpdateRequest {
+  aiName: string;
+}
+
+export interface LevelUpInfo {
+  oldLevel: number;
+  newLevel: number;
+}
+
 // 일기
 export interface AiComment {
   id: number;
@@ -35,6 +53,7 @@ export interface Diary {
   content: string;
   diaryDate: string; // YYYY-MM-DD
   aiComment: AiComment | null;
+  levelUp?: LevelUpInfo | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,9 +93,14 @@ export type AuthStackParamList = {
   Signup: undefined;
 };
 
+export type MainStackParamList = {
+  MainTabs: undefined;
+  Settings: undefined;
+};
+
 export type MainTabParamList = {
   DiaryList: undefined;
-  Settings: undefined;
+  Companion: undefined;
 };
 
 export type DiaryStackParamList = {

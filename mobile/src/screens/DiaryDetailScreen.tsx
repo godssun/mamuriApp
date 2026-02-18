@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { diaryApi, ApiError } from '../api/client';
+import { diaryApi, companionApi, ApiError } from '../api/client';
 import { Diary, DiaryStackParamList } from '../types';
 
 type Props = {
@@ -23,9 +23,13 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
   const [diary, setDiary] = useState<Diary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [aiName, setAiName] = useState('마음이');
 
   useEffect(() => {
     loadDiary();
+    companionApi.getProfile()
+      .then((profile) => setAiName(profile.aiName))
+      .catch(() => {});
   }, [diaryId]);
 
   const loadDiary = async () => {
@@ -136,7 +140,7 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
 
         <View style={styles.aiSection}>
           <View style={styles.aiHeader}>
-            <Text style={styles.aiTitle}>마무리의 코멘트</Text>
+            <Text style={styles.aiTitle}>{aiName}의 코멘트</Text>
             <TouchableOpacity
               onPress={handleRetryAiComment}
               disabled={isRetrying}

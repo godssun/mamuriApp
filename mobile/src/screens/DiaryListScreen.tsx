@@ -7,10 +7,10 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { diaryApi } from '../api/client';
-import { Diary, DiaryStackParamList } from '../types';
+import { Diary, DiaryStackParamList, MainStackParamList } from '../types';
 import {
   CalendarSection,
   DiaryCard,
@@ -47,6 +47,7 @@ const formatDateISO = (date: Date): string => {
 };
 
 export default function DiaryListScreen({ navigation }: Props) {
+  const mainNavigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const [diaries, setDiaries] = useState<Diary[]>([]);
   const [calendarDates, setCalendarDates] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
@@ -159,6 +160,9 @@ export default function DiaryListScreen({ navigation }: Props) {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>나의 일기</Text>
+          <TouchableOpacity onPress={() => mainNavigation.navigate('Settings')}>
+            <Text style={styles.settingsIcon}>⚙️</Text>
+          </TouchableOpacity>
         </View>
         <ErrorState onRetry={() => loadDiaries()} />
       </View>
@@ -170,6 +174,9 @@ export default function DiaryListScreen({ navigation }: Props) {
       {/* 헤더 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>나의 일기</Text>
+        <TouchableOpacity onPress={() => mainNavigation.navigate('Settings')}>
+          <Text style={styles.settingsIcon}>⚙️</Text>
+        </TouchableOpacity>
       </View>
 
       {/* 캘린더 */}
@@ -233,6 +240,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF9F5',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 16,
@@ -241,6 +251,10 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     color: '#2D2D2D',
+  },
+  settingsIcon: {
+    fontSize: 22,
+    padding: 4,
   },
   listContent: {
     paddingHorizontal: 20,

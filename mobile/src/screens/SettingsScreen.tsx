@@ -1,17 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   Switch,
   Alert,
   ActivityIndicator,
+  ScrollView,
+  Modal,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
-import { settingsApi, ApiError } from '../api/client';
-import { UserSettings } from '../types';
+import { settingsApi, companionApi, ApiError } from '../api/client';
+import { UserSettings, CompanionProfile } from '../types';
 
 const AI_TONE_OPTIONS = [
   { value: 'warm' as const, label: '따뜻한', description: '공감하고 위로하는 톤' },
@@ -20,15 +23,24 @@ const AI_TONE_OPTIONS = [
 ];
 
 export default function SettingsScreen() {
+  const navigation = useNavigation();
   const { logout } = useAuth();
   const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [companion, setCompanion] = useState<CompanionProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [newAiName, setNewAiName] = useState('');
+  const [isSavingName, setIsSavingName] = useState(false);
 
-  const loadSettings = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
-      const data = await settingsApi.get();
-      setSettings(data);
+      const [settingsData, companionData] = await Promise.all([
+        settingsApi.get(),
+        companionApi.getProfile(),
+      ]);
+      setSettings(settingsData);
+      setCompanion(companionData);
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -38,8 +50,8 @@ export default function SettingsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadSettings();
-    }, [loadSettings])
+      loadData();
+    }, [loadData])
   );
 
   const updateSettings = async (updates: Partial<UserSettings>) => {
@@ -52,7 +64,6 @@ export default function SettingsScreen() {
     try {
       await settingsApi.update(newSettings);
     } catch (error) {
-      // 롤백
       setSettings(settings);
       const message = error instanceof ApiError
         ? error.message
@@ -60,6 +71,33 @@ export default function SettingsScreen() {
       Alert.alert('오류', message);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleOpenNameModal = () => {
+    setNewAiName(companion?.aiName ?? '');
+    setShowNameModal(true);
+  };
+
+  const handleSaveAiName = async () => {
+    const trimmed = newAiName.trim();
+    if (!trimmed) {
+      Alert.alert('알림', '이름을 입력해주세요.');
+      return;
+    }
+
+    setIsSavingName(true);
+    try {
+      const updated = await companionApi.updateName({ aiName: trimmed });
+      setCompanion(updated);
+      setShowNameModal(false);
+    } catch (error) {
+      const message = error instanceof ApiError
+        ? error.message
+        : '이름 변경에 실패했습니다.';
+      Alert.alert('오류', message);
+    } finally {
+      setIsSavingName(false);
     }
   };
 
@@ -89,11 +127,30 @@ export default function SettingsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={styles.backButton}>← 뒤로</Text>
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>설정</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.content}>
-        {/* AI 설정 섹션 */}
+      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+        {/* AI 친구 설정 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>AI 친구</Text>
+
+          <TouchableOpacity style={styles.settingRow} onPress={handleOpenNameModal}>
+            <View style={styles.settingRowLeft}>
+              <Text style={styles.settingLabel}>AI 친구 이름</Text>
+              <Text style={styles.settingDescription}>
+                {companion?.aiName ?? '마음이'}
+              </Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* AI 코멘트 설정 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>AI 코멘트</Text>
 
@@ -165,7 +222,44 @@ export default function SettingsScreen() {
             전문적인 상담이 필요한 경우 전문가의 도움을 받으세요.
           </Text>
         </View>
-      </View>
+      </ScrollView>
+
+      {/* AI 이름 변경 모달 */}
+      <Modal visible={showNameModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.nameModal}>
+            <Text style={styles.modalTitle}>AI 친구 이름 변경</Text>
+            <TextInput
+              style={styles.nameInput}
+              value={newAiName}
+              onChangeText={setNewAiName}
+              placeholder="새 이름을 입력해주세요"
+              placeholderTextColor="#999"
+              maxLength={20}
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowNameModal(false)}
+              >
+                <Text style={styles.modalCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSaveButton, isSavingName && styles.modalSaveButtonDisabled]}
+                onPress={handleSaveAiName}
+                disabled={isSavingName}
+              >
+                {isSavingName ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalSaveText}>저장</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -182,18 +276,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF9F5',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 16,
   },
+  backButton: {
+    fontSize: 16,
+    color: '#FF9B7A',
+  },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
     color: '#2D2D2D',
+  },
+  headerSpacer: {
+    width: 50,
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   section: {
     marginBottom: 32,
@@ -214,6 +321,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+  },
+  settingRowLeft: {
+    flex: 1,
+  },
+  chevron: {
+    fontSize: 20,
+    color: '#CCC',
+    marginLeft: 8,
   },
   settingGroup: {
     backgroundColor: '#fff',
@@ -281,5 +396,68 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#BBB',
     lineHeight: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  nameModal: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 320,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2D2D2D',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  nameInput: {
+    backgroundColor: '#F8F8F8',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#2D2D2D',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 15,
+    color: '#666',
+    fontWeight: '600',
+  },
+  modalSaveButton: {
+    flex: 1,
+    backgroundColor: '#FF9B7A',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  modalSaveButtonDisabled: {
+    backgroundColor: '#FFD0C2',
+  },
+  modalSaveText: {
+    fontSize: 15,
+    color: '#fff',
+    fontWeight: '600',
   },
 });

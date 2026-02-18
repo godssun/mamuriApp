@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   RootStackParamList,
   AuthStackParamList,
+  MainStackParamList,
   MainTabParamList,
   DiaryStackParamList,
 } from '../types';
@@ -17,10 +18,12 @@ import SignupScreen from '../screens/SignupScreen';
 import DiaryListScreen from '../screens/DiaryListScreen';
 import WriteDiaryScreen from '../screens/WriteDiaryScreen';
 import DiaryDetailScreen from '../screens/DiaryDetailScreen';
+import CompanionScreen from '../screens/CompanionScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const MainStack = createNativeStackNavigator<MainStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
 const DiaryStack = createNativeStackNavigator<DiaryStackParamList>();
 
@@ -28,7 +31,7 @@ const DiaryStack = createNativeStackNavigator<DiaryStackParamList>();
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const icons: Record<string, string> = {
     '일기': '📝',
-    '설정': '⚙️',
+    'AI 친구': '🌱',
   };
 
   return (
@@ -66,8 +69,8 @@ function DiaryNavigator() {
   );
 }
 
-// 메인 탭
-function MainNavigator() {
+// 메인 탭 (일기 + AI 친구)
+function MainTabsNavigator() {
   return (
     <MainTab.Navigator
       screenOptions={{
@@ -86,14 +89,24 @@ function MainNavigator() {
         }}
       />
       <MainTab.Screen
-        name="Settings"
-        component={SettingsScreen}
+        name="Companion"
+        component={CompanionScreen}
         options={{
           tabBarLabel: () => null,
-          tabBarIcon: ({ focused }) => <TabIcon label="설정" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon label="AI 친구" focused={focused} />,
         }}
       />
     </MainTab.Navigator>
+  );
+}
+
+// 메인 스택 (탭 + 설정)
+function MainNavigator() {
+  return (
+    <MainStack.Navigator screenOptions={{ headerShown: false }}>
+      <MainStack.Screen name="MainTabs" component={MainTabsNavigator} />
+      <MainStack.Screen name="Settings" component={SettingsScreen} />
+    </MainStack.Navigator>
   );
 }
 

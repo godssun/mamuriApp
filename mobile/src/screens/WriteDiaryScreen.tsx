@@ -14,8 +14,9 @@ import {
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { diaryApi, ApiError } from '../api/client';
-import { DiaryStackParamList } from '../types';
+import { diaryApi, companionApi, ApiError } from '../api/client';
+import { DiaryStackParamList, LevelUpInfo } from '../types';
+import { LevelUpModal } from '../components/companion';
 
 type Props = {
   navigation: NativeStackNavigationProp<DiaryStackParamList, 'WriteDiary'>;
@@ -43,6 +44,16 @@ export default function WriteDiaryScreen({ navigation }: Props) {
   const [diaryDate, setDiaryDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [levelUpInfo, setLevelUpInfo] = useState<LevelUpInfo | null>(null);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [aiName, setAiName] = useState('마음이');
+  const [savedDiaryId, setSavedDiaryId] = useState<number | null>(null);
+
+  React.useEffect(() => {
+    companionApi.getProfile()
+      .then((profile) => setAiName(profile.aiName))
+      .catch(() => {});
+  }, []);
 
   const getDefaultTitle = () => {
     const month = diaryDate.getMonth() + 1;
@@ -79,7 +90,13 @@ export default function WriteDiaryScreen({ navigation }: Props) {
         diaryDate: formatDateISO(diaryDate),
       });
 
-      navigation.replace('DiaryDetail', { diaryId: diary.id });
+      if (diary.levelUp) {
+        setSavedDiaryId(diary.id);
+        setLevelUpInfo(diary.levelUp);
+        setShowLevelUp(true);
+      } else {
+        navigation.replace('DiaryDetail', { diaryId: diary.id });
+      }
     } catch (error) {
       const message = error instanceof ApiError
         ? error.message
@@ -101,6 +118,13 @@ export default function WriteDiaryScreen({ navigation }: Props) {
       );
     } else {
       navigation.goBack();
+    }
+  };
+
+  const handleLevelUpClose = () => {
+    setShowLevelUp(false);
+    if (savedDiaryId) {
+      navigation.replace('DiaryDetail', { diaryId: savedDiaryId });
     }
   };
 
@@ -210,6 +234,14 @@ export default function WriteDiaryScreen({ navigation }: Props) {
           display="default"
           onChange={handleDateChange}
           maximumDate={new Date()}
+        />
+      )}
+      {levelUpInfo && (
+        <LevelUpModal
+          visible={showLevelUp}
+          levelUpInfo={levelUpInfo}
+          aiName={aiName}
+          onClose={handleLevelUpClose}
         />
       )}
     </KeyboardAvoidingView>

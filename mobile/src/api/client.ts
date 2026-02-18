@@ -10,6 +10,8 @@ import {
   DiaryCalendarResponse,
   AiComment,
   UserSettings,
+  CompanionProfile,
+  CompanionUpdateRequest,
 } from '../types';
 
 // 개발 환경에서는 localhost, 프로덕션에서는 실제 서버 URL
@@ -76,7 +78,17 @@ async function request<T>(
     headers,
   });
 
-  const json: ApiResponse<T> = await response.json();
+  const text = await response.text();
+  let json: ApiResponse<T>;
+  try {
+    json = text ? JSON.parse(text) : { success: false, data: null, message: null };
+  } catch {
+    throw new ApiError(
+      '서버 응답을 처리할 수 없습니다.',
+      response.status,
+      response.status === 401
+    );
+  }
 
   if (!response.ok || !json.success) {
     const isUnauthorized = response.status === 401;
@@ -174,6 +186,20 @@ export const diaryApi = {
   async retryAiComment(diaryId: number): Promise<AiComment> {
     return request<AiComment>(`/diaries/${diaryId}/ai-comment/retry`, {
       method: 'POST',
+    });
+  },
+};
+
+// AI 친구 API
+export const companionApi = {
+  async getProfile(): Promise<CompanionProfile> {
+    return request<CompanionProfile>('/companion');
+  },
+
+  async updateName(data: CompanionUpdateRequest): Promise<CompanionProfile> {
+    return request<CompanionProfile>('/companion', {
+      method: 'PUT',
+      body: JSON.stringify(data),
     });
   },
 };
