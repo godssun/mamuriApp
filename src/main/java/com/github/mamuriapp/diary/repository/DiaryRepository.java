@@ -70,4 +70,20 @@ public interface DiaryRepository extends JpaRepository<Diary, Long> {
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    /**
+     * 사용자의 특정 날짜 일기 목록을 조회한다.
+     *
+     * @param userId 사용자 ID
+     * @param date   조회 날짜
+     * @return 일기 목록
+     */
+    @Query("SELECT d FROM Diary d WHERE d.user.id = :userId " +
+           "AND d.diaryDate = :date " +
+           "ORDER BY d.createdAt DESC")
+    List<Diary> findByUserIdAndDiaryDate(
+            @Param("userId") Long userId,
+            @Param("date") LocalDate date);
+
+    long countByUserId(Long userId);
 }
