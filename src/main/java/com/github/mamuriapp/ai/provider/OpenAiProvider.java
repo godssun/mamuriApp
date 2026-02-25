@@ -31,12 +31,15 @@ public class OpenAiProvider implements LlmProvider {
                 .baseUrl(aiProperties.getApi().getUrl())
                 .defaultHeader("Authorization", "Bearer " + aiProperties.getApi().getKey())
                 .build();
+        log.info("[LLM] OpenAiProvider 활성화됨 (model={}, url={})",
+                aiProperties.getApi().getModel(), aiProperties.getApi().getUrl());
     }
 
     @Override
     public LlmResponse generate(String prompt, int maxTokens) {
         String model = aiProperties.getApi().getModel();
-        log.debug("OpenAI API 호출 (model={}, maxTokens={})", model, maxTokens);
+        log.info("[LLM] OpenAI API 호출 시작 (model={}, maxTokens={}, promptLength={})",
+                model, maxTokens, prompt.length());
 
         Map<String, Object> requestBody = Map.of(
                 "model", model,
@@ -54,6 +57,7 @@ public class OpenAiProvider implements LlmProvider {
                     .body(Map.class);
 
             String content = extractContent(response);
+            log.info("[LLM] OpenAI API 응답 수신 (길이={}자)", content.length());
             return new LlmResponse(content, model);
         } catch (Exception e) {
             log.error("OpenAI API 호출 실패: {}", e.getMessage(), e);

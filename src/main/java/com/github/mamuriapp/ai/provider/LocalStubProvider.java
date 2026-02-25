@@ -15,9 +15,13 @@ public class LocalStubProvider implements LlmProvider {
 
     private static final String MODEL_NAME = "local-stub";
 
+    public LocalStubProvider() {
+        log.warn("[LLM] LocalStubProvider 활성화됨 — .env의 AI_PROVIDER가 'openai'인지 확인하세요");
+    }
+
     @Override
     public LlmResponse generate(String prompt, int maxTokens) {
-        log.debug("LocalStubProvider 호출 (maxTokens={})", maxTokens);
+        log.warn("[LLM] LocalStubProvider 호출 — 하드코딩 응답 반환 (maxTokens={})", maxTokens);
 
         String content = "오늘 하루도 정말 수고 많으셨어요. "
                 + "일기를 통해 마음을 나눠 주셔서 감사해요. "

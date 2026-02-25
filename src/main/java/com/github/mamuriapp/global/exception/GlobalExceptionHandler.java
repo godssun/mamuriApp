@@ -2,11 +2,14 @@ package com.github.mamuriapp.global.exception;
 
 import com.github.mamuriapp.global.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.stream.Collectors;
 
@@ -17,6 +20,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @Value("${spring.profiles.active:prod}")
+    private String activeProfile;
 
     /**
      * {@link CustomException} 처리.
@@ -53,11 +59,24 @@ public class GlobalExceptionHandler {
      * @param e 예외
      * @return HTTP 500 응답
      */
+    /**
+     * 타입 변환 실패 처리 (e.g. PathVariable에 문자열이 들어온 경우).
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        log.warn("TypeMismatch: {}", e.getMessage());
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.fail(ErrorCode.INVALID_INPUT.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         log.error("Unhandled exception", e);
+        String message = "dev".equals(activeProfile)
+                ? e.getClass().getSimpleName() + ": " + e.getMessage()
+                : ErrorCode.INTERNAL_ERROR.getMessage();
         return ResponseEntity
                 .internalServerError()
-                .body(ApiResponse.fail(ErrorCode.INTERNAL_ERROR.getMessage()));
+                .body(ApiResponse.fail(message));
     }
 }
