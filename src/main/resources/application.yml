@@ -1,4 +1,7 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
+
   application:
     name: mamuriApp
 
@@ -24,7 +27,7 @@ jwt:
 
 ai:
   provider: ${AI_PROVIDER:stub}
-  prompt-version: v1
+  prompt-version: v2
   max-output-tokens: 180
   max-input-chars: 3000
   api:

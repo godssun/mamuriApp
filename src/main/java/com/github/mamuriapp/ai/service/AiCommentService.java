@@ -9,6 +9,7 @@ import com.github.mamuriapp.ai.repository.AiCommentRepository;
 import com.github.mamuriapp.diary.entity.Diary;
 import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
+import com.github.mamuriapp.user.entity.User;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class AiCommentService {
     private final SafetyCheckService safetyCheckService;
     private final LlmProvider llmProvider;
     private final AiProperties aiProperties;
+    private final PromptBuilder promptBuilder;
 
     private String promptTemplate;
 
@@ -49,14 +51,14 @@ public class AiCommentService {
 
     /**
      * 일기에 대한 AI 코멘트를 생성한다.
-     * 안전 검사를 먼저 수행하고, 위기 신호 시 안전 메시지로 대체한다.
+     * aiEnabled 설정 확인 후, 안전 검사를 수행하고, 위기 신호 시 안전 메시지로 대체한다.
      *
-     * @param diary    코멘트를 생성할 일기
-     * @param userName 사용자 닉네임 (프롬프트 개인화용)
-     * @return AI 코멘트 응답
+     * @param diary 코멘트를 생성할 일기
+     * @param user  사용자 엔티티 (개인화용)
+     * @return AI 코멘트 응답 (AI 비활성화 시 null)
      */
     @Transactional
-    public AiCommentResponse generateComment(Diary diary, String userName) {
+    public AiCommentResponse generateComment(Diary diary, User user) {
         boolean isSafe = safetyCheckService.check(diary);
 
         String content;
@@ -69,9 +71,18 @@ public class AiCommentService {
                     + "(자살예방상담전화 1393, 정신건강위기상담전화 1577-0199)";
             modelName = "safety-override";
         } else {
-            LlmResponse response = callLlm(diary, userName);
-            content = response.content();
-            modelName = response.modelName();
+            try {
+                LlmResponse response = callLlm(diary, user);
+                if (response == null) {
+                    log.info("[AI] 코멘트 비활성화 (userId={})", user.getId());
+                    return null;
+                }
+                content = response.content();
+                modelName = response.modelName();
+            } catch (Exception e) {
+                log.warn("[AI] LLM 호출 실패 (diaryId={}): {}", diary.getId(), e.getMessage(), e);
+                return null;
+            }
         }
 
         AiComment aiComment = AiComment.builder()
@@ -101,14 +112,20 @@ public class AiCommentService {
     /**
      * AI 코멘트를 재생성한다 (재시도).
      *
-     * @param diaryId  일기 ID
-     * @param diary    일기 엔티티
-     * @param userName 사용자 닉네임
+     * @param diaryId 일기 ID
+     * @param diary   일기 엔티티
+     * @param user    사용자 엔티티
      * @return 재생성된 AI 코멘트 응답
      */
     @Transactional
-    public AiCommentResponse retryComment(Long diaryId, Diary diary, String userName) {
-        LlmResponse response = callLlm(diary, userName);
+    public AiCommentResponse retryComment(Long diaryId, Diary diary, User user) {
+        LlmResponse response;
+        try {
+            response = callLlm(diary, user);
+        } catch (Exception e) {
+            log.warn("[AI] 재시도 LLM 호출 실패 (diaryId={}): {}", diaryId, e.getMessage());
+            throw new CustomException(ErrorCode.AI_SERVICE_ERROR);
+        }
 
         AiComment aiComment = aiCommentRepository.findByDiaryId(diaryId)
                 .map(existing -> {
@@ -126,18 +143,17 @@ public class AiCommentService {
         return AiCommentResponse.from(aiComment);
     }
 
-    private LlmResponse callLlm(Diary diary, String userName) {
-        String diaryContent = truncate(diary.getContent(), aiProperties.getMaxInputChars());
-        String prompt = promptTemplate
-                .replace("{{userName}}", userName != null ? userName : "친구")
-                .replace("{{content}}", diaryContent);
-        return llmProvider.generate(prompt, aiProperties.getMaxOutputTokens());
-    }
-
-    private String truncate(String text, int maxChars) {
-        if (text == null || text.length() <= maxChars) {
-            return text;
+    private LlmResponse callLlm(Diary diary, User user) {
+        log.info("[AI] 코멘트 생성 시작 (diaryId={}, userId={}, provider={})",
+                diary.getId(), user.getId(), llmProvider.getClass().getSimpleName());
+        String prompt = promptBuilder.build(
+                promptTemplate, user, diary, aiProperties.getMaxInputChars());
+        if (prompt == null) {
+            return null;
         }
-        return text.substring(0, maxChars);
+        LlmResponse response = llmProvider.generate(prompt, aiProperties.getMaxOutputTokens());
+        log.info("[AI] 코멘트 생성 완료 (model={}, 응답길이={}자)",
+                response.modelName(), response.content().length());
+        return response;
     }
 }

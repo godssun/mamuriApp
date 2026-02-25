@@ -76,7 +76,7 @@ public class DiaryService {
 
         AiCommentResponse aiComment = null;
         try {
-            aiComment = aiCommentService.generateComment(diary, user.getNickname());
+            aiComment = aiCommentService.generateComment(diary, user);
         } catch (Exception e) {
             log.warn("AI 코멘트 생성 실패 (diaryId={}): {}", diary.getId(), e.getMessage());
         }

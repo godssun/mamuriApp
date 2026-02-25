@@ -41,7 +41,7 @@ public class AiController {
         Diary diary = diaryRepository.findByIdAndUserIdWithUser(diaryId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DIARY_NOT_FOUND));
 
-        AiCommentResponse response = aiCommentService.retryComment(diaryId, diary, diary.getUser().getNickname());
+        AiCommentResponse response = aiCommentService.retryComment(diaryId, diary, diary.getUser());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
