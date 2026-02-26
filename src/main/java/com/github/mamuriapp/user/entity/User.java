@@ -6,6 +6,7 @@ import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -51,6 +52,37 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // -- 구독/쿼터 필드 --
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "subscription_status", nullable = false)
+    private SubscriptionStatus subscriptionStatus = SubscriptionStatus.FREE;
+
+    @Column(name = "current_period_end")
+    private LocalDateTime currentPeriodEnd;
+
+    @Column(name = "grace_period_end")
+    private LocalDateTime gracePeriodEnd;
+
+    @Column(name = "stripe_customer_id")
+    private String stripeCustomerId;
+
+    @Column(name = "stripe_subscription_id")
+    private String stripeSubscriptionId;
+
+    @Column(name = "quota_used", nullable = false)
+    private int quotaUsed = 0;
+
+    @Column(name = "quota_reset_date")
+    private LocalDate quotaResetDate;
+
+    @Column(name = "crisis_flag_until")
+    private LocalDateTime crisisFlagUntil;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
+
     @Builder
     public User(String email, String password, String nickname, String aiName) {
         this.email = email;
@@ -86,5 +118,45 @@ public class User {
         if (this.diaryCount > 0) {
             this.diaryCount--;
         }
+    }
+
+    // -- 구독/쿼터 메서드 --
+
+    public boolean isPremium() {
+        return subscriptionStatus != null && subscriptionStatus.isPremium();
+    }
+
+    public void incrementQuotaUsed() {
+        this.quotaUsed++;
+    }
+
+    public void resetQuota() {
+        this.quotaUsed = 0;
+        this.quotaResetDate = LocalDate.now().withDayOfMonth(1).plusMonths(1);
+    }
+
+    public boolean hasCrisisFlag() {
+        return crisisFlagUntil != null && crisisFlagUntil.isAfter(LocalDateTime.now());
+    }
+
+    public void setCrisisFlag() {
+        this.crisisFlagUntil = LocalDateTime.now().plusDays(7);
+    }
+
+    public void updateSubscription(SubscriptionStatus status, LocalDateTime periodEnd) {
+        this.subscriptionStatus = status;
+        this.currentPeriodEnd = periodEnd;
+    }
+
+    public void updateStripeCustomerId(String id) {
+        this.stripeCustomerId = id;
+    }
+
+    public void updateStripeSubscriptionId(String id) {
+        this.stripeSubscriptionId = id;
+    }
+
+    public void updateGracePeriodEnd(LocalDateTime end) {
+        this.gracePeriodEnd = end;
     }
 }

@@ -46,7 +46,7 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/refresh").permitAll()
+                        .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/refresh", "/api/stripe/webhook").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(requestLoggingFilter,
                         UsernamePasswordAuthenticationFilter.class)

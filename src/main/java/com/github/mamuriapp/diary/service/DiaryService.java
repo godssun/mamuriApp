@@ -2,12 +2,14 @@ package com.github.mamuriapp.diary.service;
 
 import com.github.mamuriapp.ai.dto.AiCommentResponse;
 import com.github.mamuriapp.ai.service.AiCommentService;
+import com.github.mamuriapp.ai.service.SafetyCheckService;
 import com.github.mamuriapp.diary.dto.DiaryCalendarResponse;
 import com.github.mamuriapp.diary.dto.DiaryCreateRequest;
 import com.github.mamuriapp.diary.dto.DiaryResponse;
 import com.github.mamuriapp.diary.dto.DiaryUpdateRequest;
 import com.github.mamuriapp.diary.entity.Diary;
 import com.github.mamuriapp.diary.repository.DiaryRepository;
+import com.github.mamuriapp.global.config.FeatureFlags;
 import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
 import com.github.mamuriapp.user.entity.User;
@@ -32,10 +34,14 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class DiaryService {
 
+    private static final int FREE_MONTHLY_QUOTA = 20;
+
     private final DiaryRepository diaryRepository;
     private final UserRepository userRepository;
     private final AiCommentService aiCommentService;
+    private final SafetyCheckService safetyCheckService;
     private final CompanionService companionService;
+    private final FeatureFlags featureFlags;
 
     /**
      * 새로운 일기를 작성한다.
@@ -65,6 +71,26 @@ public class DiaryService {
         diaryRepository.save(diary);
         user.incrementDiaryCount();
 
+        // 1. SafetyCheck (항상 먼저)
+        boolean isSafe = safetyCheckService.check(diary);
+        if (!isSafe) {
+            user.setCrisisFlag();
+        }
+
+        // 2. QuotaCheck (Feature Flag ON + 비프리미엄 + 비위기 사용자만)
+        if (featureFlags.isQuotaEnforcementEnabled()
+                && !user.isPremium()
+                && !user.hasCrisisFlag()) {
+            // Lazy Reset: quotaResetDate가 과거이면 자동 리셋
+            if (user.getQuotaResetDate() != null
+                    && user.getQuotaResetDate().isBefore(LocalDate.now())) {
+                user.resetQuota();
+            }
+            if (user.getQuotaUsed() >= FREE_MONTHLY_QUOTA) {
+                throw new CustomException(ErrorCode.QUOTA_EXCEEDED);
+            }
+        }
+
         // 레벨업 감지
         int newLevel = CompanionService.calculateLevel(user.getDiaryCount());
         DiaryResponse.LevelUpInfo levelUpInfo = null;
@@ -74,9 +100,18 @@ public class DiaryService {
             levelUpInfo = new DiaryResponse.LevelUpInfo(oldLevel, newLevel);
         }
 
+        // 3. AI 코멘트 생성
         AiCommentResponse aiComment = null;
         try {
-            aiComment = aiCommentService.generateComment(diary, user);
+            aiComment = aiCommentService.generateComment(diary, user, isSafe);
+
+            // AI 성공 후에만 쿼터 증가 (비프리미엄, 비위기 사용자)
+            if (aiComment != null
+                    && featureFlags.isQuotaEnforcementEnabled()
+                    && !user.isPremium()
+                    && !user.hasCrisisFlag()) {
+                user.incrementQuotaUsed();
+            }
         } catch (Exception e) {
             log.warn("AI 코멘트 생성 실패 (diaryId={}): {}", diary.getId(), e.getMessage());
         }

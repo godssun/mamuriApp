@@ -71,8 +71,9 @@ public class OpenAiProvider implements LlmProvider {
                         .body(Map.class);
 
                 String content = extractContent(response);
-                log.info("[LLM] OpenAI API 응답 수신 (길이={}자)", content.length());
-                return new LlmResponse(content, model);
+                int totalTokens = extractTotalTokens(response);
+                log.info("[LLM] OpenAI API 응답 수신 (길이={}자, tokens={})", content.length(), totalTokens);
+                return new LlmResponse(content, model, totalTokens);
             } catch (ResourceAccessException e) {
                 log.warn("[LLM] OpenAI API 타임아웃 (시도 {}/{}): {}",
                         attempt, MAX_RETRIES, e.getMessage());
@@ -94,6 +95,19 @@ public class OpenAiProvider implements LlmProvider {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private int extractTotalTokens(Map<?, ?> response) {
+        try {
+            Map<String, Object> usage = (Map<String, Object>) response.get("usage");
+            if (usage != null && usage.get("total_tokens") != null) {
+                return ((Number) usage.get("total_tokens")).intValue();
+            }
+        } catch (Exception e) {
+            log.debug("[LLM] 토큰 사용량 추출 실패: {}", e.getMessage());
+        }
+        return 0;
     }
 
     @SuppressWarnings("unchecked")

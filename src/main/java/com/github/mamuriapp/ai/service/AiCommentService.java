@@ -3,9 +3,11 @@ package com.github.mamuriapp.ai.service;
 import com.github.mamuriapp.ai.config.AiProperties;
 import com.github.mamuriapp.ai.dto.AiCommentResponse;
 import com.github.mamuriapp.ai.entity.AiComment;
+import com.github.mamuriapp.ai.entity.AiUsageLog;
 import com.github.mamuriapp.ai.provider.LlmProvider;
 import com.github.mamuriapp.ai.provider.LlmResponse;
 import com.github.mamuriapp.ai.repository.AiCommentRepository;
+import com.github.mamuriapp.ai.repository.AiUsageLogRepository;
 import com.github.mamuriapp.diary.entity.Diary;
 import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
@@ -18,6 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -29,7 +33,11 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class AiCommentService {
 
+    /** gpt-4o-mini 기준: ~$0.15/1M input + $0.60/1M output, 환율 1350원 */
+    private static final BigDecimal COST_PER_TOKEN_KRW = new BigDecimal("0.0005");
+
     private final AiCommentRepository aiCommentRepository;
+    private final AiUsageLogRepository aiUsageLogRepository;
     private final SafetyCheckService safetyCheckService;
     private final LlmProvider llmProvider;
     private final AiProperties aiProperties;
@@ -51,16 +59,15 @@ public class AiCommentService {
 
     /**
      * 일기에 대한 AI 코멘트를 생성한다.
-     * aiEnabled 설정 확인 후, 안전 검사를 수행하고, 위기 신호 시 안전 메시지로 대체한다.
+     * 안전 검사 결과를 외부(DiaryService)에서 전달받아, 위기 신호 시 안전 메시지로 대체한다.
      *
-     * @param diary 코멘트를 생성할 일기
-     * @param user  사용자 엔티티 (개인화용)
+     * @param diary  코멘트를 생성할 일기
+     * @param user   사용자 엔티티 (개인화용)
+     * @param isSafe 안전 검사 결과 (true: 안전, false: 위기 감지)
      * @return AI 코멘트 응답 (AI 비활성화 시 null)
      */
     @Transactional
-    public AiCommentResponse generateComment(Diary diary, User user) {
-        boolean isSafe = safetyCheckService.check(diary);
-
+    public AiCommentResponse generateComment(Diary diary, User user, boolean isSafe) {
         String content;
         String modelName;
 
@@ -79,6 +86,9 @@ public class AiCommentService {
                 }
                 content = response.content();
                 modelName = response.modelName();
+
+                // AI 사용량 로깅
+                logAiUsage(user, diary, response);
             } catch (Exception e) {
                 log.warn("[AI] LLM 호출 실패 (diaryId={}): {}", diary.getId(), e.getMessage(), e);
                 return null;
@@ -141,6 +151,25 @@ public class AiCommentService {
 
         aiCommentRepository.save(aiComment);
         return AiCommentResponse.from(aiComment);
+    }
+
+    private void logAiUsage(User user, Diary diary, LlmResponse response) {
+        try {
+            BigDecimal cost = COST_PER_TOKEN_KRW
+                    .multiply(BigDecimal.valueOf(response.totalTokens()))
+                    .setScale(4, RoundingMode.HALF_UP);
+
+            AiUsageLog usageLog = AiUsageLog.builder()
+                    .user(user)
+                    .diary(diary)
+                    .modelName(response.modelName())
+                    .totalTokens(response.totalTokens())
+                    .estimatedCostKrw(cost)
+                    .build();
+            aiUsageLogRepository.save(usageLog);
+        } catch (Exception e) {
+            log.warn("[AI] 사용량 로깅 실패: {}", e.getMessage());
+        }
     }
 
     private LlmResponse callLlm(Diary diary, User user) {

@@ -34,3 +34,13 @@ ai:
     url: ${AI_API_URL:https://api.openai.com/v1}
     key: ${AI_API_KEY:}
     model: ${AI_MODEL:gpt-4o-mini}
+
+stripe:
+  api-key: ${STRIPE_API_KEY:}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  price-monthly: ${STRIPE_PRICE_MONTHLY:}
+  price-yearly: ${STRIPE_PRICE_YEARLY:}
+
+feature:
+  premium-enabled: ${FEATURE_PREMIUM_ENABLED:false}
+  quota-enforcement-enabled: ${FEATURE_QUOTA_ENABLED:false}
