@@ -12,9 +12,11 @@ import {
   Modal,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { settingsApi, companionApi, ApiError } from '../api/client';
-import { UserSettings, CompanionProfile } from '../types';
+import { UserSettings, CompanionProfile, MainStackParamList } from '../types';
 
 const AI_TONE_OPTIONS = [
   { value: 'warm' as const, label: '따뜻한', description: '공감하고 위로하는 톤' },
@@ -23,8 +25,9 @@ const AI_TONE_OPTIONS = [
 ];
 
 export default function SettingsScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { logout } = useAuth();
+  const { isPremium } = useSubscription();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [companion, setCompanion] = useState<CompanionProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -202,6 +205,24 @@ export default function SettingsScreen() {
               ))}
             </View>
           </View>
+        </View>
+
+        {/* 구독 섹션 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>구독</Text>
+
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => navigation.navigate('Subscription')}
+          >
+            <View style={styles.settingRowLeft}>
+              <Text style={styles.settingLabel}>구독 관리</Text>
+              <Text style={styles.settingDescription}>
+                {isPremium ? '프리미엄 이용 중' : '무료 플랜'}
+              </Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
         </View>
 
         {/* 계정 섹션 */}

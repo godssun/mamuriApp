@@ -82,6 +82,21 @@ export interface UserSettings {
   aiEnabled: boolean;
 }
 
+// 구독
+export type SubscriptionStatusType = 'FREE' | 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
+
+export interface SubscriptionInfo {
+  status: SubscriptionStatusType;
+  quotaUsed: number;
+  quotaLimit: number; // -1이면 무제한 (프리미엄)
+  currentPeriodEnd: string | null;
+  crisisFlag: boolean;
+}
+
+export interface CheckoutResponse {
+  checkoutUrl: string;
+}
+
 // 네비게이션
 export type RootStackParamList = {
   Auth: undefined;
@@ -96,6 +111,8 @@ export type AuthStackParamList = {
 export type MainStackParamList = {
   MainTabs: undefined;
   Settings: undefined;
+  Paywall: undefined;
+  Subscription: undefined;
 };
 
 export type MainTabParamList = {

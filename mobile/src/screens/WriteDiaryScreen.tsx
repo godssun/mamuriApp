@@ -14,9 +14,13 @@ import {
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation as useRootNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp as RootNav } from '@react-navigation/native-stack';
 import { diaryApi, companionApi, ApiError } from '../api/client';
-import { DiaryStackParamList, LevelUpInfo } from '../types';
+import { DiaryStackParamList, MainStackParamList, LevelUpInfo } from '../types';
 import { LevelUpModal } from '../components/companion';
+import { useSubscription } from '../contexts/SubscriptionContext';
+import CrisisBanner from '../components/CrisisBanner';
 
 type Props = {
   navigation: NativeStackNavigationProp<DiaryStackParamList, 'WriteDiary'>;
@@ -39,6 +43,8 @@ const formatDateISO = (date: Date): string => {
 };
 
 export default function WriteDiaryScreen({ navigation }: Props) {
+  const rootNavigation = useRootNavigation<RootNav<MainStackParamList>>();
+  const { info, isPremium, quotaRemaining, hasCrisisFlag, refresh: refreshSubscription } = useSubscription();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [diaryDate, setDiaryDate] = useState(new Date());
@@ -90,6 +96,9 @@ export default function WriteDiaryScreen({ navigation }: Props) {
         diaryDate: formatDateISO(diaryDate),
       });
 
+      // AI 성공 후 구독 상태 갱신 (쿼터 반영)
+      refreshSubscription();
+
       if (diary.levelUp) {
         setSavedDiaryId(diary.id);
         setLevelUpInfo(diary.levelUp);
@@ -98,6 +107,11 @@ export default function WriteDiaryScreen({ navigation }: Props) {
         navigation.replace('DiaryDetail', { diaryId: diary.id });
       }
     } catch (error) {
+      if (error instanceof ApiError && error.status === 429) {
+        // 쿼터 초과 → 페이월로 이동
+        rootNavigation.navigate('Paywall');
+        return;
+      }
       const message = error instanceof ApiError
         ? error.message
         : '일기 저장 중 오류가 발생했습니다.';
@@ -139,7 +153,17 @@ export default function WriteDiaryScreen({ navigation }: Props) {
         <TouchableOpacity onPress={handleCancel}>
           <Text style={styles.cancelButton}>취소</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>일기 쓰기</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>일기 쓰기</Text>
+          {!isPremium && quotaRemaining !== Infinity && (
+            <Text style={[
+              styles.quotaCounter,
+              quotaRemaining <= 5 && styles.quotaCounterWarn,
+            ]}>
+              AI 코멘트 {(info?.quotaUsed ?? 0)}/{(info?.quotaLimit ?? 20)}
+            </Text>
+          )}
+        </View>
         <TouchableOpacity
           onPress={handleSave}
           disabled={isLoading}
@@ -151,6 +175,8 @@ export default function WriteDiaryScreen({ navigation }: Props) {
           )}
         </TouchableOpacity>
       </View>
+
+      {hasCrisisFlag && <CrisisBanner />}
 
       <ScrollView
         style={styles.content}
@@ -263,10 +289,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
+  headerCenter: {
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: 17,
     fontWeight: '600',
     color: '#2D2D2D',
+  },
+  quotaCounter: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 2,
+  },
+  quotaCounterWarn: {
+    color: '#FF9B7A',
+    fontWeight: '600',
   },
   cancelButton: {
     fontSize: 16,

@@ -12,6 +12,8 @@ import {
   UserSettings,
   CompanionProfile,
   CompanionUpdateRequest,
+  SubscriptionInfo,
+  CheckoutResponse,
 } from '../types';
 
 // 개발 환경에서는 localhost, 프로덕션에서는 실제 서버 URL
@@ -304,6 +306,24 @@ export const companionApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  },
+};
+
+// 구독 API
+export const subscriptionApi = {
+  async getStatus(): Promise<SubscriptionInfo> {
+    return request<SubscriptionInfo>('/subscription/status');
+  },
+
+  async createCheckout(priceId: string): Promise<CheckoutResponse> {
+    return request<CheckoutResponse>('/subscription/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ priceId }),
+    });
+  },
+
+  async cancel(): Promise<void> {
+    await request<void>('/subscription/cancel', { method: 'POST' });
   },
 };
 

@@ -20,6 +20,8 @@ import WriteDiaryScreen from '../screens/WriteDiaryScreen';
 import DiaryDetailScreen from '../screens/DiaryDetailScreen';
 import CompanionScreen from '../screens/CompanionScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import PaywallScreen from '../screens/PaywallScreen';
+import SubscriptionScreen from '../screens/SubscriptionScreen';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -106,6 +108,8 @@ function MainNavigator() {
     <MainStack.Navigator screenOptions={{ headerShown: false }}>
       <MainStack.Screen name="MainTabs" component={MainTabsNavigator} />
       <MainStack.Screen name="Settings" component={SettingsScreen} />
+      <MainStack.Screen name="Paywall" component={PaywallScreen} />
+      <MainStack.Screen name="Subscription" component={SubscriptionScreen} />
     </MainStack.Navigator>
   );
 }
