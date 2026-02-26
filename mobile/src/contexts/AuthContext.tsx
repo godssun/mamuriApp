@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authApi, tokenStorage } from '../api/client';
+import { authApi, tokenStorage, setForceLogoutHandler, clearForceLogoutHandler } from '../api/client';
 import { SignupRequest, LoginRequest } from '../types';
 
 interface AuthContextType {
@@ -8,6 +8,7 @@ interface AuthContextType {
   login: (data: LoginRequest) => Promise<void>;
   signup: (data: SignupRequest) => Promise<void>;
   logout: () => Promise<void>;
+  forceLogout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,7 +17,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 앱 시작 시 토큰 확인
+  // forceLogout: API client에서 TOKEN_REUSE_DETECTED 등 호출
+  const forceLogout = useCallback(() => {
+    tokenStorage.clear();
+    setIsAuthenticated(false);
+  }, []);
+
+  // API client에 forceLogout 핸들러 등록/해제
+  useEffect(() => {
+    setForceLogoutHandler(forceLogout);
+    return () => clearForceLogoutHandler();
+  }, [forceLogout]);
+
+  // 앱 시작 시 토큰 유효성 검증
   useEffect(() => {
     checkAuth();
   }, []);
@@ -24,8 +37,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuth = async () => {
     try {
       const tokens = await tokenStorage.get();
-      setIsAuthenticated(!!tokens?.accessToken);
+      if (!tokens?.refreshToken) {
+        setIsAuthenticated(false);
+        return;
+      }
+
+      // refreshToken으로 실제 서버 검증
+      await authApi.refresh();
+      setIsAuthenticated(true);
     } catch {
+      await tokenStorage.clear();
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
@@ -43,12 +64,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await authApi.logout();
+    try {
+      await authApi.logout();
+    } catch {
+      // 서버 로그아웃 실패해도 로컬 상태는 초기화
+    }
     setIsAuthenticated(false);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, login, signup, logout, forceLogout }}>
       {children}
     </AuthContext.Provider>
   );

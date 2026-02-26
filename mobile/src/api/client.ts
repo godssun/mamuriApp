@@ -47,18 +47,74 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public isUnauthorized: boolean = false
+    public isUnauthorized: boolean = false,
+    public code?: string
   ) {
     super(message);
     this.name = 'ApiError';
   }
 }
 
+// forceLogout 콜백 (React 트리 바깥에서 인증 상태 제어)
+let forceLogoutHandler: (() => void) | null = null;
+
+export function setForceLogoutHandler(handler: () => void): void {
+  forceLogoutHandler = handler;
+}
+
+export function clearForceLogoutHandler(): void {
+  forceLogoutHandler = null;
+}
+
+// 토큰 갱신 (동시 401 시 단일 갱신 보장)
+let refreshPromise: Promise<TokenResponse> | null = null;
+
+async function refreshAccessToken(): Promise<TokenResponse> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const currentTokens = await tokenStorage.get();
+      if (!currentTokens?.refreshToken) {
+        throw new ApiError('리프레시 토큰이 없습니다.', 401, true);
+      }
+
+      // request() 대신 직접 fetch 사용 (무한 루프 방지)
+      const response = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: currentTokens.refreshToken }),
+      });
+
+      const text = await response.text();
+      const json: ApiResponse<TokenResponse> = text
+        ? JSON.parse(text)
+        : { success: false, data: null, message: null };
+
+      if (!response.ok || !json.success || !json.data) {
+        throw new ApiError(
+          json.message || '토큰 갱신에 실패했습니다.',
+          response.status,
+          true
+        );
+      }
+
+      await tokenStorage.save(json.data);
+      return json.data;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
 // 기본 fetch 래퍼
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
-  requireAuth: boolean = true
+  requireAuth: boolean = true,
+  _isRetry: boolean = false
 ): Promise<T> {
   const url = `${BASE_URL}${endpoint}`;
   const headers: HeadersInit = {
@@ -73,10 +129,26 @@ async function request<T>(
     }
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  // 타임아웃 (15초)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (error: unknown) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiError('요청 시간이 초과되었습니다.', 408, false, 'TIMEOUT');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const text = await response.text();
   let json: ApiResponse<T>;
@@ -90,12 +162,48 @@ async function request<T>(
     );
   }
 
+  // 401 인터셉터
+  if (response.status === 401) {
+    const message = json.message || '';
+
+    // TOKEN_REUSE_DETECTED → 즉시 로그아웃
+    if (message.includes('재사용')) {
+      await tokenStorage.clear();
+      forceLogoutHandler?.();
+      throw new ApiError(message, 401, true, 'TOKEN_REUSE_DETECTED');
+    }
+
+    // 첫 시도 + 인증 필요 요청 → 토큰 갱신 후 재시도
+    if (!_isRetry && requireAuth) {
+      try {
+        await refreshAccessToken();
+        return request<T>(endpoint, options, requireAuth, true);
+      } catch {
+        await tokenStorage.clear();
+        forceLogoutHandler?.();
+        throw new ApiError(
+          message || '인증이 만료되었습니다. 다시 로그인해주세요.',
+          401,
+          true
+        );
+      }
+    }
+
+    // 재시도 후에도 401 → 로그아웃
+    await tokenStorage.clear();
+    forceLogoutHandler?.();
+    throw new ApiError(
+      message || '인증이 만료되었습니다. 다시 로그인해주세요.',
+      401,
+      true
+    );
+  }
+
   if (!response.ok || !json.success) {
-    const isUnauthorized = response.status === 401;
     throw new ApiError(
       json.message || '요청 처리 중 오류가 발생했습니다.',
       response.status,
-      isUnauthorized
+      false
     );
   }
 
@@ -123,20 +231,15 @@ export const authApi = {
   },
 
   async refresh(): Promise<TokenResponse> {
-    const currentTokens = await tokenStorage.get();
-    if (!currentTokens?.refreshToken) {
-      throw new ApiError('리프레시 토큰이 없습니다.', 401, true);
-    }
-
-    const tokens = await request<TokenResponse>('/auth/refresh', {
-      method: 'POST',
-      body: JSON.stringify({ refreshToken: currentTokens.refreshToken }),
-    }, false);
-    await tokenStorage.save(tokens);
-    return tokens;
+    return refreshAccessToken();
   },
 
   async logout(): Promise<void> {
+    try {
+      await request<void>('/auth/logout', { method: 'POST' }, true);
+    } catch {
+      // 서버 로그아웃 실패해도 로컬 토큰은 삭제
+    }
     await tokenStorage.clear();
   },
 };
