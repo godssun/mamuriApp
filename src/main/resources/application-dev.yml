@@ -14,4 +14,4 @@ spring:
     baseline-on-migrate: true
 
 jwt:
-  secret: dev-only-secret-key-do-not-use-in-production-minimum-32-chars
+  secret: ${JWT_SECRET:dev-only-secret-key-do-not-use-in-production-minimum-32-chars}

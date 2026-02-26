@@ -6,7 +6,9 @@ import com.github.mamuriapp.global.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
@@ -25,14 +27,25 @@ public class OpenAiProvider implements LlmProvider {
     private final AiProperties aiProperties;
     private final RestClient restClient;
 
+    private static final int MAX_RETRIES = 2;
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(30);
+
     public OpenAiProvider(AiProperties aiProperties) {
         this.aiProperties = aiProperties;
+
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(CONNECT_TIMEOUT);
+        factory.setReadTimeout(READ_TIMEOUT);
+
         this.restClient = RestClient.builder()
                 .baseUrl(aiProperties.getApi().getUrl())
                 .defaultHeader("Authorization", "Bearer " + aiProperties.getApi().getKey())
+                .requestFactory(factory)
                 .build();
-        log.info("[LLM] OpenAiProvider 활성화됨 (model={}, url={})",
-                aiProperties.getApi().getModel(), aiProperties.getApi().getUrl());
+        log.info("[LLM] OpenAiProvider 활성화됨 (model={}, url={}, connectTimeout={}s, readTimeout={}s)",
+                aiProperties.getApi().getModel(), aiProperties.getApi().getUrl(),
+                CONNECT_TIMEOUT.toSeconds(), READ_TIMEOUT.toSeconds());
     }
 
     @Override
@@ -48,20 +61,38 @@ public class OpenAiProvider implements LlmProvider {
                 "temperature", 0.7
         );
 
-        try {
-            Map<?, ?> response = restClient.post()
-                    .uri("/chat/completions")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(requestBody)
-                    .retrieve()
-                    .body(Map.class);
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                Map<?, ?> response = restClient.post()
+                        .uri("/chat/completions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(requestBody)
+                        .retrieve()
+                        .body(Map.class);
 
-            String content = extractContent(response);
-            log.info("[LLM] OpenAI API 응답 수신 (길이={}자)", content.length());
-            return new LlmResponse(content, model);
-        } catch (Exception e) {
-            log.error("OpenAI API 호출 실패: {}", e.getMessage(), e);
-            throw new CustomException(ErrorCode.AI_SERVICE_ERROR);
+                String content = extractContent(response);
+                log.info("[LLM] OpenAI API 응답 수신 (길이={}자)", content.length());
+                return new LlmResponse(content, model);
+            } catch (ResourceAccessException e) {
+                log.warn("[LLM] OpenAI API 타임아웃 (시도 {}/{}): {}",
+                        attempt, MAX_RETRIES, e.getMessage());
+                if (attempt == MAX_RETRIES) {
+                    throw new CustomException(ErrorCode.AI_SERVICE_ERROR);
+                }
+                sleep(1000L * attempt);
+            } catch (Exception e) {
+                log.error("[LLM] OpenAI API 호출 실패: {}", e.getMessage(), e);
+                throw new CustomException(ErrorCode.AI_SERVICE_ERROR);
+            }
+        }
+        throw new CustomException(ErrorCode.AI_SERVICE_ERROR);
+    }
+
+    private void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

@@ -148,13 +148,15 @@ public class DiaryService {
 
     /**
      * 일기 상세를 조회한다.
+     * JOIN FETCH로 User를 즉시 로딩하여 추가 쿼리를 방지한다.
      *
      * @param userId  사용자 ID
      * @param diaryId 일기 ID
      * @return 일기 응답 (AI 코멘트 포함)
      */
     public DiaryResponse getDetail(Long userId, Long diaryId) {
-        Diary diary = findUserDiary(userId, diaryId);
+        Diary diary = diaryRepository.findByIdAndUserIdWithUser(diaryId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.DIARY_NOT_FOUND));
         AiCommentResponse aiComment = aiCommentService.getComment(diaryId);
         return DiaryResponse.of(diary, aiComment);
     }
