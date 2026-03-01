@@ -6,6 +6,7 @@ import com.github.mamuriapp.global.exception.ErrorCode;
 import com.github.mamuriapp.user.dto.SubscriptionStatusResponse;
 import com.github.mamuriapp.user.entity.SubscriptionEvent;
 import com.github.mamuriapp.user.entity.SubscriptionStatus;
+import com.github.mamuriapp.user.entity.SubscriptionTier;
 import com.github.mamuriapp.user.entity.User;
 import com.github.mamuriapp.user.repository.SubscriptionEventRepository;
 import com.github.mamuriapp.user.repository.UserRepository;
@@ -26,7 +27,7 @@ import java.time.ZoneId;
 
 /**
  * 구독 서비스.
- * Stripe 연동을 통한 구독 관리와 웹훅 처리를 담당한다.
+ * Stripe 연동을 통한 멀티 플랜(Deluxe/Premium) 구독 관리와 웹훅 처리를 담당한다.
  */
 @Slf4j
 @Service
@@ -39,6 +40,7 @@ public class SubscriptionService {
 
     /**
      * Stripe Checkout Session을 생성한다.
+     * 신규 가입자에게는 7일 무료 체험을 제공한다.
      *
      * @param userId  사용자 ID
      * @param priceId Stripe Price ID
@@ -48,7 +50,6 @@ public class SubscriptionService {
         User user = findUser(userId);
 
         try {
-            // Stripe Customer ID가 없으면 메타데이터로 전달
             SessionCreateParams.Builder builder = SessionCreateParams.builder()
                     .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
                     .setSuccessUrl("mamuri://subscription/success")
@@ -58,6 +59,14 @@ public class SubscriptionService {
                             .setQuantity(1L)
                             .build())
                     .putMetadata("userId", String.valueOf(userId));
+
+            // 신규 가입자 → 7일 무료 체험
+            if (user.getStripeSubscriptionId() == null && user.getTrialEnd() == null) {
+                builder.setSubscriptionData(
+                        SessionCreateParams.SubscriptionData.builder()
+                                .setTrialPeriodDays(7L)
+                                .build());
+            }
 
             if (user.getStripeCustomerId() != null) {
                 builder.setCustomer(user.getStripeCustomerId());
@@ -154,8 +163,18 @@ public class SubscriptionService {
         user.updateSubscription(status, periodEnd);
         user.updateStripeSubscriptionId(subscription.getId());
 
+        // Price ID 기반으로 티어 결정
+        SubscriptionTier tier = determineTierFromSubscription(subscription);
+        user.updateSubscriptionTier(tier);
+
+        // Trial 시작 기록
+        if (status == SubscriptionStatus.TRIALING && user.getTrialStart() == null) {
+            user.startTrial();
+        }
+
         recordEvent(event, user);
-        log.info("[Stripe] 구독 상태 업데이트: userId={}, status={}", user.getId(), status);
+        log.info("[Stripe] 구독 상태 업데이트: userId={}, status={}, tier={}",
+                user.getId(), status, tier);
     }
 
     private void handleSubscriptionDeleted(Event event) {
@@ -167,13 +186,13 @@ public class SubscriptionService {
         if (user == null) return;
 
         user.updateSubscription(SubscriptionStatus.CANCELED, null);
+        user.updateSubscriptionTier(SubscriptionTier.FREE);
 
         recordEvent(event, user);
         log.info("[Stripe] 구독 취소됨: userId={}", user.getId());
     }
 
     private void handlePaymentFailed(Event event) {
-        // invoice.payment_failed의 경우 customer 정보로 사용자 조회
         String customerId = extractCustomerIdFromInvoice(event);
         if (customerId == null) return;
 
@@ -185,6 +204,28 @@ public class SubscriptionService {
 
         recordEvent(event, user);
         log.info("[Stripe] 결제 실패 → PAST_DUE: userId={}", user.getId());
+    }
+
+    /**
+     * Stripe Subscription의 Price ID를 기반으로 구독 티어를 결정한다.
+     */
+    private SubscriptionTier determineTierFromSubscription(Subscription subscription) {
+        try {
+            if (subscription.getItems() != null && subscription.getItems().getData() != null
+                    && !subscription.getItems().getData().isEmpty()) {
+                String priceId = subscription.getItems().getData().get(0).getPrice().getId();
+                if (stripeProperties.isPremiumPrice(priceId)) {
+                    return SubscriptionTier.PREMIUM;
+                }
+                if (stripeProperties.isDeluxePrice(priceId)) {
+                    return SubscriptionTier.DELUXE;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[Stripe] Price ID 기반 티어 결정 실패: {}", e.getMessage());
+        }
+        // 기본: DELUXE
+        return SubscriptionTier.DELUXE;
     }
 
     private Subscription extractSubscription(Event event) {

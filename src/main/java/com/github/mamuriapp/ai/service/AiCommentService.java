@@ -10,7 +10,10 @@ import com.github.mamuriapp.ai.provider.LlmProvider;
 import com.github.mamuriapp.ai.provider.LlmResponse;
 import com.github.mamuriapp.ai.repository.AiCommentRepository;
 import com.github.mamuriapp.ai.repository.AiUsageLogRepository;
+import com.github.mamuriapp.diary.entity.ConversationMessage;
 import com.github.mamuriapp.diary.entity.Diary;
+import com.github.mamuriapp.diary.repository.ConversationMessageRepository;
+import com.github.mamuriapp.global.config.FeatureFlags;
 import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
 import com.github.mamuriapp.user.entity.User;
@@ -50,10 +53,12 @@ public class AiCommentService {
 
     private final AiCommentRepository aiCommentRepository;
     private final AiUsageLogRepository aiUsageLogRepository;
+    private final ConversationMessageRepository conversationMessageRepository;
     private final SafetyCheckService safetyCheckService;
     private final LlmProvider llmProvider;
     private final AiProperties aiProperties;
     private final PromptBuilder promptBuilder;
+    private final FeatureFlags featureFlags;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -124,6 +129,11 @@ public class AiCommentService {
                 .build();
         aiCommentRepository.save(aiComment);
 
+        // 대화 기능 활성화 시 conversation_messages에도 저장 (dual-write)
+        if (featureFlags.isConversationEnabled()) {
+            saveInitialConversationMessage(diary, user, comment, modelName);
+        }
+
         return AiCommentResponse.from(aiComment);
     }
 
@@ -175,7 +185,64 @@ public class AiCommentService {
                         .build());
 
         aiCommentRepository.save(aiComment);
+
+        // 대화 기능 활성화 시 conversation_messages도 업데이트 (dual-write)
+        if (featureFlags.isConversationEnabled()) {
+            updateInitialConversationMessage(diary, user, parsed[0], response.modelName());
+        }
+
         return AiCommentResponse.from(aiComment);
+    }
+
+    /**
+     * 초기 AI 코멘트를 conversation_messages에 저장한다 (sequence_number=0).
+     */
+    private void saveInitialConversationMessage(Diary diary, User user,
+                                                 String content, String modelName) {
+        try {
+            ConversationMessage message = ConversationMessage.builder()
+                    .diary(diary)
+                    .user(user)
+                    .role("AI")
+                    .content(content)
+                    .sequenceNumber(0)
+                    .modelName(modelName)
+                    .promptVersion(aiProperties.getPromptVersion())
+                    .build();
+            conversationMessageRepository.save(message);
+            log.debug("[AI] conversation_messages 초기 저장 완료 (diaryId={})", diary.getId());
+        } catch (Exception e) {
+            log.warn("[AI] conversation_messages 저장 실패 (diaryId={}): {}",
+                    diary.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * conversation_messages의 초기 AI 코멘트를 업데이트한다 (재시도 시).
+     * 기존 sequence_number=0 메시지가 없으면 새로 생성한다.
+     */
+    private void updateInitialConversationMessage(Diary diary, User user,
+                                                   String content, String modelName) {
+        try {
+            List<ConversationMessage> existing = conversationMessageRepository
+                    .findByDiaryIdOrderBySequenceNumberAsc(diary.getId());
+
+            ConversationMessage initial = existing.stream()
+                    .filter(m -> m.getSequenceNumber() == 0 && "AI".equals(m.getRole()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (initial != null) {
+                // 기존 레코드 삭제 후 새로 생성 (엔티티 불변 패턴)
+                conversationMessageRepository.delete(initial);
+                conversationMessageRepository.flush();
+            }
+
+            saveInitialConversationMessage(diary, user, content, modelName);
+        } catch (Exception e) {
+            log.warn("[AI] conversation_messages 업데이트 실패 (diaryId={}): {}",
+                    diary.getId(), e.getMessage());
+        }
     }
 
     private void logAiUsage(User user, Diary diary, LlmResponse response) {

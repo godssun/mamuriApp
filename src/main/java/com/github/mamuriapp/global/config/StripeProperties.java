@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Stripe 결제 관련 설정.
+ * Deluxe / Premium 멀티 플랜 가격 ID를 관리한다.
  */
 @Slf4j
 @Getter
@@ -20,8 +21,14 @@ public class StripeProperties {
 
     private String apiKey = "";
     private String webhookSecret = "";
-    private String priceMonthly = "";
-    private String priceYearly = "";
+
+    // Deluxe 플랜 가격 ID
+    private String priceDeluxeMonthly = "";
+    private String priceDeluxeYearly = "";
+
+    // Premium 플랜 가격 ID
+    private String pricePremiumMonthly = "";
+    private String pricePremiumYearly = "";
 
     @PostConstruct
     void init() {
@@ -31,5 +38,25 @@ public class StripeProperties {
         } else {
             log.warn("[Stripe] API 키가 설정되지 않았습니다");
         }
+    }
+
+    /**
+     * 주어진 Price ID가 Premium 플랜인지 확인한다.
+     *
+     * @param priceId Stripe Price ID
+     * @return Premium이면 true
+     */
+    public boolean isPremiumPrice(String priceId) {
+        return priceId.equals(pricePremiumMonthly) || priceId.equals(pricePremiumYearly);
+    }
+
+    /**
+     * 주어진 Price ID가 Deluxe 플랜인지 확인한다.
+     *
+     * @param priceId Stripe Price ID
+     * @return Deluxe이면 true
+     */
+    public boolean isDeluxePrice(String priceId) {
+        return priceId.equals(priceDeluxeMonthly) || priceId.equals(priceDeluxeYearly);
     }
 }

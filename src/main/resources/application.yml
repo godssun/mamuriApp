@@ -16,6 +16,11 @@ spring:
       hibernate:
         format_sql: true
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -27,7 +32,7 @@ jwt:
 
 ai:
   provider: ${AI_PROVIDER:stub}
-  prompt-version: v2
+  prompt-version: v4
   max-output-tokens: 180
   max-input-chars: 3000
   api:
@@ -38,9 +43,29 @@ ai:
 stripe:
   api-key: ${STRIPE_API_KEY:}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
-  price-monthly: ${STRIPE_PRICE_MONTHLY:}
-  price-yearly: ${STRIPE_PRICE_YEARLY:}
+  price-deluxe-monthly: ${STRIPE_PRICE_DELUXE_MONTHLY:}
+  price-deluxe-yearly: ${STRIPE_PRICE_DELUXE_YEARLY:}
+  price-premium-monthly: ${STRIPE_PRICE_PREMIUM_MONTHLY:}
+  price-premium-yearly: ${STRIPE_PRICE_PREMIUM_YEARLY:}
 
 feature:
   premium-enabled: ${FEATURE_PREMIUM_ENABLED:false}
   quota-enforcement-enabled: ${FEATURE_QUOTA_ENABLED:false}
+  conversation-enabled: ${FEATURE_CONVERSATION_ENABLED:true}
+
+upload:
+  dir: ${UPLOAD_DIR:uploads}
+  max-file-size: 5242880  # 5MB
+
+rate-limit:
+  conversation:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    free:
+      per-minute: 3
+      per-hour: 10
+    deluxe:
+      per-minute: 10
+      per-hour: 30
+    premium:
+      per-minute: 20
+      per-hour: 60

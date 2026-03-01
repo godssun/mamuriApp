@@ -1,8 +1,11 @@
 package com.github.mamuriapp.global.exception;
 
 import com.github.mamuriapp.global.dto.ApiResponse;
+import com.github.mamuriapp.global.ratelimit.RateLimitExceededException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -54,11 +57,23 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 예상하지 못한 예외 처리.
+     * Rate Limit 초과 처리.
+     * 429 Too Many Requests + Retry-After 헤더를 반환한다.
      *
-     * @param e 예외
-     * @return HTTP 500 응답
+     * @param e Rate Limit 예외
+     * @return Retry-After 헤더를 포함한 HTTP 429 응답
      */
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRateLimitExceeded(RateLimitExceededException e) {
+        log.warn("RateLimitExceeded: {}", e.getMessage());
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Retry-After", String.valueOf(e.getRetryAfterSeconds()));
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .headers(headers)
+                .body(ApiResponse.fail(e.getMessage()));
+    }
+
     /**
      * 타입 변환 실패 처리 (e.g. PathVariable에 문자열이 들어온 경우).
      */

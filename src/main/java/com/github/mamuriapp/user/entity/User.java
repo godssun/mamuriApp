@@ -79,6 +79,16 @@ public class User {
     @Column(name = "crisis_flag_until")
     private LocalDateTime crisisFlagUntil;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "subscription_tier", nullable = false)
+    private SubscriptionTier subscriptionTier = SubscriptionTier.FREE;
+
+    @Column(name = "trial_start")
+    private LocalDateTime trialStart;
+
+    @Column(name = "trial_end")
+    private LocalDateTime trialEnd;
+
     // -- 스트릭 필드 --
 
     @Column(name = "current_streak", nullable = false)
@@ -169,6 +179,51 @@ public class User {
 
     public void updateGracePeriodEnd(LocalDateTime end) {
         this.gracePeriodEnd = end;
+    }
+
+    public void updateSubscriptionTier(SubscriptionTier tier) {
+        this.subscriptionTier = tier;
+    }
+
+    /**
+     * 7일 무료 체험을 시작한다.
+     */
+    public void startTrial() {
+        this.trialStart = LocalDateTime.now();
+        this.trialEnd = LocalDateTime.now().plusDays(7);
+        this.subscriptionTier = SubscriptionTier.DELUXE;
+    }
+
+    /**
+     * 체험 기간이 활성 상태인지 확인한다.
+     *
+     * @return 체험 기간 내이고 TRIALING 상태이면 true
+     */
+    public boolean isTrialActive() {
+        return trialEnd != null && LocalDateTime.now().isBefore(trialEnd)
+                && subscriptionStatus == SubscriptionStatus.TRIALING;
+    }
+
+    /**
+     * 체험 기간이 만료되었는지 확인한다.
+     *
+     * @return 체험 만료 후 FREE 티어이면 true
+     */
+    public boolean isTrialExpired() {
+        return trialEnd != null && LocalDateTime.now().isAfter(trialEnd)
+                && subscriptionTier == SubscriptionTier.FREE;
+    }
+
+    /**
+     * 유효한 구독 티어를 반환한다.
+     * 위기 상황 시 PREMIUM, 체험 중이면 DELUXE, 그 외 설정된 티어를 반환한다.
+     *
+     * @return 유효 구독 티어
+     */
+    public SubscriptionTier getEffectiveTier() {
+        if (hasCrisisFlag()) return SubscriptionTier.PREMIUM;
+        if (isTrialActive()) return SubscriptionTier.DELUXE;
+        return subscriptionTier;
     }
 
     // -- 스트릭 메서드 --

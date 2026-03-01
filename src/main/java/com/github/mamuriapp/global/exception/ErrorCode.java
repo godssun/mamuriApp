@@ -33,6 +33,11 @@ public enum ErrorCode {
     QUOTA_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "이번 달 AI 코멘트 사용량을 초과했습니다."),
     PREMIUM_REQUIRED(HttpStatus.PAYMENT_REQUIRED, "프리미엄 구독이 필요한 기능입니다."),
 
+    // Conversation
+    REPLY_LIMIT_EXCEEDED(HttpStatus.FORBIDDEN, "오늘의 답변 횟수 제한에 도달했습니다."),
+    TRIAL_EXPIRED(HttpStatus.PAYMENT_REQUIRED, "무료 체험이 만료되었습니다. 구독을 시작해주세요."),
+    CONVERSATION_NOT_FOUND(HttpStatus.NOT_FOUND, "대화를 찾을 수 없습니다."),
+
     // General
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다.");

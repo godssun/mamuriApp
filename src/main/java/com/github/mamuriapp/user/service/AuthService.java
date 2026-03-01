@@ -47,7 +47,7 @@ public class AuthService {
                 .nickname(request.getNickname())
                 .aiName(request.getAiName())
                 .build();
-        userRepository.save(user);
+        user = userRepository.save(user);
 
         UserSettings settings = UserSettings.builder()
                 .user(user)

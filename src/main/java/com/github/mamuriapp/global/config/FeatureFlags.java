@@ -20,4 +20,7 @@ public class FeatureFlags {
 
     /** 쿼터 제한 적용 여부 (기본: false) */
     private boolean quotaEnforcementEnabled = false;
+
+    /** 대화 기능 활성화 여부 (기본: false) */
+    private boolean conversationEnabled = false;
 }
