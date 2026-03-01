@@ -3,6 +3,7 @@ package com.github.mamuriapp.user.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.mamuriapp.global.config.JwtConfig;
 import com.github.mamuriapp.global.config.SecurityConfig;
+import com.github.mamuriapp.global.config.UploadProperties;
 import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
 import com.github.mamuriapp.global.exception.GlobalExceptionHandler;
@@ -17,8 +18,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
@@ -51,7 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class AuthControllerTest {
 
-    @Configuration
+    @TestConfiguration
     static class TestJwtConfig {
         @Bean
         JwtConfig jwtConfig() {
@@ -60,6 +61,13 @@ class AuthControllerTest {
             config.setAccessExpiration(1_800_000L);
             config.setRefreshExpiration(604_800_000L);
             return config;
+        }
+
+        @Bean
+        UploadProperties uploadProperties() {
+            UploadProperties props = new UploadProperties();
+            props.setDir(System.getProperty("java.io.tmpdir") + "/mamuri-test-uploads");
+            return props;
         }
     }
 
@@ -73,6 +81,7 @@ class AuthControllerTest {
 
     @MockitoBean
     private AuthService authService;
+
 
     // --- Signup ---
 

@@ -8,6 +8,8 @@ import com.github.mamuriapp.ai.provider.LlmResponse;
 import com.github.mamuriapp.ai.repository.AiCommentRepository;
 import com.github.mamuriapp.ai.repository.AiUsageLogRepository;
 import com.github.mamuriapp.diary.entity.Diary;
+import com.github.mamuriapp.diary.repository.ConversationMessageRepository;
+import com.github.mamuriapp.global.config.FeatureFlags;
 import com.github.mamuriapp.user.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,10 +53,16 @@ class AiCommentServiceTest {
     private LlmProvider llmProvider;
 
     @Mock
+    private ConversationMessageRepository conversationMessageRepository;
+
+    @Mock
     private AiProperties aiProperties;
 
     @Mock
     private PromptBuilder promptBuilder;
+
+    @Mock
+    private FeatureFlags featureFlags;
 
     private User testUser;
     private Diary testDiary;
