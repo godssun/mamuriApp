@@ -9,6 +9,7 @@ import {
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../types';
 import { useSubscription } from '../contexts/SubscriptionContext';
+import { useTheme } from '../contexts/ThemeContext';
 import CrisisBanner from '../components/CrisisBanner';
 
 type Props = {
@@ -33,7 +34,7 @@ const PLANS = [
     highlight: true,
     benefits: [
       '무제한 AI 답변',
-      'AI 친구의 레벨 제한 해제',
+      '더 깊이 있는 AI 대화',
       '월간 감정 리포트 (예정)',
     ],
   },
@@ -41,9 +42,10 @@ const PLANS = [
 
 export default function PaywallScreen({ navigation }: Props) {
   const { hasCrisisFlag } = useSubscription();
+  const { theme } = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← 뒤로</Text>
@@ -57,7 +59,6 @@ export default function PaywallScreen({ navigation }: Props) {
         {hasCrisisFlag && <CrisisBanner />}
 
         <View style={styles.heroSection}>
-          <Text style={styles.heroEmoji}>📝</Text>
           <Text style={styles.heroTitle}>
             오늘의 대화 횟수를{'\n'}모두 사용했어요
           </Text>
@@ -139,10 +140,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 32,
-  },
-  heroEmoji: {
-    fontSize: 56,
-    marginBottom: 16,
   },
   heroTitle: {
     fontSize: 22,

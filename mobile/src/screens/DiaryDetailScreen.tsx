@@ -27,6 +27,7 @@ import ReplyCounter from '../components/conversation/ReplyCounter';
 import MessageInput from '../components/conversation/MessageInput';
 import UpgradePromptCard from '../components/subscription/UpgradePromptCard';
 import UpgradeModal from '../components/subscription/UpgradeModal';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<DiaryStackParamList, 'DiaryDetail'>;
@@ -36,6 +37,7 @@ type Props = {
 export default function DiaryDetailScreen({ navigation, route }: Props) {
   const { diaryId } = route.params;
   const parentNav = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { theme } = useTheme();
 
   const [diary, setDiary] = useState<Diary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -218,7 +220,7 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator size="large" color="#FF9B7A" />
       </View>
     );
@@ -229,7 +231,7 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← 뒤로</Text>
@@ -251,15 +253,15 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
           keyboardShouldPersistTaps="handled"
         >
           {/* 일기 본문 */}
-          <Text style={styles.diaryDate}>{formatDiaryDate(diary.diaryDate)}</Text>
-          <Text style={styles.title}>{diary.title}</Text>
-          <Text style={styles.diaryContent}>{diary.content}</Text>
+          <Text style={[styles.diaryDate, { color: theme.colors.text, fontFamily: theme.fontFamily, fontSize: Math.round(20 * theme.fontScale) }]}>{formatDiaryDate(diary.diaryDate)}</Text>
+          <Text style={[styles.title, { color: theme.colors.text, fontFamily: theme.fontFamily, fontSize: Math.round(26 * theme.fontScale) }]}>{diary.title}</Text>
+          <Text style={[styles.diaryContent, { color: theme.colors.text, fontFamily: theme.fontFamily, fontSize: Math.round(16 * theme.fontScale), lineHeight: Math.round(28 * theme.fontScale) }]}>{diary.content}</Text>
           <Text style={styles.createdAt}>작성: {formatCreatedAt(diary.createdAt)}</Text>
 
           {/* 대화 영역 */}
           <View style={styles.conversationSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{aiName}와(과)의 대화</Text>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>{aiName}와(과)의 대화</Text>
               {!hasConversation && (
                 <TouchableOpacity
                   onPress={handleRetryAiComment}
@@ -306,7 +308,7 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
             ) : diary.aiComment ? (
               // 레거시 AI 코멘트 (대화 기능 비활성화 시)
               <View style={styles.aiCommentCard}>
-                <Text style={styles.aiCommentContent}>
+                <Text style={[styles.aiCommentContent, { fontFamily: theme.fontFamily, fontSize: Math.round(15 * theme.fontScale), lineHeight: Math.round(26 * theme.fontScale) }]}>
                   {diary.aiComment.content}
                 </Text>
               </View>

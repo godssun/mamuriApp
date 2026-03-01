@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = {
   currentStreak: number;
@@ -7,6 +8,7 @@ type Props = {
 };
 
 export default function StreakHeader({ currentStreak, longestStreak }: Props) {
+  const { theme } = useTheme();
   if (currentStreak === 0 && longestStreak === 0) {
     return null;
   }
@@ -14,9 +16,9 @@ export default function StreakHeader({ currentStreak, longestStreak }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.currentStreak}>
-        <Text style={styles.fireIcon}>🔥</Text>
-        <Text style={styles.streakCount}>{currentStreak}</Text>
-        <Text style={styles.streakLabel}>일 연속</Text>
+        <View style={styles.streakDot} />
+        <Text style={[styles.streakCount, { fontFamily: theme.fontFamily }]}>{currentStreak}</Text>
+        <Text style={[styles.streakLabel, { fontFamily: theme.fontFamily }]}>일 연속</Text>
       </View>
       {longestStreak > 0 && (
         <View style={styles.bestStreak}>
@@ -43,9 +45,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  fireIcon: {
-    fontSize: 20,
-    marginRight: 6,
+  streakDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF9B7A',
+    marginRight: 8,
   },
   streakCount: {
     fontSize: 24,

@@ -10,29 +10,57 @@ import {
   Modal,
   TextInput,
   Image,
+  Switch,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { companionApi, ApiError } from '../api/client';
-import { CompanionProfile, CompanionSettings, MainStackParamList } from '../types';
-import { getCompanionConfig, calculateProgress } from '../constants/companion';
-import { ProgressBar } from '../components/companion';
+import { companionApi, settingsApi, ApiError } from '../api/client';
+import { CompanionProfile, CompanionSettings, UserSettings, MainStackParamList } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+
+if (Platform.OS === 'android') {
+  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+}
+
+const AI_TONE_OPTIONS = [
+  { value: 'warm' as const, label: '따뜻한', description: '공감하고 위로하는 톤' },
+  { value: 'calm' as const, label: '차분한', description: '안정적이고 담담한 톤' },
+  { value: 'cheerful' as const, label: '밝은', description: '긍정적이고 활기찬 톤' },
+  { value: 'realistic' as const, label: '현실적인', description: '솔직하고 담백한 톤' },
+];
+
+const SPEECH_STYLE_OPTIONS = [
+  { value: 'formal' as const, label: '존댓말', description: '정중하고 예의 바른 말투' },
+  { value: 'casual' as const, label: '반말', description: '편안한 친구 같은 말투' },
+];
 
 function getAvatarImageUri(avatar: string | null | undefined): string | null {
   if (!avatar || avatar.length === 0) return null;
   if (avatar.startsWith('http')) return avatar;
-  if (avatar.startsWith('/uploads/')) return `http://localhost:8080${avatar}`;
+  if (avatar.startsWith('/uploads/')) {
+    const host = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+    return `http://${host}:8080${avatar}`;
+  }
   return null; // 이모지 등 비정상 값은 무시
 }
 
 export default function CompanionScreen() {
   const mainNavigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { setCompanionName } = useAuth();
+  const { theme } = useTheme();
   const [profile, setProfile] = useState<CompanionProfile | null>(null);
   const [companionSettings, setCompanionSettings] = useState<CompanionSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showNameModal, setShowNameModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [isSavingCompanion, setIsSavingCompanion] = useState(false);
+  const [showAiSettings, setShowAiSettings] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -42,12 +70,15 @@ export default function CompanionScreen() {
 
   const loadProfile = async () => {
     try {
-      const [profileData, settingsData] = await Promise.all([
+      const [profileData, companionSettingsData, userSettingsData] = await Promise.all([
         companionApi.getProfile(),
         companionApi.getSettings(),
+        settingsApi.get(),
       ]);
       setProfile(profileData);
-      setCompanionSettings(settingsData);
+      setCompanionName(profileData.aiName);
+      setCompanionSettings(companionSettingsData);
+      setSettings(userSettingsData);
     } catch (error) {
       console.error('Failed to load companion profile:', error);
     } finally {
@@ -71,6 +102,7 @@ export default function CompanionScreen() {
     try {
       const updated = await companionApi.updateName({ aiName: trimmed });
       setProfile(updated);
+      setCompanionName(trimmed);
       setShowNameModal(false);
     } catch (error) {
       const message = error instanceof ApiError
@@ -82,9 +114,51 @@ export default function CompanionScreen() {
     }
   };
 
+  const updateSettings = async (updates: Partial<UserSettings>) => {
+    if (!settings) return;
+    const newSettings = { ...settings, ...updates };
+    setSettings(newSettings);
+    try {
+      await settingsApi.update(newSettings);
+    } catch (error) {
+      setSettings(settings);
+      const message = error instanceof ApiError
+        ? error.message
+        : '설정 저장에 실패했습니다.';
+      Alert.alert('오류', message);
+    }
+  };
+
+  const updateCompanionSettings = async (updates: Partial<CompanionSettings>) => {
+    if (!companionSettings) return;
+    const newSettings = { ...companionSettings, ...updates };
+    setCompanionSettings(newSettings);
+    setIsSavingCompanion(true);
+    try {
+      const result = await companionApi.updateSettings({
+        speechStyle: newSettings.speechStyle,
+        aiTone: newSettings.aiTone,
+      });
+      setCompanionSettings(result);
+    } catch (error) {
+      setCompanionSettings(companionSettings);
+      const message = error instanceof ApiError
+        ? error.message
+        : '설정 저장에 실패했습니다.';
+      Alert.alert('오류', message);
+    } finally {
+      setIsSavingCompanion(false);
+    }
+  };
+
+  const toggleAiSettings = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowAiSettings(!showAiSettings);
+  };
+
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator size="large" color="#FF9B7A" />
       </View>
     );
@@ -92,7 +166,7 @@ export default function CompanionScreen() {
 
   if (!profile) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
         <Text style={styles.errorText}>프로필을 불러올 수 없습니다.</Text>
         <TouchableOpacity style={styles.retryButton} onPress={loadProfile}>
           <Text style={styles.retryButtonText}>다시 시도</Text>
@@ -101,23 +175,12 @@ export default function CompanionScreen() {
     );
   }
 
-  const config = getCompanionConfig(profile.level);
-  const progress = calculateProgress(
-    profile.diaryCount,
-    profile.nextLevelDiaryCount,
-    profile.maxLevel,
-    profile.level,
-  );
-  const remaining = profile.maxLevel
-    ? 0
-    : profile.nextLevelDiaryCount - profile.diaryCount;
-
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>AI 친구</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>{profile.aiName}</Text>
         <TouchableOpacity onPress={() => mainNavigation.navigate('Settings')}>
-          <Text style={styles.settingsIcon}>⚙️</Text>
+          <Text style={styles.settingsIcon}>설정</Text>
         </TouchableOpacity>
       </View>
 
@@ -126,7 +189,7 @@ export default function CompanionScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         {/* 프로필 카드 */}
-        <View style={styles.profileCard}>
+        <View style={[styles.profileCard, { backgroundColor: theme.colors.card }]}>
           {getAvatarImageUri(companionSettings?.avatar) ? (
             <Image
               source={{ uri: getAvatarImageUri(companionSettings?.avatar)! }}
@@ -136,60 +199,138 @@ export default function CompanionScreen() {
               )}
             />
           ) : (
-            <Text style={styles.profileEmoji}>{config.emoji}</Text>
+            <View style={styles.profilePlaceholder}>
+              <Text style={styles.profileInitial}>
+                {profile.aiName.charAt(0)}
+              </Text>
+            </View>
           )}
 
           <TouchableOpacity style={styles.nameRow} onPress={handleOpenNameModal}>
-            <Text style={styles.profileName}>{profile.aiName}</Text>
-            <Text style={styles.editIcon}>✏️</Text>
+            <Text style={[styles.profileName, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>{profile.aiName}</Text>
+            <Text style={styles.editIcon}>변경</Text>
           </TouchableOpacity>
 
-          <Text style={styles.levelBadge}>
-            Lv.{profile.level} {config.title}
+          <Text style={[styles.profileDescription, { fontFamily: theme.fontFamily }]}>
+            누구에게도 말하지 못한 당신의 일상을 공유해주세요
           </Text>
-
-          <View style={styles.progressSection}>
-            <ProgressBar progress={progress} />
-            <Text style={styles.progressText}>
-              {profile.maxLevel
-                ? '최고 레벨 달성!'
-                : `${profile.diaryCount} / ${profile.nextLevelDiaryCount}편`}
-            </Text>
-          </View>
-
-          <Text style={styles.profileDescription}>{config.description}</Text>
         </View>
 
-        {/* 성장 기록 */}
-        <Text style={styles.sectionTitle}>성장 기록</Text>
-        <View style={styles.statsCard}>
+        {/* 기록 */}
+        <Text style={[styles.sectionTitle, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>기록</Text>
+        <View style={[styles.statsCard, { backgroundColor: theme.colors.card }]}>
           <View style={styles.statRow}>
-            <Text style={styles.statIcon}>📝</Text>
-            <Text style={styles.statLabel}>작성한 일기</Text>
-            <Text style={styles.statValue}>{profile.diaryCount}편</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statRow}>
-            <Text style={styles.statIcon}>⭐</Text>
-            <Text style={styles.statLabel}>현재 레벨</Text>
-            <Text style={styles.statValue}>Lv.{profile.level}</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statRow}>
-            <Text style={styles.statIcon}>🎯</Text>
-            <Text style={styles.statLabel}>다음 레벨까지</Text>
-            <Text style={styles.statValue}>
-              {profile.maxLevel ? '달성 완료!' : `${remaining}편`}
-            </Text>
+            <View style={styles.statDot} />
+            <Text style={[styles.statLabel, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>함께한 일기</Text>
+            <Text style={[styles.statValue, { fontFamily: theme.fontFamily }]}>{profile.diaryCount}편</Text>
           </View>
         </View>
+
+        {/* AI 설정 (접었다 폈다) */}
+        <TouchableOpacity
+          style={styles.settingSectionHeader}
+          onPress={toggleAiSettings}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.sectionTitle, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>AI 코멘트 설정</Text>
+          <Text style={styles.settingChevron}>
+            {showAiSettings ? '∧' : '∨'}
+          </Text>
+        </TouchableOpacity>
+
+        {showAiSettings && (
+          <View style={styles.settingsContent}>
+            <View style={styles.settingRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingLabel, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>AI 코멘트 받기</Text>
+                <Text style={[styles.settingDescription, { fontFamily: theme.fontFamily }]}>
+                  일기 작성 시 AI 코멘트를 받습니다
+                </Text>
+              </View>
+              <Switch
+                value={settings?.aiEnabled ?? true}
+                onValueChange={(value) => updateSettings({ aiEnabled: value })}
+                trackColor={{ false: '#E5E5E5', true: '#FFD0C2' }}
+                thumbColor={settings?.aiEnabled ? '#FF9B7A' : '#fff'}
+              />
+            </View>
+
+            <View style={styles.settingGroup}>
+              <Text style={[styles.settingLabel, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>AI 톤</Text>
+              <View style={styles.toneOptions}>
+                {AI_TONE_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.toneOption,
+                      companionSettings?.aiTone === option.value && styles.toneOptionSelected,
+                    ]}
+                    onPress={() => updateCompanionSettings({ aiTone: option.value })}
+                    disabled={isSavingCompanion}
+                  >
+                    <Text
+                      style={[
+                        styles.toneLabel,
+                        companionSettings?.aiTone === option.value && styles.toneLabelSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.toneDescription,
+                        companionSettings?.aiTone === option.value && styles.toneDescriptionSelected,
+                      ]}
+                    >
+                      {option.description}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={[styles.settingGroup, { marginTop: 12 }]}>
+              <Text style={[styles.settingLabel, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>말투 스타일</Text>
+              <View style={styles.toneOptions}>
+                {SPEECH_STYLE_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.toneOption,
+                      companionSettings?.speechStyle === option.value && styles.toneOptionSelected,
+                    ]}
+                    onPress={() => updateCompanionSettings({ speechStyle: option.value })}
+                    disabled={isSavingCompanion}
+                  >
+                    <Text
+                      style={[
+                        styles.toneLabel,
+                        companionSettings?.speechStyle === option.value && styles.toneLabelSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.toneDescription,
+                        companionSettings?.speechStyle === option.value && styles.toneDescriptionSelected,
+                      ]}
+                    >
+                      {option.description}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* 이름 변경 모달 */}
       <Modal visible={showNameModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.nameModal}>
-            <Text style={styles.modalTitle}>AI 친구 이름 변경</Text>
+            <Text style={styles.modalTitle}>이름 변경</Text>
             <TextInput
               style={styles.nameInput}
               value={newName}
@@ -266,7 +407,8 @@ const styles = StyleSheet.create({
     color: '#2D2D2D',
   },
   settingsIcon: {
-    fontSize: 22,
+    fontSize: 15,
+    color: '#999',
     padding: 4,
   },
   content: {
@@ -288,9 +430,19 @@ const styles = StyleSheet.create({
     elevation: 2,
     marginBottom: 24,
   },
-  profileEmoji: {
-    fontSize: 64,
+  profilePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FFF0EB',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  profileInitial: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#FF9B7A',
   },
   profileImage: {
     width: 80,
@@ -310,23 +462,9 @@ const styles = StyleSheet.create({
     color: '#2D2D2D',
   },
   editIcon: {
-    fontSize: 16,
-  },
-  levelBadge: {
-    fontSize: 15,
-    color: '#FF9B7A',
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  progressSection: {
-    width: '100%',
-    marginBottom: 16,
-    gap: 8,
-  },
-  progressText: {
     fontSize: 13,
-    color: '#999',
-    textAlign: 'center',
+    color: '#FF9B7A',
+    fontWeight: '500',
   },
   profileDescription: {
     fontSize: 14,
@@ -354,8 +492,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
   },
-  statIcon: {
-    fontSize: 20,
+  statDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FF9B7A',
     marginRight: 12,
   },
   statLabel: {
@@ -371,6 +512,75 @@ const styles = StyleSheet.create({
   statDivider: {
     height: 1,
     backgroundColor: '#F0F0F0',
+  },
+  settingSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  settingChevron: {
+    fontSize: 14,
+    color: '#999',
+  },
+  settingsContent: {
+    gap: 12,
+    marginBottom: 8,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+  },
+  settingGroup: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+  },
+  settingLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#2D2D2D',
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 13,
+    color: '#999',
+  },
+  toneOptions: {
+    marginTop: 12,
+    gap: 8,
+  },
+  toneOption: {
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    backgroundColor: '#FAFAFA',
+  },
+  toneOptionSelected: {
+    borderColor: '#FF9B7A',
+    backgroundColor: '#FFF0EB',
+  },
+  toneLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2D2D2D',
+    marginBottom: 2,
+  },
+  toneLabelSelected: {
+    color: '#FF9B7A',
+  },
+  toneDescription: {
+    fontSize: 13,
+    color: '#999',
+  },
+  toneDescriptionSelected: {
+    color: '#FF9B7A',
   },
   modalOverlay: {
     flex: 1,

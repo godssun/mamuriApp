@@ -4,6 +4,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { companionApi } from '../api/client';
 import {
   RootStackParamList,
   AuthStackParamList,
@@ -31,15 +33,14 @@ const MainTab = createBottomTabNavigator<MainTabParamList>();
 const DiaryStack = createNativeStackNavigator<DiaryStackParamList>();
 
 // 탭 아이콘 컴포넌트
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    '일기': '📝',
-    'AI 친구': '🌱',
-  };
-
+function TabIcon({ label, icon, focused }: { label: string; icon?: string; focused: boolean }) {
   return (
     <View style={styles.tabIconContainer}>
-      <Text style={styles.tabIcon}>{icons[label]}</Text>
+      {icon ? (
+        <Text style={styles.tabIcon}>{icon}</Text>
+      ) : (
+        <View style={[styles.tabDot, focused && styles.tabDotFocused]} />
+      )}
       <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>
         {label}
       </Text>
@@ -74,6 +75,18 @@ function DiaryNavigator() {
 
 // 메인 탭 (일기 + AI 친구)
 function MainTabsNavigator() {
+  const { companionName, setCompanionName } = useAuth();
+
+  React.useEffect(() => {
+    if (!companionName) {
+      companionApi.getProfile()
+        .then((profile) => setCompanionName(profile.aiName))
+        .catch(() => {});
+    }
+  }, []);
+
+  const tabLabel = companionName || '친구';
+
   return (
     <MainTab.Navigator
       screenOptions={{
@@ -96,7 +109,7 @@ function MainTabsNavigator() {
         component={CompanionScreen}
         options={{
           tabBarLabel: () => null,
-          tabBarIcon: ({ focused }) => <TabIcon label="AI 친구" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon label={tabLabel} focused={focused} />,
         }}
       />
     </MainTab.Navigator>
@@ -126,10 +139,11 @@ function MainNavigator() {
 // 루트 네비게이션
 export default function Navigation() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { theme } = useTheme();
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
         <Text style={styles.loadingText}>마무리</Text>
       </View>
     );
@@ -174,6 +188,16 @@ const styles = StyleSheet.create({
   tabIcon: {
     fontSize: 24,
     marginBottom: 4,
+  },
+  tabDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#999',
+    marginBottom: 4,
+  },
+  tabDotFocused: {
+    backgroundColor: '#FF9B7A',
   },
   tabLabel: {
     fontSize: 11,

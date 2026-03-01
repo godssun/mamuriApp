@@ -13,6 +13,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { companionApi, ApiError } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 const AI_TONE_OPTIONS = [
   { value: 'warm' as const, label: '따뜻한', description: '공감하고 위로하는 톤' },
@@ -30,7 +31,8 @@ type ToneValue = 'warm' | 'calm' | 'cheerful' | 'realistic';
 type SpeechValue = 'formal' | 'casual';
 
 export default function CompanionSetupScreen() {
-  const { completeOnboarding } = useAuth();
+  const { completeOnboarding, setCompanionName } = useAuth();
+  const { theme } = useTheme();
   const [step, setStep] = useState(0); // 0: 이름, 1: 톤+말투, 2: 사진
   const [aiName, setAiName] = useState('마음이');
   const [aiTone, setAiTone] = useState<ToneValue>('warm');
@@ -63,6 +65,7 @@ export default function CompanionSetupScreen() {
       // 1. AI 이름 설정
       const trimmedName = aiName.trim() || '마음이';
       await companionApi.updateName({ aiName: trimmedName });
+      setCompanionName(trimmedName);
 
       // 2. 톤 + 말투 설정
       await companionApi.updateSettings({
@@ -91,7 +94,7 @@ export default function CompanionSetupScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
@@ -99,10 +102,9 @@ export default function CompanionSetupScreen() {
       >
         {/* 헤더 */}
         <View style={styles.header}>
-          <Text style={styles.headerEmoji}>🌱</Text>
-          <Text style={styles.headerTitle}>AI 친구를 만나보세요</Text>
+          <Text style={styles.headerTitle}>나만의 친구를 만나보세요</Text>
           <Text style={styles.headerSubtitle}>
-            매일 일기를 함께 나눌 AI 친구를 설정해주세요
+            매일 일기를 함께 나눌 친구를 설정해주세요
           </Text>
         </View>
 
@@ -118,9 +120,9 @@ export default function CompanionSetupScreen() {
 
         {step === 0 && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>AI 친구의 이름을 지어주세요</Text>
+            <Text style={styles.stepTitle}>친구의 이름을 지어주세요</Text>
             <Text style={styles.stepDescription}>
-              나만의 AI 친구에게 이름을 붙여주세요
+              나만의 친구에게 이름을 붙여주세요
             </Text>
             <TextInput
               style={styles.nameInput}
@@ -136,7 +138,7 @@ export default function CompanionSetupScreen() {
 
         {step === 1 && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>AI 친구의 성격을 골라주세요</Text>
+            <Text style={styles.stepTitle}>친구의 성격을 골라주세요</Text>
 
             <Text style={styles.optionGroupLabel}>톤</Text>
             <View style={styles.optionGroup}>
@@ -217,7 +219,7 @@ export default function CompanionSetupScreen() {
                 <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarPlaceholderIcon}>📷</Text>
+                  <Text style={styles.avatarPlaceholderIcon}>+</Text>
                   <Text style={styles.avatarPlaceholderText}>탭하여 사진 선택</Text>
                 </View>
               )}
@@ -273,10 +275,6 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 32,
-  },
-  headerEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
   },
   headerTitle: {
     fontSize: 24,
@@ -390,6 +388,8 @@ const styles = StyleSheet.create({
   },
   avatarPlaceholderIcon: {
     fontSize: 36,
+    color: '#CCC',
+    fontWeight: '300',
   },
   avatarPlaceholderText: {
     fontSize: 14,

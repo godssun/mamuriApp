@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import {
   ApiResponse,
   TokenResponse,
@@ -21,9 +22,11 @@ import {
   ConversationReplyResponse,
 } from '../types';
 
-// 개발 환경에서는 localhost, 프로덕션에서는 실제 서버 URL
+// Android 에뮬레이터에서는 10.0.2.2가 호스트 머신의 localhost
+const DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+
 const BASE_URL = __DEV__
-  ? 'http://localhost:8080/api'
+  ? `http://${DEV_HOST}:8080/api`
   : 'https://api.mamuri.app/api';
 
 const TOKEN_KEY = 'auth_tokens';

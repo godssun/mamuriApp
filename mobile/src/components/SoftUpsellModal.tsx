@@ -19,15 +19,13 @@ export default function SoftUpsellModal({ visible, aiName, onLearnMore, onDismis
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          <Text style={styles.emoji}>🌟</Text>
-
           <Text style={styles.title}>
-            {aiName}이(가) 많이 성장했어요!
+            {aiName}와(과) 더 많은 대화를 나눠보세요
           </Text>
 
           <Text style={styles.description}>
             프리미엄으로 업그레이드하면{'\n'}
-            {aiName}이(가) 더 깊이 있는 코멘트를 남겨줄 수 있어요.
+            더 깊이 있는 코멘트를 받을 수 있어요.
           </Text>
 
           <View style={styles.benefits}>
@@ -64,10 +62,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     maxWidth: 320,
-  },
-  emoji: {
-    fontSize: 48,
-    marginBottom: 16,
   },
   title: {
     fontSize: 18,

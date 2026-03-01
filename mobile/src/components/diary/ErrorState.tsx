@@ -1,16 +1,17 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 
 type Props = {
   onRetry: () => void;
 };
 
 export default function ErrorState({ onRetry }: Props) {
+  const { theme } = useTheme();
   return (
     <View style={styles.container}>
-      <Text style={styles.emoji}>☁️</Text>
-      <Text style={styles.title}>일기를 불러오지 못했어요</Text>
-      <Text style={styles.subtitle}>
+      <Text style={[styles.title, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>일기를 불러오지 못했어요</Text>
+      <Text style={[styles.subtitle, { color: theme.colors.textSecondary, fontFamily: theme.fontFamily }]}>
         네트워크 연결을 확인하고{'\n'}
         다시 시도해주세요
       </Text>
@@ -33,10 +34,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
-  },
-  emoji: {
-    fontSize: 64,
-    marginBottom: 16,
   },
   title: {
     fontSize: 20,

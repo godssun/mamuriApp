@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface Props {
   content: string;
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export default function UserBubble({ content, createdAt }: Props) {
+  const { theme } = useTheme();
   const formatTime = (dateString?: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -20,7 +22,7 @@ export default function UserBubble({ content, createdAt }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.bubble}>
-        <Text style={styles.content}>{content}</Text>
+        <Text style={[styles.content, { fontFamily: theme.fontFamily, fontSize: Math.round(15 * theme.fontScale), lineHeight: Math.round(24 * theme.fontScale) }]}>{content}</Text>
       </View>
       {createdAt && (
         <Text style={styles.time}>{formatTime(createdAt)}</Text>

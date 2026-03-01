@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../types';
 import { subscriptionApi, ApiError } from '../api/client';
 import { useSubscription } from '../contexts/SubscriptionContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<MainStackParamList, 'Subscription'>;
@@ -75,6 +76,7 @@ const PLANS: Plan[] = [
 
 export default function SubscriptionScreen({ navigation }: Props) {
   const { info, isSubscribed, refresh } = useSubscription();
+  const { theme } = useTheme();
   const [selectedTier, setSelectedTier] = useState<PlanTier>('deluxe');
   const [selectedPeriod, setSelectedPeriod] = useState<PlanPeriod>('monthly');
   const [isLoading, setIsLoading] = useState(false);
@@ -148,12 +150,12 @@ export default function SubscriptionScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← 뒤로</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>구독 관리</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>구독 관리</Text>
         <View style={styles.headerSpacer} />
       </View>
 

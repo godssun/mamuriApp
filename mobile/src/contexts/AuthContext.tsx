@@ -6,6 +6,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isNewUser: boolean;
+  companionName: string;
+  setCompanionName: (name: string) => void;
   login: (data: LoginRequest) => Promise<void>;
   signup: (data: SignupRequest) => Promise<void>;
   logout: () => Promise<void>;
@@ -19,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);
+  const [companionName, setCompanionName] = useState('');
 
   // forceLogout: API client에서 TOKEN_REUSE_DETECTED 등 호출
   const forceLogout = useCallback(() => {
@@ -84,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      isAuthenticated, isLoading, isNewUser,
+      isAuthenticated, isLoading, isNewUser, companionName, setCompanionName,
       login, signup, logout, forceLogout, completeOnboarding,
     }}>
       {children}

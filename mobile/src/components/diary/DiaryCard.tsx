@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Diary } from '../../types';
+import { useTheme } from '../../contexts/ThemeContext';
 
 type Props = {
   diary: Diary;
@@ -8,16 +9,17 @@ type Props = {
 };
 
 function DiaryCard({ diary, onPress }: Props) {
+  const { theme } = useTheme();
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, { backgroundColor: theme.colors.card }]}
       onPress={() => onPress(diary.id)}
       activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={`일기: ${diary.title}`}
     >
-      <Text style={styles.title} numberOfLines={1}>{diary.title}</Text>
-      <Text style={styles.content} numberOfLines={2}>{diary.content}</Text>
+      <Text style={[styles.title, { color: theme.colors.text, fontFamily: theme.fontFamily, fontSize: Math.round(18 * theme.fontScale) }]} numberOfLines={1}>{diary.title}</Text>
+      <Text style={[styles.content, { fontFamily: theme.fontFamily, fontSize: Math.round(14 * theme.fontScale), lineHeight: Math.round(20 * theme.fontScale) }]} numberOfLines={2}>{diary.content}</Text>
       {diary.aiComment && (
         <View style={styles.aiCommentBadge}>
           <Text style={styles.aiCommentText}>AI 코멘트</Text>

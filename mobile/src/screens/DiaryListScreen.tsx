@@ -19,6 +19,7 @@ import {
   LoadingState,
 } from '../components/diary';
 import StreakHeader from '../components/StreakHeader';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<DiaryStackParamList, 'DiaryListHome'>;
@@ -49,6 +50,7 @@ const formatDateISO = (date: Date): string => {
 
 export default function DiaryListScreen({ navigation }: Props) {
   const mainNavigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { theme } = useTheme();
   const [diaries, setDiaries] = useState<Diary[]>([]);
   const [calendarDates, setCalendarDates] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
@@ -149,11 +151,11 @@ export default function DiaryListScreen({ navigation }: Props) {
     const isToday = section.diaryDate === todayStr;
     return (
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{section.title}</Text>
+        <Text style={[styles.sectionTitle, { fontFamily: theme.fontFamily }]}>{section.title}</Text>
         {isToday && <Text style={styles.todayBadge}>오늘</Text>}
       </View>
     );
-  }, [todayStr]);
+  }, [todayStr, theme.fontFamily]);
 
   if (isLoading) {
     return <LoadingState />;
@@ -161,11 +163,11 @@ export default function DiaryListScreen({ navigation }: Props) {
 
   if (hasError) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>나의 일기</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>나의 일기</Text>
           <TouchableOpacity onPress={() => mainNavigation.navigate('Settings')}>
-            <Text style={styles.settingsIcon}>⚙️</Text>
+            <Text style={[styles.settingsIcon, { color: theme.colors.textSecondary }]}>설정</Text>
           </TouchableOpacity>
         </View>
         <ErrorState onRetry={() => loadDiaries()} />
@@ -174,12 +176,12 @@ export default function DiaryListScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>나의 일기</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>나의 일기</Text>
         <TouchableOpacity onPress={() => mainNavigation.navigate('Settings')}>
-          <Text style={styles.settingsIcon}>⚙️</Text>
+          <Text style={styles.settingsIcon}>설정</Text>
         </TouchableOpacity>
       </View>
 
@@ -266,7 +268,8 @@ const styles = StyleSheet.create({
     color: '#2D2D2D',
   },
   settingsIcon: {
-    fontSize: 22,
+    fontSize: 15,
+    color: '#999',
     padding: 4,
   },
   listContent: {

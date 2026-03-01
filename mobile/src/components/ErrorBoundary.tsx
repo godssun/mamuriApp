@@ -31,7 +31,6 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <View style={styles.container}>
-          <Text style={styles.emoji}>🔧</Text>
           <Text style={styles.title}>문제가 발생했어요</Text>
           <Text style={styles.subtitle}>
             예상치 못한 오류가 발생했어요.{'\n'}
@@ -61,10 +60,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
     backgroundColor: '#FFF9F5',
-  },
-  emoji: {
-    fontSize: 64,
-    marginBottom: 16,
   },
   title: {
     fontSize: 20,

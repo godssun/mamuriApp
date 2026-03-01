@@ -16,11 +16,11 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation as useRootNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp as RootNav } from '@react-navigation/native-stack';
-import { diaryApi, companionApi, ApiError } from '../api/client';
-import { DiaryStackParamList, MainStackParamList, LevelUpInfo } from '../types';
-import { LevelUpModal } from '../components/companion';
+import { diaryApi, ApiError } from '../api/client';
+import { DiaryStackParamList, MainStackParamList } from '../types';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import CrisisBanner from '../components/CrisisBanner';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<DiaryStackParamList, 'WriteDiary'>;
@@ -45,21 +45,12 @@ const formatDateISO = (date: Date): string => {
 export default function WriteDiaryScreen({ navigation }: Props) {
   const rootNavigation = useRootNavigation<RootNav<MainStackParamList>>();
   const { info, isPremium, quotaRemaining, hasCrisisFlag, refresh: refreshSubscription } = useSubscription();
+  const { theme } = useTheme();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [diaryDate, setDiaryDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [levelUpInfo, setLevelUpInfo] = useState<LevelUpInfo | null>(null);
-  const [showLevelUp, setShowLevelUp] = useState(false);
-  const [aiName, setAiName] = useState('마음이');
-  const [savedDiaryId, setSavedDiaryId] = useState<number | null>(null);
-
-  React.useEffect(() => {
-    companionApi.getProfile()
-      .then((profile) => setAiName(profile.aiName))
-      .catch(() => {});
-  }, []);
 
   const getDefaultTitle = () => {
     const month = diaryDate.getMonth() + 1;
@@ -98,14 +89,7 @@ export default function WriteDiaryScreen({ navigation }: Props) {
 
       // AI 성공 후 구독 상태 갱신 (쿼터 반영)
       refreshSubscription();
-
-      if (diary.levelUp) {
-        setSavedDiaryId(diary.id);
-        setLevelUpInfo(diary.levelUp);
-        setShowLevelUp(true);
-      } else {
-        navigation.replace('DiaryDetail', { diaryId: diary.id });
-      }
+      navigation.replace('DiaryDetail', { diaryId: diary.id });
     } catch (error) {
       if (error instanceof ApiError && error.status === 429) {
         // 쿼터 초과 → 페이월로 이동
@@ -135,26 +119,19 @@ export default function WriteDiaryScreen({ navigation }: Props) {
     }
   };
 
-  const handleLevelUpClose = () => {
-    setShowLevelUp(false);
-    if (savedDiaryId) {
-      navigation.replace('DiaryDetail', { diaryId: savedDiaryId });
-    }
-  };
-
   const isToday = formatDateISO(diaryDate) === formatDateISO(new Date());
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
         <TouchableOpacity onPress={handleCancel}>
           <Text style={styles.cancelButton}>취소</Text>
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>일기 쓰기</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>일기 쓰기</Text>
           {!isPremium && info?.dailyRepliesMax !== -1 && (
             <Text style={[
               styles.quotaCounter,
@@ -188,25 +165,25 @@ export default function WriteDiaryScreen({ navigation }: Props) {
           style={styles.dateSelector}
           onPress={() => setShowDatePicker(true)}
         >
-          <Text style={styles.dateIcon}>📅</Text>
-          <Text style={styles.dateText}>{formatDateKorean(diaryDate)}</Text>
+          <View style={styles.dateDot} />
+          <Text style={[styles.dateText, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>{formatDateKorean(diaryDate)}</Text>
           {isToday && <Text style={styles.todayBadge}>오늘</Text>}
           <Text style={styles.dateChevron}>›</Text>
         </TouchableOpacity>
 
         <TextInput
-          style={styles.titleInput}
+          style={[styles.titleInput, { color: theme.colors.text, borderBottomColor: theme.colors.border, fontFamily: theme.fontFamily, fontSize: Math.round(24 * theme.fontScale) }]}
           placeholder={getDefaultTitle()}
-          placeholderTextColor="#CCC"
+          placeholderTextColor={theme.colors.textSecondary}
           value={title}
           onChangeText={setTitle}
           maxLength={100}
         />
 
         <TextInput
-          style={styles.contentInput}
+          style={[styles.contentInput, { color: theme.colors.text, fontFamily: theme.fontFamily, fontSize: Math.round(16 * theme.fontScale), lineHeight: Math.round(26 * theme.fontScale) }]}
           placeholder="오늘 하루는 어떠셨나요?&#10;당신의 이야기를 들려주세요."
-          placeholderTextColor="#CCC"
+          placeholderTextColor={theme.colors.textSecondary}
           value={content}
           onChangeText={setContent}
           multiline
@@ -215,7 +192,7 @@ export default function WriteDiaryScreen({ navigation }: Props) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
+        <Text style={[styles.footerText, { fontFamily: theme.fontFamily }]}>
           AI가 당신의 일기를 읽고 따뜻한 코멘트를 남겨드릴게요
         </Text>
       </View>
@@ -260,14 +237,6 @@ export default function WriteDiaryScreen({ navigation }: Props) {
           display="default"
           onChange={handleDateChange}
           maximumDate={new Date()}
-        />
-      )}
-      {levelUpInfo && (
-        <LevelUpModal
-          visible={showLevelUp}
-          levelUpInfo={levelUpInfo}
-          aiName={aiName}
-          onClose={handleLevelUpClose}
         />
       )}
     </KeyboardAvoidingView>
@@ -336,8 +305,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  dateIcon: {
-    fontSize: 18,
+  dateDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FF9B7A',
     marginRight: 10,
   },
   dateText: {
