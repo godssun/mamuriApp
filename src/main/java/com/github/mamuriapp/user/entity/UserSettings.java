@@ -40,14 +40,30 @@ public class UserSettings {
     @Column(name = "ai_speech_style", nullable = false)
     private String aiSpeechStyle = "formal";
 
+    /** 배경 테마 (warm, light, dark) */
+    @Column(name = "background_theme", nullable = false)
+    private String backgroundTheme = "warm";
+
+    /** 글자 폰트 (system, serif) */
+    @Column(name = "font_family", nullable = false)
+    private String fontFamily = "system";
+
+    /** 글자 크기 (small, medium, large) */
+    @Column(name = "font_size", nullable = false)
+    private String fontSize = "medium";
+
     @Builder
     public UserSettings(User user, String aiTone, boolean aiEnabled,
-                        String aiAvatar, String aiSpeechStyle) {
+                        String aiAvatar, String aiSpeechStyle,
+                        String backgroundTheme, String fontFamily, String fontSize) {
         this.user = user;
         this.aiTone = aiTone;
         this.aiEnabled = aiEnabled;
         this.aiAvatar = aiAvatar;
         this.aiSpeechStyle = aiSpeechStyle != null ? aiSpeechStyle : "formal";
+        this.backgroundTheme = backgroundTheme != null ? backgroundTheme : "warm";
+        this.fontFamily = fontFamily != null ? fontFamily : "system";
+        this.fontSize = fontSize != null ? fontSize : "medium";
     }
 
     /**
@@ -84,5 +100,17 @@ public class UserSettings {
      */
     public void updateAiSpeechStyle(String aiSpeechStyle) {
         this.aiSpeechStyle = aiSpeechStyle;
+    }
+
+    public void updateBackgroundTheme(String backgroundTheme) {
+        this.backgroundTheme = backgroundTheme;
+    }
+
+    public void updateFontFamily(String fontFamily) {
+        this.fontFamily = fontFamily;
+    }
+
+    public void updateFontSize(String fontSize) {
+        this.fontSize = fontSize;
     }
 }

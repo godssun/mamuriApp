@@ -17,6 +17,12 @@ public class UserSettingsDto {
 
     private boolean aiEnabled;
 
+    private String backgroundTheme;
+
+    private String fontFamily;
+
+    private String fontSize;
+
     /**
      * 엔티티를 DTO로 변환한다.
      *
@@ -24,6 +30,12 @@ public class UserSettingsDto {
      * @return UserSettingsDto
      */
     public static UserSettingsDto from(UserSettings entity) {
-        return new UserSettingsDto(entity.getAiTone(), entity.isAiEnabled());
+        return new UserSettingsDto(
+                entity.getAiTone(),
+                entity.isAiEnabled(),
+                entity.getBackgroundTheme(),
+                entity.getFontFamily(),
+                entity.getFontSize()
+        );
     }
 }
