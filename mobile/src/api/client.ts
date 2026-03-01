@@ -14,6 +14,7 @@ import {
   CompanionUpdateRequest,
   SubscriptionInfo,
   CheckoutResponse,
+  StreakResponse,
 } from '../types';
 
 // 개발 환경에서는 localhost, 프로덕션에서는 실제 서버 URL
@@ -306,6 +307,10 @@ export const companionApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  },
+
+  async getStreak(): Promise<StreakResponse> {
+    return request<StreakResponse>('/companion/streak');
   },
 };
 

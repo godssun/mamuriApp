@@ -40,6 +40,12 @@ export interface LevelUpInfo {
   newLevel: number;
 }
 
+export interface StreakInfo {
+  currentStreak: number;
+  longestStreak: number;
+  streakActive: boolean;
+}
+
 // 일기
 export interface AiComment {
   id: number;
@@ -54,6 +60,7 @@ export interface Diary {
   diaryDate: string; // YYYY-MM-DD
   aiComment: AiComment | null;
   levelUp?: LevelUpInfo | null;
+  streakInfo?: StreakInfo | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -68,6 +75,12 @@ export interface DiaryUpdateRequest {
   title: string;
   content: string;
   diaryDate?: string; // YYYY-MM-DD (선택적)
+}
+
+export interface StreakResponse {
+  currentStreak: number;
+  longestStreak: number;
+  lastDiaryDate: string | null;
 }
 
 export interface DiaryCalendarResponse {

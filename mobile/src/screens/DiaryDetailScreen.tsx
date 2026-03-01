@@ -176,6 +176,7 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
               </TouchableOpacity>
             </View>
           )}
+
         </View>
       </ScrollView>
     </View>

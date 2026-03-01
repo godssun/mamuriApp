@@ -9,8 +9,8 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { diaryApi } from '../api/client';
-import { Diary, DiaryStackParamList, MainStackParamList } from '../types';
+import { diaryApi, companionApi } from '../api/client';
+import { Diary, DiaryStackParamList, MainStackParamList, StreakResponse } from '../types';
 import {
   CalendarSection,
   DiaryCard,
@@ -18,6 +18,7 @@ import {
   ErrorState,
   LoadingState,
 } from '../components/diary';
+import StreakHeader from '../components/StreakHeader';
 
 type Props = {
   navigation: NativeStackNavigationProp<DiaryStackParamList, 'DiaryListHome'>;
@@ -56,17 +57,20 @@ export default function DiaryListScreen({ navigation }: Props) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [showFullCalendar, setShowFullCalendar] = useState(true);
+  const [streakData, setStreakData] = useState<StreakResponse | null>(null);
 
   const loadDiaries = useCallback(async (showLoader = true) => {
     if (showLoader) setIsLoading(true);
     setHasError(false);
     try {
-      const [diaryData, calendarData] = await Promise.all([
+      const [diaryData, calendarData, streakResult] = await Promise.all([
         diaryApi.getListByMonth(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1),
         diaryApi.getCalendar(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1),
+        companionApi.getStreak().catch(() => null),
       ]);
       setDiaries(diaryData);
       setCalendarDates(calendarData.datesWithDiaries);
+      setStreakData(streakResult);
     } catch (error) {
       console.error('Failed to load diaries:', error);
       setHasError(true);
@@ -179,6 +183,14 @@ export default function DiaryListScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
+      {/* 스트릭 */}
+      {streakData && (streakData.currentStreak > 0 || streakData.longestStreak > 0) && (
+        <StreakHeader
+          currentStreak={streakData.currentStreak}
+          longestStreak={streakData.longestStreak}
+        />
+      )}
+
       {/* 캘린더 */}
       <CalendarSection
         selectedMonth={selectedMonth}
@@ -208,6 +220,7 @@ export default function DiaryListScreen({ navigation }: Props) {
           <EmptyState
             month={selectedMonth.getMonth() + 1}
             selectedDate={selectedDate}
+            currentStreak={streakData?.currentStreak}
           />
         }
         stickySectionHeadersEnabled={false}
