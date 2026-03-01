@@ -5,51 +5,57 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Switch,
   Alert,
   ActivityIndicator,
   ScrollView,
   Modal,
   Image,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import { settingsApi, companionApi, ApiError } from '../api/client';
-import { UserSettings, CompanionProfile, CompanionSettings, MainStackParamList } from '../types';
-import { getCompanionConfig } from '../constants/companion';
-
-const AI_TONE_OPTIONS = [
-  { value: 'warm' as const, label: '따뜻한', description: '공감하고 위로하는 톤' },
-  { value: 'calm' as const, label: '차분한', description: '안정적이고 담담한 톤' },
-  { value: 'cheerful' as const, label: '밝은', description: '긍정적이고 활기찬 톤' },
-  { value: 'realistic' as const, label: '현실적인', description: '솔직하고 담백한 톤' },
-];
-
-const SPEECH_STYLE_OPTIONS = [
-  { value: 'formal' as const, label: '존댓말', description: '정중하고 예의 바른 말투' },
-  { value: 'casual' as const, label: '반말', description: '편안한 친구 같은 말투' },
-];
+import { useTheme } from '../contexts/ThemeContext';
+import { companionApi, ApiError } from '../api/client';
+import { CompanionProfile, CompanionSettings, MainStackParamList } from '../types';
 
 function getAvatarImageUri(avatar: string | null | undefined): string | null {
   if (!avatar || avatar.length === 0) return null;
   if (avatar.startsWith('http')) return avatar;
-  if (avatar.startsWith('/uploads/')) return `http://localhost:8080${avatar}`;
+  if (avatar.startsWith('/uploads/')) {
+    const host = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+    return `http://${host}:8080${avatar}`;
+  }
   return null; // 이모지 등 비정상 값은 무시
 }
+
+const THEME_OPTIONS = [
+  { value: 'warm' as const, label: '따뜻한', bg: '#FFF9F5', border: '#F0F0F0' },
+  { value: 'light' as const, label: '밝은', bg: '#FFFFFF', border: '#E5E5E5' },
+  { value: 'dark' as const, label: '어두운', bg: '#1A1A2E', border: '#2A2A4E' },
+];
+
+const FONT_SIZE_OPTIONS = [
+  { value: 'small' as const, label: '작게', scale: 0.9 },
+  { value: 'medium' as const, label: '보통', scale: 1.0 },
+  { value: 'large' as const, label: '크게', scale: 1.15 },
+];
+
+const FONT_FAMILY_OPTIONS = [
+  { value: 'system' as const, label: '기본', font: undefined as string | undefined },
+  { value: 'serif' as const, label: '명조', font: 'NanumMyeongjo_400Regular' as string | undefined },
+];
 
 export default function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { logout } = useAuth();
   const { isPremium } = useSubscription();
-  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const { theme, updateAppearance } = useTheme();
   const [companion, setCompanion] = useState<CompanionProfile | null>(null);
   const [companionSettings, setCompanionSettings] = useState<CompanionSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isSavingCompanion, setIsSavingCompanion] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
   const [newAiName, setNewAiName] = useState('');
@@ -57,12 +63,10 @@ export default function SettingsScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const [settingsData, companionData, companionSettingsData] = await Promise.all([
-        settingsApi.get(),
+      const [companionData, companionSettingsData] = await Promise.all([
         companionApi.getProfile(),
         companionApi.getSettings(),
       ]);
-      setSettings(settingsData);
       setCompanion(companionData);
       setCompanionSettings(companionSettingsData);
     } catch (error) {
@@ -77,50 +81,6 @@ export default function SettingsScreen() {
       loadData();
     }, [loadData])
   );
-
-  const updateSettings = async (updates: Partial<UserSettings>) => {
-    if (!settings) return;
-
-    const newSettings = { ...settings, ...updates };
-    setSettings(newSettings);
-    setIsSaving(true);
-
-    try {
-      await settingsApi.update(newSettings);
-    } catch (error) {
-      setSettings(settings);
-      const message = error instanceof ApiError
-        ? error.message
-        : '설정 저장에 실패했습니다.';
-      Alert.alert('오류', message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const updateCompanionSettings = async (updates: Partial<CompanionSettings>) => {
-    if (!companionSettings) return;
-
-    const newSettings = { ...companionSettings, ...updates };
-    setCompanionSettings(newSettings);
-    setIsSavingCompanion(true);
-
-    try {
-      const result = await companionApi.updateSettings({
-        speechStyle: newSettings.speechStyle,
-        aiTone: newSettings.aiTone,
-      });
-      setCompanionSettings(result);
-    } catch (error) {
-      setCompanionSettings(companionSettings);
-      const message = error instanceof ApiError
-        ? error.message
-        : '설정 저장에 실패했습니다.';
-      Alert.alert('오류', message);
-    } finally {
-      setIsSavingCompanion(false);
-    }
-  };
 
   const handlePickAvatar = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -155,7 +115,7 @@ export default function SettingsScreen() {
   const handleRemoveAvatar = () => {
     Alert.alert(
       '프로필 사진 삭제',
-      '기본 이모지로 되돌리시겠어요?',
+      '기본 프로필로 되돌리시겠어요?',
       [
         { text: '취소', style: 'cancel' },
         {
@@ -224,7 +184,7 @@ export default function SettingsScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator size="large" color="#FF9B7A" />
       </View>
     );
@@ -233,21 +193,21 @@ export default function SettingsScreen() {
   const avatarUrl = getAvatarImageUri(companionSettings?.avatar);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← 뒤로</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>설정</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>설정</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-        {/* AI 친구 프로필 */}
+        {/* 프로필 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>AI 친구</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>{companion?.aiName ?? '친구'}</Text>
 
-          <View style={styles.profileCard}>
+          <View style={[styles.profileCard, { backgroundColor: theme.colors.card }]}>
             <TouchableOpacity
               style={styles.profileAvatarWrap}
               onPress={handlePickAvatar}
@@ -266,123 +226,155 @@ export default function SettingsScreen() {
                   )}
                 />
               ) : (
-                <Text style={styles.profileAvatarEmoji}>
-                  {companion ? getCompanionConfig(companion.level).emoji : '🌱'}
+                <Text style={styles.profileAvatarInitial}>
+                  {companion?.aiName?.charAt(0) ?? '?'}
                 </Text>
               )}
-              <View style={styles.profileAvatarBadge}>
-                <Text style={styles.profileAvatarBadgeText}>📷</Text>
-              </View>
             </TouchableOpacity>
 
             <View style={styles.profileInfo}>
               <TouchableOpacity style={styles.profileNameRow} onPress={handleOpenNameModal}>
                 <Text style={styles.profileName}>{companion?.aiName ?? '마음이'}</Text>
-                <Text style={styles.profileEditIcon}>✏️</Text>
+                <Text style={styles.profileEditText}>변경</Text>
               </TouchableOpacity>
               <Text style={styles.profileSub}>
                 {avatarUrl ? '사진 탭하여 변경' : '사진 탭하여 설정'}
               </Text>
               {avatarUrl && (
                 <TouchableOpacity onPress={handleRemoveAvatar} disabled={isUploadingAvatar}>
-                  <Text style={styles.profileResetText}>기본 이모지로 되돌리기</Text>
+                  <Text style={styles.profileResetText}>기본 프로필로 되돌리기</Text>
                 </TouchableOpacity>
               )}
             </View>
           </View>
         </View>
 
-        {/* AI 코멘트 설정 */}
+        {/* 외관 섹션 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>AI 코멘트</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>외관</Text>
 
-          <View style={styles.settingRow}>
-            <View>
-              <Text style={styles.settingLabel}>AI 코멘트 받기</Text>
-              <Text style={styles.settingDescription}>
-                일기 작성 시 AI 코멘트를 받습니다
-              </Text>
-            </View>
-            <Switch
-              value={settings?.aiEnabled ?? true}
-              onValueChange={(value) => updateSettings({ aiEnabled: value })}
-              trackColor={{ false: '#E5E5E5', true: '#FFD0C2' }}
-              thumbColor={settings?.aiEnabled ? '#FF9B7A' : '#fff'}
-            />
-          </View>
-
-          <View style={styles.settingGroup}>
-            <Text style={styles.settingLabel}>AI 톤</Text>
-            <View style={styles.toneOptions}>
-              {AI_TONE_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.toneOption,
-                    companionSettings?.aiTone === option.value && styles.toneOptionSelected,
-                  ]}
-                  onPress={() => updateCompanionSettings({ aiTone: option.value })}
-                  disabled={isSavingCompanion}
-                >
-                  <Text
+          {/* 배경 테마 */}
+          <View style={[styles.settingRow, { backgroundColor: theme.colors.card }]}>
+            <View style={styles.settingRowLeft}>
+              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>배경 테마</Text>
+              <View style={styles.themePreviewRow}>
+                {THEME_OPTIONS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
                     style={[
-                      styles.toneLabel,
-                      companionSettings?.aiTone === option.value && styles.toneLabelSelected,
+                      styles.themeCircle,
+                      { backgroundColor: opt.bg, borderColor: opt.border },
+                      theme.colors.background === opt.bg && styles.themeCircleSelected,
                     ]}
+                    onPress={() => updateAppearance({ backgroundTheme: opt.value })}
                   >
-                    {option.label}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.toneDescription,
-                      companionSettings?.aiTone === option.value && styles.toneDescriptionSelected,
-                    ]}
-                  >
-                    {option.description}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    {theme.colors.background === opt.bg && (
+                      <View style={[
+                        styles.themeCheckDot,
+                        { backgroundColor: opt.value === 'dark' ? '#E8E8E8' : '#FF9B7A' },
+                      ]} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           </View>
 
-          <View style={[styles.settingGroup, { marginTop: 12 }]}>
-            <Text style={styles.settingLabel}>말투 스타일</Text>
-            <View style={styles.toneOptions}>
-              {SPEECH_STYLE_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.toneOption,
-                    companionSettings?.speechStyle === option.value && styles.toneOptionSelected,
-                  ]}
-                  onPress={() => updateCompanionSettings({ speechStyle: option.value })}
-                  disabled={isSavingCompanion}
-                >
-                  <Text
-                    style={[
-                      styles.toneLabel,
-                      companionSettings?.speechStyle === option.value && styles.toneLabelSelected,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.toneDescription,
-                      companionSettings?.speechStyle === option.value && styles.toneDescriptionSelected,
-                    ]}
-                  >
-                    {option.description}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+          {/* 글자 크기 */}
+          <View style={[styles.settingRow, { backgroundColor: theme.colors.card }]}>
+            <View style={styles.settingRowLeft}>
+              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>글자 크기</Text>
+              <View style={styles.optionRow}>
+                {FONT_SIZE_OPTIONS.map((opt) => {
+                  const currentSize = theme.fontScale === 0.9 ? 'small' : theme.fontScale === 1.15 ? 'large' : 'medium';
+                  const isSelected = currentSize === opt.value;
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[
+                        styles.fontSizeCard,
+                        { borderColor: theme.colors.border },
+                        isSelected && styles.fontSizeCardSelected,
+                      ]}
+                      onPress={() => updateAppearance({ fontSize: opt.value })}
+                    >
+                      <Text style={[
+                        styles.fontSizeLabel,
+                        { color: theme.colors.textSecondary },
+                        isSelected && { color: '#FF9B7A' },
+                      ]}>
+                        {opt.label}
+                      </Text>
+                      <Text style={{
+                        fontSize: Math.round(16 * opt.scale),
+                        color: theme.colors.text,
+                        fontFamily: theme.fontFamily,
+                      }}>
+                        가나다라
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
+          </View>
+
+          {/* 글자 폰트 */}
+          <View style={[styles.settingRow, { backgroundColor: theme.colors.card }]}>
+            <View style={styles.settingRowLeft}>
+              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>글자 폰트</Text>
+              <View style={styles.optionRow}>
+                {FONT_FAMILY_OPTIONS.map((opt) => {
+                  const isSelected = (theme.fontFamily === undefined && opt.value === 'system')
+                    || (theme.fontFamily === 'serif' && opt.value === 'serif');
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[
+                        styles.fontFamilyCard,
+                        { borderColor: theme.colors.border },
+                        isSelected && styles.fontFamilyCardSelected,
+                      ]}
+                      onPress={() => updateAppearance({ fontFamily: opt.value })}
+                    >
+                      <Text style={[
+                        styles.fontFamilyLabel,
+                        { color: theme.colors.textSecondary },
+                        isSelected && { color: '#FF9B7A' },
+                      ]}>
+                        {opt.label}
+                      </Text>
+                      <Text style={{
+                        fontSize: 15,
+                        fontFamily: opt.font,
+                        color: theme.colors.text,
+                      }}>
+                        오늘 하루는 어떠셨나요
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+
+          {/* 미리보기 */}
+          <View style={[styles.previewCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={[styles.previewLabel, { color: theme.colors.textSecondary }]}>미리보기</Text>
+            <Text style={{
+              fontSize: Math.round(16 * theme.fontScale),
+              fontFamily: theme.fontFamily,
+              color: theme.colors.text,
+              lineHeight: Math.round(26 * theme.fontScale),
+            }}>
+              오늘 하루는 참 좋았어요.{'\n'}내일은 더 좋은 하루가 될 거예요.
+            </Text>
           </View>
         </View>
 
         {/* 구독 섹션 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>구독</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>구독</Text>
 
           <TouchableOpacity
             style={styles.settingRow}
@@ -422,7 +414,7 @@ export default function SettingsScreen() {
       <Modal visible={showNameModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.nameModal}>
-            <Text style={styles.modalTitle}>AI 친구 이름 변경</Text>
+            <Text style={styles.modalTitle}>이름 변경</Text>
             <TextInput
               style={styles.nameInput}
               value={newAiName}
@@ -524,11 +516,6 @@ const styles = StyleSheet.create({
     color: '#CCC',
     marginLeft: 8,
   },
-  settingGroup: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-  },
   settingLabel: {
     fontSize: 16,
     fontWeight: '500',
@@ -538,37 +525,6 @@ const styles = StyleSheet.create({
   settingDescription: {
     fontSize: 13,
     color: '#999',
-  },
-  toneOptions: {
-    marginTop: 12,
-    gap: 8,
-  },
-  toneOption: {
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    backgroundColor: '#FAFAFA',
-  },
-  toneOptionSelected: {
-    borderColor: '#FF9B7A',
-    backgroundColor: '#FFF0EB',
-  },
-  toneLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#2D2D2D',
-    marginBottom: 2,
-  },
-  toneLabelSelected: {
-    color: '#FF9B7A',
-  },
-  toneDescription: {
-    fontSize: 13,
-    color: '#999',
-  },
-  toneDescriptionSelected: {
-    color: '#FF9B7A',
   },
   profileCard: {
     flexDirection: 'row',
@@ -592,33 +548,16 @@ const styles = StyleSheet.create({
     height: 68,
     borderRadius: 34,
   },
-  profileAvatarEmoji: {
-    fontSize: 36,
+  profileAvatarInitial: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FF9B7A',
   },
   profileAvatarLoading: {
     width: 68,
     height: 68,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  profileAvatarBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  profileAvatarBadgeText: {
-    fontSize: 10,
   },
   profileInfo: {
     flex: 1,
@@ -634,8 +573,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2D2D2D',
   },
-  profileEditIcon: {
-    fontSize: 14,
+  profileEditText: {
+    fontSize: 13,
+    color: '#FF9B7A',
+    fontWeight: '500',
   },
   profileSub: {
     fontSize: 13,
@@ -729,5 +670,95 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#fff',
     fontWeight: '600',
+  },
+  themePreviewRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  themeCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  themeCircleSelected: {
+    borderColor: '#FF9B7A',
+    borderWidth: 2.5,
+  },
+  themeCheckDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  optionChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    backgroundColor: '#FAFAFA',
+  },
+  optionChipSelected: {
+    borderColor: '#FF9B7A',
+    backgroundColor: '#FFF0EB',
+  },
+  optionChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  optionChipTextSelected: {
+    color: '#FF9B7A',
+  },
+  fontSizeCard: {
+    flex: 1,
+    alignItems: 'center' as const,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    backgroundColor: '#FAFAFA',
+    gap: 6,
+  },
+  fontSizeCardSelected: {
+    borderColor: '#FF9B7A',
+    backgroundColor: '#FFF0EB',
+  },
+  fontSizeLabel: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+  },
+  fontFamilyCard: {
+    flex: 1,
+    alignItems: 'center' as const,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    backgroundColor: '#FAFAFA',
+    gap: 4,
+  },
+  fontFamilyCardSelected: {
+    borderColor: '#FF9B7A',
+    backgroundColor: '#FFF0EB',
+  },
+  fontFamilyLabel: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+  },
+  previewCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  previewLabel: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    marginBottom: 8,
   },
 });

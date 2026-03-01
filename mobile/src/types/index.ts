@@ -93,6 +93,9 @@ export interface DiaryCalendarResponse {
 export interface UserSettings {
   aiTone: 'warm' | 'calm' | 'cheerful' | 'realistic';
   aiEnabled: boolean;
+  backgroundTheme: 'warm' | 'light' | 'dark';
+  fontFamily: 'system' | 'serif';
+  fontSize: 'small' | 'medium' | 'large';
 }
 
 // 컴패니언 개인화 설정
