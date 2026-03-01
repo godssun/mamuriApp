@@ -3,6 +3,7 @@ package com.github.mamuriapp.user.service;
 import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
 import com.github.mamuriapp.user.dto.CompanionResponse;
+import com.github.mamuriapp.user.dto.StreakResponse;
 import com.github.mamuriapp.user.entity.User;
 import com.github.mamuriapp.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -81,6 +82,22 @@ public class CompanionService {
     public static long nextLevelThreshold(int level) {
         if (level >= 10) return -1;
         return (long) level * 5;
+    }
+
+    /**
+     * 스트릭 정보를 조회한다.
+     *
+     * @param userId 사용자 ID
+     * @return 스트릭 응답
+     */
+    public StreakResponse getStreak(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        return new StreakResponse(
+                user.getCurrentStreak(),
+                user.getLongestStreak(),
+                user.getLastDiaryDate()
+        );
     }
 
     private CompanionResponse toResponse(User user, int level, long diaryCount) {

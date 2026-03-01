@@ -1,5 +1,7 @@
 package com.github.mamuriapp.ai.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.mamuriapp.ai.config.AiProperties;
 import com.github.mamuriapp.ai.dto.AiCommentResponse;
 import com.github.mamuriapp.ai.entity.AiComment;
@@ -23,6 +25,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * AI 코멘트 서비스.
@@ -36,12 +40,22 @@ public class AiCommentService {
     /** gpt-4o-mini 기준: ~$0.15/1M input + $0.60/1M output, 환율 1350원 */
     private static final BigDecimal COST_PER_TOKEN_KRW = new BigDecimal("0.0005");
 
+    private static final List<String> FALLBACK_QUESTIONS = List.of(
+            "오늘 하루 중 가장 기억에 남는 순간이 있다면 무엇인가요?",
+            "요즘 마음을 편하게 해주는 것이 있나요?",
+            "내일은 어떤 하루가 되었으면 좋겠나요?",
+            "최근에 작은 행복을 느꼈던 순간이 있나요?",
+            "오늘 자신에게 해주고 싶은 말이 있다면 무엇인가요?"
+    );
+
     private final AiCommentRepository aiCommentRepository;
     private final AiUsageLogRepository aiUsageLogRepository;
     private final SafetyCheckService safetyCheckService;
     private final LlmProvider llmProvider;
     private final AiProperties aiProperties;
     private final PromptBuilder promptBuilder;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private String promptTemplate;
 
@@ -68,15 +82,17 @@ public class AiCommentService {
      */
     @Transactional
     public AiCommentResponse generateComment(Diary diary, User user, boolean isSafe) {
-        String content;
+        String comment;
+        String followupQuestion = null;
         String modelName;
 
         if (!isSafe) {
-            content = "힘든 시간을 보내고 계시는군요. "
+            comment = "힘든 시간을 보내고 계시는군요. "
                     + "혼자 감당하지 않아도 괜찮아요. "
                     + "전문적인 도움을 받을 수 있는 곳에 연락해 보시는 건 어떨까요? "
                     + "(자살예방상담전화 1393, 정신건강위기상담전화 1577-0199)";
             modelName = "safety-override";
+            // 위기 상황에서는 후속 질문 없음
         } else {
             try {
                 LlmResponse response = callLlm(diary, user);
@@ -84,8 +100,12 @@ public class AiCommentService {
                     log.info("[AI] 코멘트 비활성화 (userId={})", user.getId());
                     return null;
                 }
-                content = response.content();
                 modelName = response.modelName();
+
+                // JSON 파싱 시도
+                String[] parsed = parseAiResponse(response.content(), diary.getId());
+                comment = parsed[0];
+                followupQuestion = parsed[1];
 
                 // AI 사용량 로깅
                 logAiUsage(user, diary, response);
@@ -97,7 +117,8 @@ public class AiCommentService {
 
         AiComment aiComment = AiComment.builder()
                 .diary(diary)
-                .content(content)
+                .content(comment)
+                .followupQuestion(followupQuestion)
                 .modelName(modelName)
                 .promptVersion(aiProperties.getPromptVersion())
                 .build();
@@ -137,14 +158,18 @@ public class AiCommentService {
             throw new CustomException(ErrorCode.AI_SERVICE_ERROR);
         }
 
+        // JSON 파싱 시도
+        String[] parsed = parseAiResponse(response.content(), diaryId);
+
         AiComment aiComment = aiCommentRepository.findByDiaryId(diaryId)
                 .map(existing -> {
-                    existing.updateContent(response.content());
+                    existing.updateContent(parsed[0], parsed[1]);
                     return existing;
                 })
                 .orElseGet(() -> AiComment.builder()
                         .diary(diary)
-                        .content(response.content())
+                        .content(parsed[0])
+                        .followupQuestion(parsed[1])
                         .modelName(response.modelName())
                         .promptVersion(aiProperties.getPromptVersion())
                         .build());
@@ -170,6 +195,33 @@ public class AiCommentService {
         } catch (Exception e) {
             log.warn("[AI] 사용량 로깅 실패: {}", e.getMessage());
         }
+    }
+
+    /**
+     * AI 응답을 JSON 파싱하여 [content, followupQuestion] 배열로 반환한다.
+     * content에는 후속 질문이 마지막 문장으로 포함된다.
+     */
+    private String[] parseAiResponse(String responseContent, Long diaryId) {
+        try {
+            JsonNode jsonNode = objectMapper.readTree(responseContent);
+            String comment = jsonNode.get("comment").asText();
+            String followup = jsonNode.has("followupQuestion")
+                    ? jsonNode.get("followupQuestion").asText()
+                    : getRandomFallbackQuestion();
+            // 코멘트에 후속 질문이 포함되어 있지 않으면 마지막 문장으로 합친다
+            String content = comment.contains(followup)
+                    ? comment
+                    : comment + " " + followup;
+            return new String[]{content, followup};
+        } catch (Exception e) {
+            log.warn("[AI] JSON 파싱 실패, fallback 사용 (diaryId={}): {}", diaryId, e.getMessage());
+            String fallback = getRandomFallbackQuestion();
+            return new String[]{responseContent + " " + fallback, fallback};
+        }
+    }
+
+    private String getRandomFallbackQuestion() {
+        return FALLBACK_QUESTIONS.get(ThreadLocalRandom.current().nextInt(FALLBACK_QUESTIONS.size()));
     }
 
     private LlmResponse callLlm(Diary diary, User user) {

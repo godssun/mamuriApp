@@ -88,6 +88,14 @@ public interface DiaryRepository extends JpaRepository<Diary, Long> {
     long countByUserId(Long userId);
 
     /**
+     * 사용자의 최근 일기를 최대 10건 조회한다 (스트릭 재계산용).
+     *
+     * @param userId 사용자 ID
+     * @return 최근 일기 목록 (최대 10건)
+     */
+    List<Diary> findTop10ByUserIdOrderByDiaryDateDesc(Long userId);
+
+    /**
      * 사용자의 최근 일기를 최대 5건 조회한다 (특정 일기 제외).
      * AI 프롬프트의 "최근 기록" 컨텍스트에 사용된다.
      *

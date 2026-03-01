@@ -21,6 +21,7 @@ public class DiaryResponse {
     private LocalDate diaryDate;
     private AiCommentResponse aiComment;
     private LevelUpInfo levelUp;
+    private StreakInfo streak;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -35,6 +36,17 @@ public class DiaryResponse {
     }
 
     /**
+     * 스트릭 정보.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class StreakInfo {
+        private int currentStreak;
+        private int longestStreak;
+        private boolean streakActive;
+    }
+
+    /**
      * 엔티티를 DTO로 변환한다 (AI 코멘트 없이).
      *
      * @param diary 일기 엔티티
@@ -46,6 +58,7 @@ public class DiaryResponse {
                 diary.getTitle(),
                 diary.getContent(),
                 diary.getDiaryDate(),
+                null,
                 null,
                 null,
                 diary.getCreatedAt(),
@@ -68,6 +81,7 @@ public class DiaryResponse {
                 diary.getDiaryDate(),
                 aiComment,
                 null,
+                null,
                 diary.getCreatedAt(),
                 diary.getUpdatedAt()
         );
@@ -89,6 +103,31 @@ public class DiaryResponse {
                 diary.getDiaryDate(),
                 aiComment,
                 levelUpInfo,
+                null,
+                diary.getCreatedAt(),
+                diary.getUpdatedAt()
+        );
+    }
+
+    /**
+     * 엔티티를 DTO로 변환한다 (AI 코멘트 + 레벨업 + 스트릭 정보 포함).
+     *
+     * @param diary       일기 엔티티
+     * @param aiComment   AI 코멘트 응답
+     * @param levelUpInfo 레벨업 정보 (nullable)
+     * @param streakInfo  스트릭 정보 (nullable)
+     * @return DiaryResponse
+     */
+    public static DiaryResponse of(Diary diary, AiCommentResponse aiComment,
+                                   LevelUpInfo levelUpInfo, StreakInfo streakInfo) {
+        return new DiaryResponse(
+                diary.getId(),
+                diary.getTitle(),
+                diary.getContent(),
+                diary.getDiaryDate(),
+                aiComment,
+                levelUpInfo,
+                streakInfo,
                 diary.getCreatedAt(),
                 diary.getUpdatedAt()
         );

@@ -91,6 +91,9 @@ public class DiaryService {
             }
         }
 
+        // 스트릭 업데이트
+        user.updateStreak(diaryDate);
+
         // 레벨업 감지
         int newLevel = CompanionService.calculateLevel(user.getDiaryCount());
         DiaryResponse.LevelUpInfo levelUpInfo = null;
@@ -116,7 +119,11 @@ public class DiaryService {
             log.warn("AI 코멘트 생성 실패 (diaryId={}): {}", diary.getId(), e.getMessage());
         }
 
-        return DiaryResponse.of(diary, aiComment, levelUpInfo);
+        DiaryResponse.StreakInfo streakInfo = new DiaryResponse.StreakInfo(
+                user.getCurrentStreak(), user.getLongestStreak(),
+                user.getLastDiaryDate() != null && user.getLastDiaryDate().equals(diaryDate)
+        );
+        return DiaryResponse.of(diary, aiComment, levelUpInfo, streakInfo);
     }
 
     /**
@@ -225,7 +232,38 @@ public class DiaryService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         user.decrementDiaryCount();
 
+        LocalDate deletedDate = diary.getDiaryDate();
         diaryRepository.delete(diary);
+
+        // 스트릭 재계산: 삭제된 일기가 lastDiaryDate와 같으면
+        if (deletedDate.equals(user.getLastDiaryDate())) {
+            recalculateStreak(user);
+        }
+    }
+
+    private void recalculateStreak(User user) {
+        List<Diary> recentDiaries = diaryRepository.findTop10ByUserIdOrderByDiaryDateDesc(user.getId());
+        if (recentDiaries.isEmpty()) {
+            user.resetStreakData();
+            return;
+        }
+
+        // 가장 최근 일기 날짜부터 연속성 체크
+        LocalDate lastDate = recentDiaries.get(0).getDiaryDate();
+        int streak = 1;
+
+        for (int i = 1; i < recentDiaries.size(); i++) {
+            LocalDate currentDate = recentDiaries.get(i).getDiaryDate();
+            if (currentDate.equals(lastDate)) continue; // 같은 날 일기
+            if (currentDate.equals(lastDate.minusDays(1))) {
+                streak++;
+                lastDate = currentDate;
+            } else {
+                break;
+            }
+        }
+
+        user.setStreakData(streak, recentDiaries.get(0).getDiaryDate());
     }
 
     private Diary findUserDiary(Long userId, Long diaryId) {

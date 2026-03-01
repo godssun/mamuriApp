@@ -3,6 +3,7 @@ package com.github.mamuriapp.user.controller;
 import com.github.mamuriapp.global.dto.ApiResponse;
 import com.github.mamuriapp.user.dto.CompanionResponse;
 import com.github.mamuriapp.user.dto.CompanionUpdateRequest;
+import com.github.mamuriapp.user.dto.StreakResponse;
 import com.github.mamuriapp.user.service.CompanionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +49,20 @@ public class CompanionController {
             @Valid @RequestBody CompanionUpdateRequest request) {
         Long userId = (Long) authentication.getPrincipal();
         CompanionResponse response = companionService.updateAiName(userId, request.getAiName());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * 스트릭 정보를 조회한다.
+     *
+     * @param authentication 인증 정보
+     * @return 스트릭 응답
+     */
+    @GetMapping("/streak")
+    public ResponseEntity<ApiResponse<StreakResponse>> getStreak(
+            Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        StreakResponse response = companionService.getStreak(userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
