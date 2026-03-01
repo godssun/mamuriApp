@@ -167,4 +167,189 @@ class UserTest {
         LocalDate expectedResetDate = LocalDate.now().withDayOfMonth(1).plusMonths(1);
         assertThat(user.getQuotaResetDate()).isEqualTo(expectedResetDate);
     }
+
+    // --- updateStreak ---
+
+    @Nested
+    @DisplayName("updateStreak")
+    class UpdateStreak {
+
+        @Test
+        @DisplayName("첫 일기 작성 시 streak=1, longestStreak=1로 설정된다")
+        void updateStreak_firstDiary_setsStreakToOne() {
+            // given
+            User user = createUser();
+            LocalDate today = LocalDate.now();
+
+            // when
+            user.updateStreak(today);
+
+            // then
+            assertThat(user.getCurrentStreak()).isEqualTo(1);
+            assertThat(user.getLongestStreak()).isEqualTo(1);
+            assertThat(user.getLastDiaryDate()).isEqualTo(today);
+        }
+
+        @Test
+        @DisplayName("연속 일기 작성 시 streak이 증가한다")
+        void updateStreak_consecutive_incrementsStreak() {
+            // given
+            User user = createUser();
+            LocalDate day1 = LocalDate.of(2026, 2, 28);
+            LocalDate day2 = LocalDate.of(2026, 3, 1);
+            LocalDate day3 = LocalDate.of(2026, 3, 2);
+
+            // when
+            user.updateStreak(day1);
+            user.updateStreak(day2);
+            user.updateStreak(day3);
+
+            // then
+            assertThat(user.getCurrentStreak()).isEqualTo(3);
+            assertThat(user.getLongestStreak()).isEqualTo(3);
+            assertThat(user.getLastDiaryDate()).isEqualTo(day3);
+        }
+
+        @Test
+        @DisplayName("같은 날 여러 일기 작성 시 streak이 변하지 않는다")
+        void updateStreak_sameDay_noChange() {
+            // given
+            User user = createUser();
+            LocalDate today = LocalDate.now();
+
+            // when
+            user.updateStreak(today);
+            user.updateStreak(today);
+            user.updateStreak(today);
+
+            // then
+            assertThat(user.getCurrentStreak()).isEqualTo(1);
+            assertThat(user.getLongestStreak()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("공백 발생 시 streak이 1로 리셋된다 (longestStreak 유지)")
+        void updateStreak_gap_resetsStreak() {
+            // given
+            User user = createUser();
+            LocalDate day1 = LocalDate.of(2026, 2, 25);
+            LocalDate day2 = LocalDate.of(2026, 2, 26);
+            LocalDate day3 = LocalDate.of(2026, 2, 27);
+            LocalDate day5 = LocalDate.of(2026, 3, 1); // 1일 공백
+
+            // when
+            user.updateStreak(day1);
+            user.updateStreak(day2);
+            user.updateStreak(day3);
+            assertThat(user.getCurrentStreak()).isEqualTo(3);
+
+            user.updateStreak(day5);
+
+            // then
+            assertThat(user.getCurrentStreak()).isEqualTo(1);
+            assertThat(user.getLongestStreak()).isEqualTo(3); // 유지
+            assertThat(user.getLastDiaryDate()).isEqualTo(day5);
+        }
+
+        @Test
+        @DisplayName("과거 날짜 일기 작성 시 streak이 변하지 않는다")
+        void updateStreak_pastDate_ignored() {
+            // given
+            User user = createUser();
+            LocalDate today = LocalDate.of(2026, 3, 1);
+            LocalDate yesterday = LocalDate.of(2026, 2, 28);
+
+            // when
+            user.updateStreak(today);
+            user.updateStreak(yesterday); // 과거 날짜
+
+            // then
+            assertThat(user.getCurrentStreak()).isEqualTo(1);
+            assertThat(user.getLastDiaryDate()).isEqualTo(today); // 변경 없음
+        }
+
+        @Test
+        @DisplayName("null 날짜는 무시된다")
+        void updateStreak_nullDate_ignored() {
+            // given
+            User user = createUser();
+
+            // when
+            user.updateStreak(null);
+
+            // then
+            assertThat(user.getCurrentStreak()).isZero();
+            assertThat(user.getLastDiaryDate()).isNull();
+        }
+
+        @Test
+        @DisplayName("longestStreak은 공백 후에도 줄어들지 않는다")
+        void updateStreak_longestStreakNeverDecreases() {
+            // given
+            User user = createUser();
+            LocalDate day1 = LocalDate.of(2026, 1, 1);
+            LocalDate day2 = LocalDate.of(2026, 1, 2);
+            LocalDate day3 = LocalDate.of(2026, 1, 3);
+            LocalDate day4 = LocalDate.of(2026, 1, 4);
+            LocalDate day5 = LocalDate.of(2026, 1, 5);
+
+            // 5일 연속
+            user.updateStreak(day1);
+            user.updateStreak(day2);
+            user.updateStreak(day3);
+            user.updateStreak(day4);
+            user.updateStreak(day5);
+            assertThat(user.getLongestStreak()).isEqualTo(5);
+
+            // 공백 후 2일 연속
+            LocalDate day10 = LocalDate.of(2026, 1, 10);
+            LocalDate day11 = LocalDate.of(2026, 1, 11);
+            user.updateStreak(day10);
+            user.updateStreak(day11);
+
+            // then
+            assertThat(user.getCurrentStreak()).isEqualTo(2);
+            assertThat(user.getLongestStreak()).isEqualTo(5); // 유지
+        }
+    }
+
+    // --- resetStreakData ---
+
+    @Test
+    @DisplayName("resetStreakData 호출 시 currentStreak=0, lastDiaryDate=null이 된다")
+    void resetStreakData_resetsCurrentStreakAndDate() {
+        // given
+        User user = createUser();
+        user.updateStreak(LocalDate.now());
+        assertThat(user.getCurrentStreak()).isEqualTo(1);
+
+        // when
+        user.resetStreakData();
+
+        // then
+        assertThat(user.getCurrentStreak()).isZero();
+        assertThat(user.getLastDiaryDate()).isNull();
+    }
+
+    // --- setStreakData ---
+
+    @Test
+    @DisplayName("setStreakData는 currentStreak과 lastDiaryDate만 변경하고 longestStreak은 유지한다")
+    void setStreakData_updatesCurrentOnly() {
+        // given
+        User user = createUser();
+        // 5일 연속으로 longestStreak=5 만듬
+        for (int i = 0; i < 5; i++) {
+            user.updateStreak(LocalDate.of(2026, 1, 1).plusDays(i));
+        }
+        assertThat(user.getLongestStreak()).isEqualTo(5);
+
+        // when
+        user.setStreakData(2, LocalDate.of(2026, 2, 1));
+
+        // then
+        assertThat(user.getCurrentStreak()).isEqualTo(2);
+        assertThat(user.getLastDiaryDate()).isEqualTo(LocalDate.of(2026, 2, 1));
+        assertThat(user.getLongestStreak()).isEqualTo(5); // 유지
+    }
 }
