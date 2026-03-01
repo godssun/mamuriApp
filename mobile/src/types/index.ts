@@ -91,17 +91,64 @@ export interface DiaryCalendarResponse {
 
 // 설정
 export interface UserSettings {
-  aiTone: 'warm' | 'calm' | 'cheerful';
+  aiTone: 'warm' | 'calm' | 'cheerful' | 'realistic';
   aiEnabled: boolean;
 }
 
+// 컴패니언 개인화 설정
+export interface CompanionSettings {
+  avatar: string | null;
+  speechStyle: 'formal' | 'casual';
+  aiTone: 'warm' | 'calm' | 'cheerful' | 'realistic';
+  aiEnabled: boolean;
+}
+
+export interface CompanionSettingsUpdateRequest {
+  speechStyle: 'formal' | 'casual';
+  aiTone: 'warm' | 'calm' | 'cheerful' | 'realistic';
+}
+
+// 대화
+export interface ConversationMessage {
+  id: number;
+  role: 'USER' | 'AI';
+  content: string;
+  createdAt: string;
+}
+
+export interface ConversationLimits {
+  maxRepliesPerDay: number;
+  usedRepliesToday: number;
+  remainingReplies: number | null; // null이면 무제한
+  tier: string;
+  trialActive: boolean;
+}
+
+export interface ConversationHistoryResponse {
+  diaryId: number;
+  messages: ConversationMessage[];
+  limits: ConversationLimits;
+}
+
+export interface ConversationReplyResponse {
+  userMessageId: number;
+  aiMessageId: number;
+  aiResponse: string;
+  remainingReplies: number | null; // null이면 무제한
+  createdAt: string;
+}
+
 // 구독
+export type SubscriptionTier = 'FREE' | 'DELUXE' | 'PREMIUM';
+
 export type SubscriptionStatusType = 'FREE' | 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
 
 export interface SubscriptionInfo {
   status: SubscriptionStatusType;
-  quotaUsed: number;
-  quotaLimit: number; // -1이면 무제한 (프리미엄)
+  tier: string;
+  trialActive: boolean;
+  trialEnd: string | null;
+  dailyRepliesMax: number; // -1 = unlimited, 0 = blocked
   currentPeriodEnd: string | null;
   crisisFlag: boolean;
 }
@@ -123,6 +170,7 @@ export type AuthStackParamList = {
 
 export type MainStackParamList = {
   MainTabs: undefined;
+  CompanionSetup: undefined;
   Settings: undefined;
   Paywall: undefined;
   Subscription: undefined;

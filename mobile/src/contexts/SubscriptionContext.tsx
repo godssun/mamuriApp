@@ -6,19 +6,20 @@ import { useAuth } from './AuthContext';
 interface SubscriptionContextType {
   info: SubscriptionInfo | null;
   isLoading: boolean;
+  /** ACTIVE 또는 TRIALING 상태인지 */
+  isSubscribed: boolean;
+  /** 구독이 ACTIVE 또는 TRIALING 상태인지 (isPremium 호환용) */
   isPremium: boolean;
-  quotaRemaining: number;
+  /** 체험 기간 활성 여부 */
+  isTrialActive: boolean;
+  /** 오늘 남은 일일 답변 수 (-1 = 무제한) */
+  dailyRemaining: number;
+  /** 위기 플래그 활성 여부 */
   hasCrisisFlag: boolean;
+  /** legacy 호환 - quotaRemaining */
+  quotaRemaining: number;
   refresh: () => Promise<void>;
 }
-
-const defaultInfo: SubscriptionInfo = {
-  status: 'FREE' as SubscriptionStatusType,
-  quotaUsed: 0,
-  quotaLimit: 20,
-  currentPeriodEnd: null,
-  crisisFlag: false,
-};
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
@@ -47,15 +48,27 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [isAuthenticated, refresh]);
 
-  const isPremium = info?.status === 'ACTIVE' || info?.status === 'TRIALING';
-  const quotaRemaining = info
-    ? (info.quotaLimit === -1 ? Infinity : info.quotaLimit - info.quotaUsed)
-    : 20;
+  const isSubscribed = info?.status === 'ACTIVE' || info?.status === 'TRIALING';
+  const isPremium = isSubscribed;
+  const isTrialActive = info?.trialActive ?? false;
+  const dailyRemaining = info?.dailyRepliesMax === -1 ? -1 : (info?.dailyRepliesMax ?? 0);
   const hasCrisisFlag = info?.crisisFlag ?? false;
+  // legacy 호환
+  const quotaRemaining = dailyRemaining === -1 ? Infinity : dailyRemaining;
 
   return (
     <SubscriptionContext.Provider
-      value={{ info, isLoading, isPremium, quotaRemaining, hasCrisisFlag, refresh }}
+      value={{
+        info,
+        isLoading,
+        isSubscribed,
+        isPremium,
+        isTrialActive,
+        dailyRemaining,
+        hasCrisisFlag,
+        quotaRemaining,
+        refresh,
+      }}
     >
       {children}
     </SubscriptionContext.Provider>

@@ -12,9 +12,13 @@ import {
   UserSettings,
   CompanionProfile,
   CompanionUpdateRequest,
+  CompanionSettings,
+  CompanionSettingsUpdateRequest,
   SubscriptionInfo,
   CheckoutResponse,
   StreakResponse,
+  ConversationHistoryResponse,
+  ConversationReplyResponse,
 } from '../types';
 
 // 개발 환경에서는 localhost, 프로덕션에서는 실제 서버 URL
@@ -213,6 +217,71 @@ async function request<T>(
   return json.data as T;
 }
 
+// multipart/form-data 요청 (이미지 업로드 등)
+async function requestMultipart<T>(
+  endpoint: string,
+  formData: FormData,
+  _isRetry: boolean = false
+): Promise<T> {
+  const url = `${BASE_URL}${endpoint}`;
+  const headers: Record<string, string> = {};
+
+  const tokens = await tokenStorage.get();
+  if (tokens?.accessToken) {
+    headers['Authorization'] = `Bearer ${tokens.accessToken}`;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+      signal: controller.signal,
+    });
+  } catch (error: unknown) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiError('요청 시간이 초과되었습니다.', 408, false, 'TIMEOUT');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  const text = await response.text();
+  let json: ApiResponse<T>;
+  try {
+    json = text ? JSON.parse(text) : { success: false, data: null, message: null };
+  } catch {
+    throw new ApiError('서버 응답을 처리할 수 없습니다.', response.status, response.status === 401);
+  }
+
+  if (response.status === 401 && !_isRetry) {
+    try {
+      await refreshAccessToken();
+      return requestMultipart<T>(endpoint, formData, true);
+    } catch {
+      await tokenStorage.clear();
+      forceLogoutHandler?.();
+      throw new ApiError('인증이 만료되었습니다. 다시 로그인해주세요.', 401, true);
+    }
+  }
+
+  if (!response.ok || !json.success) {
+    throw new ApiError(
+      json.message || '요청 처리 중 오류가 발생했습니다.',
+      response.status,
+      false
+    );
+  }
+
+  return json.data as T;
+}
+
 // 인증 API
 export const authApi = {
   async signup(data: SignupRequest): Promise<TokenResponse> {
@@ -311,6 +380,52 @@ export const companionApi = {
 
   async getStreak(): Promise<StreakResponse> {
     return request<StreakResponse>('/companion/streak');
+  },
+
+  async getSettings(): Promise<CompanionSettings> {
+    return request<CompanionSettings>('/companion/settings');
+  },
+
+  async updateSettings(data: CompanionSettingsUpdateRequest): Promise<CompanionSettings> {
+    return request<CompanionSettings>('/companion/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async uploadAvatar(imageUri: string): Promise<CompanionSettings> {
+    const formData = new FormData();
+    const filename = imageUri.split('/').pop() ?? 'avatar.jpg';
+    const ext = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+
+    formData.append('file', {
+      uri: imageUri,
+      name: filename,
+      type: mimeType,
+    } as unknown as Blob);
+
+    return requestMultipart<CompanionSettings>('/companion/avatar', formData);
+  },
+
+  async removeAvatar(): Promise<CompanionSettings> {
+    return request<CompanionSettings>('/companion/avatar', {
+      method: 'DELETE',
+    });
+  },
+};
+
+// 대화 API
+export const conversationApi = {
+  async getConversation(diaryId: number): Promise<ConversationHistoryResponse> {
+    return request<ConversationHistoryResponse>(`/diaries/${diaryId}/conversation`);
+  },
+
+  async sendReply(diaryId: number, content: string): Promise<ConversationReplyResponse> {
+    return request<ConversationReplyResponse>(`/diaries/${diaryId}/conversation/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
   },
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,26 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RouteProp } from '@react-navigation/native';
-import { diaryApi, companionApi, ApiError } from '../api/client';
-import { Diary, DiaryStackParamList } from '../types';
+import { RouteProp, useNavigation } from '@react-navigation/native';
+import { diaryApi, companionApi, conversationApi, ApiError } from '../api/client';
+import {
+  Diary,
+  DiaryStackParamList,
+  MainStackParamList,
+  ConversationMessage,
+  ConversationLimits,
+} from '../types';
+import ConversationBubble from '../components/conversation/ConversationBubble';
+import UserBubble from '../components/conversation/UserBubble';
+import TypingIndicator from '../components/conversation/TypingIndicator';
+import ReplyCounter from '../components/conversation/ReplyCounter';
+import MessageInput from '../components/conversation/MessageInput';
+import UpgradePromptCard from '../components/subscription/UpgradePromptCard';
+import UpgradeModal from '../components/subscription/UpgradeModal';
 
 type Props = {
   navigation: NativeStackNavigationProp<DiaryStackParamList, 'DiaryDetail'>;
@@ -20,10 +35,21 @@ type Props = {
 
 export default function DiaryDetailScreen({ navigation, route }: Props) {
   const { diaryId } = route.params;
+  const parentNav = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+
   const [diary, setDiary] = useState<Diary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRetrying, setIsRetrying] = useState(false);
   const [aiName, setAiName] = useState('마음이');
+
+  // 대화 상태
+  const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [limits, setLimits] = useState<ConversationLimits | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [conversationLoaded, setConversationLoaded] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const scrollRef = React.useRef<ScrollView>(null);
 
   useEffect(() => {
     loadDiary();
@@ -31,6 +57,13 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
       .then((profile) => setAiName(profile.aiName))
       .catch(() => {});
   }, [diaryId]);
+
+  // 일기 로드 후 대화 이력 로드
+  useEffect(() => {
+    if (diary) {
+      loadConversation();
+    }
+  }, [diary?.id]);
 
   const loadDiary = async () => {
     try {
@@ -46,6 +79,63 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
     }
   };
 
+  const loadConversation = async () => {
+    try {
+      const data = await conversationApi.getConversation(diaryId);
+      setMessages(data.messages);
+      setLimits(data.limits);
+      setConversationLoaded(true);
+    } catch {
+      // 대화 기능 비활성화 또는 에러 → 레거시 AI 코멘트만 표시
+      setConversationLoaded(false);
+    }
+  };
+
+  const handleSendReply = useCallback(async (content: string) => {
+    setIsSending(true);
+    scrollToEnd();
+
+    try {
+      const response = await conversationApi.sendReply(diaryId, content);
+
+      // 사용자 메시지 + AI 응답 추가
+      const userMsg: ConversationMessage = {
+        id: response.userMessageId,
+        role: 'USER',
+        content,
+        createdAt: new Date().toISOString(),
+      };
+      const aiMsg: ConversationMessage = {
+        id: response.aiMessageId,
+        role: 'AI',
+        content: response.aiResponse,
+        createdAt: response.createdAt,
+      };
+
+      setMessages((prev) => [...prev, userMsg, aiMsg]);
+
+      // 남은 횟수 업데이트
+      if (limits) {
+        setLimits({
+          ...limits,
+          usedRepliesToday: limits.usedRepliesToday + 1,
+          remainingReplies: response.remainingReplies,
+        });
+      }
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 403) {
+        setShowUpgradeModal(true);
+      } else {
+        const message = error instanceof ApiError
+          ? error.message
+          : '답장 전송에 실패했습니다.';
+        Alert.alert('전송 실패', message);
+      }
+    } finally {
+      setIsSending(false);
+    }
+  }, [diaryId, limits]);
+
   const handleRetryAiComment = async () => {
     setIsRetrying(true);
     try {
@@ -53,6 +143,8 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
       setDiary((prev) =>
         prev ? { ...prev, aiComment: newComment } : null
       );
+      // 대화 이력도 새로고침
+      loadConversation();
     } catch (error) {
       const message = error instanceof ApiError
         ? error.message
@@ -76,13 +168,28 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
             try {
               await diaryApi.delete(diaryId);
               navigation.goBack();
-            } catch (error) {
+            } catch {
               Alert.alert('오류', '삭제에 실패했습니다.');
             }
           },
         },
       ]
     );
+  };
+
+  const handleUpgrade = () => {
+    setShowUpgradeModal(false);
+    try {
+      parentNav.navigate('Paywall');
+    } catch {
+      navigation.getParent()?.navigate('Paywall' as never);
+    }
+  };
+
+  const scrollToEnd = () => {
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 100);
   };
 
   const formatDiaryDate = (dateString: string) => {
@@ -105,6 +212,9 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
     const hour12 = hours % 12 || 12;
     return `${month}월 ${day}일 ${ampm} ${hour12}:${minutes}`;
   };
+
+  const isLimitReached = limits?.remainingReplies === 0;
+  const hasConversation = conversationLoaded && messages.length > 0;
 
   if (isLoading) {
     return (
@@ -129,56 +239,113 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.scrollContent}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
       >
-        <Text style={styles.diaryDate}>{formatDiaryDate(diary.diaryDate)}</Text>
-        <Text style={styles.title}>{diary.title}</Text>
-        <Text style={styles.diaryContent}>{diary.content}</Text>
-        <Text style={styles.createdAt}>작성: {formatCreatedAt(diary.createdAt)}</Text>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* 일기 본문 */}
+          <Text style={styles.diaryDate}>{formatDiaryDate(diary.diaryDate)}</Text>
+          <Text style={styles.title}>{diary.title}</Text>
+          <Text style={styles.diaryContent}>{diary.content}</Text>
+          <Text style={styles.createdAt}>작성: {formatCreatedAt(diary.createdAt)}</Text>
 
-        <View style={styles.aiSection}>
-          <View style={styles.aiHeader}>
-            <Text style={styles.aiTitle}>{aiName}의 코멘트</Text>
-            <TouchableOpacity
-              onPress={handleRetryAiComment}
-              disabled={isRetrying}
-              style={styles.retryButton}
-            >
-              {isRetrying ? (
-                <ActivityIndicator size="small" color="#FF9B7A" />
-              ) : (
-                <Text style={styles.retryText}>다시 받기</Text>
+          {/* 대화 영역 */}
+          <View style={styles.conversationSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{aiName}와(과)의 대화</Text>
+              {!hasConversation && (
+                <TouchableOpacity
+                  onPress={handleRetryAiComment}
+                  disabled={isRetrying}
+                  style={styles.retryButton}
+                >
+                  {isRetrying ? (
+                    <ActivityIndicator size="small" color="#FF9B7A" />
+                  ) : (
+                    <Text style={styles.retryText}>다시 받기</Text>
+                  )}
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
-          </View>
-
-          {diary.aiComment ? (
-            <View style={styles.aiCommentCard}>
-              <Text style={styles.aiCommentContent}>
-                {diary.aiComment.content}
-              </Text>
             </View>
-          ) : (
-            <View style={styles.aiCommentCard}>
-              <Text style={styles.noCommentText}>
-                아직 AI 코멘트가 없습니다.
-              </Text>
-              <TouchableOpacity
-                onPress={handleRetryAiComment}
-                disabled={isRetrying}
-                style={styles.getCommentButton}
-              >
-                <Text style={styles.getCommentButtonText}>
-                  코멘트 받기
+
+            {hasConversation ? (
+              // 대화형 UI
+              <View style={styles.messagesContainer}>
+                {messages.map((msg) =>
+                  msg.role === 'AI' ? (
+                    <ConversationBubble
+                      key={msg.id}
+                      content={msg.content}
+                      aiName={aiName}
+                      createdAt={msg.createdAt}
+                    />
+                  ) : (
+                    <UserBubble
+                      key={msg.id}
+                      content={msg.content}
+                      createdAt={msg.createdAt}
+                    />
+                  )
+                )}
+
+                {isSending && <TypingIndicator aiName={aiName} />}
+
+                {limits && <ReplyCounter limits={limits} />}
+
+                {isLimitReached && (
+                  <UpgradePromptCard onUpgrade={handleUpgrade} />
+                )}
+              </View>
+            ) : diary.aiComment ? (
+              // 레거시 AI 코멘트 (대화 기능 비활성화 시)
+              <View style={styles.aiCommentCard}>
+                <Text style={styles.aiCommentContent}>
+                  {diary.aiComment.content}
                 </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+              </View>
+            ) : (
+              // AI 코멘트 없음
+              <View style={styles.aiCommentCard}>
+                <Text style={styles.noCommentText}>
+                  아직 AI 코멘트가 없습니다.
+                </Text>
+                <TouchableOpacity
+                  onPress={handleRetryAiComment}
+                  disabled={isRetrying}
+                  style={styles.getCommentButton}
+                >
+                  <Text style={styles.getCommentButtonText}>
+                    코멘트 받기
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </ScrollView>
 
-        </View>
-      </ScrollView>
+        {/* 답장 입력 (대화 기능 활성화 시만) */}
+        {hasConversation && (
+          <MessageInput
+            onSend={handleSendReply}
+            isSending={isSending}
+            disabled={isLimitReached}
+          />
+        )}
+      </KeyboardAvoidingView>
+
+      <UpgradeModal
+        visible={showUpgradeModal}
+        aiName={aiName}
+        onUpgrade={handleUpgrade}
+        onDismiss={() => setShowUpgradeModal(false)}
+      />
     </View>
   );
 }
@@ -187,6 +354,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF9F5',
+  },
+  flex: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -210,12 +380,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FF6B6B',
   },
-  content: {
+  scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 20,
   },
   diaryDate: {
     fontSize: 20,
@@ -240,18 +410,18 @@ const styles = StyleSheet.create({
     color: '#999',
     marginBottom: 32,
   },
-  aiSection: {
+  conversationSection: {
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
     paddingTop: 24,
   },
-  aiHeader: {
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
-  aiTitle: {
+  sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#2D2D2D',
@@ -263,6 +433,9 @@ const styles = StyleSheet.create({
   retryText: {
     fontSize: 14,
     color: '#FF9B7A',
+  },
+  messagesContainer: {
+    gap: 0,
   },
   aiCommentCard: {
     backgroundColor: '#FFF0EB',

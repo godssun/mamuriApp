@@ -9,17 +9,26 @@ import {
   ScrollView,
   Modal,
   TextInput,
+  Image,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { companionApi, ApiError } from '../api/client';
-import { CompanionProfile, MainStackParamList } from '../types';
+import { CompanionProfile, CompanionSettings, MainStackParamList } from '../types';
 import { getCompanionConfig, calculateProgress } from '../constants/companion';
 import { ProgressBar } from '../components/companion';
+
+function getAvatarImageUri(avatar: string | null | undefined): string | null {
+  if (!avatar || avatar.length === 0) return null;
+  if (avatar.startsWith('http')) return avatar;
+  if (avatar.startsWith('/uploads/')) return `http://localhost:8080${avatar}`;
+  return null; // 이모지 등 비정상 값은 무시
+}
 
 export default function CompanionScreen() {
   const mainNavigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const [profile, setProfile] = useState<CompanionProfile | null>(null);
+  const [companionSettings, setCompanionSettings] = useState<CompanionSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showNameModal, setShowNameModal] = useState(false);
   const [newName, setNewName] = useState('');
@@ -33,8 +42,12 @@ export default function CompanionScreen() {
 
   const loadProfile = async () => {
     try {
-      const data = await companionApi.getProfile();
-      setProfile(data);
+      const [profileData, settingsData] = await Promise.all([
+        companionApi.getProfile(),
+        companionApi.getSettings(),
+      ]);
+      setProfile(profileData);
+      setCompanionSettings(settingsData);
     } catch (error) {
       console.error('Failed to load companion profile:', error);
     } finally {
@@ -114,7 +127,17 @@ export default function CompanionScreen() {
       >
         {/* 프로필 카드 */}
         <View style={styles.profileCard}>
-          <Text style={styles.profileEmoji}>{config.emoji}</Text>
+          {getAvatarImageUri(companionSettings?.avatar) ? (
+            <Image
+              source={{ uri: getAvatarImageUri(companionSettings?.avatar)! }}
+              style={styles.profileImage}
+              onError={() => setCompanionSettings(prev =>
+                prev ? { ...prev, avatar: null } : prev
+              )}
+            />
+          ) : (
+            <Text style={styles.profileEmoji}>{config.emoji}</Text>
+          )}
 
           <TouchableOpacity style={styles.nameRow} onPress={handleOpenNameModal}>
             <Text style={styles.profileName}>{profile.aiName}</Text>
@@ -267,6 +290,12 @@ const styles = StyleSheet.create({
   },
   profileEmoji: {
     fontSize: 64,
+    marginBottom: 16,
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     marginBottom: 16,
   },
   nameRow: {

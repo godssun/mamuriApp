@@ -10,19 +10,35 @@ import {
   ActivityIndicator,
   ScrollView,
   Modal,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { settingsApi, companionApi, ApiError } from '../api/client';
-import { UserSettings, CompanionProfile, MainStackParamList } from '../types';
+import { UserSettings, CompanionProfile, CompanionSettings, MainStackParamList } from '../types';
+import { getCompanionConfig } from '../constants/companion';
 
 const AI_TONE_OPTIONS = [
   { value: 'warm' as const, label: '따뜻한', description: '공감하고 위로하는 톤' },
   { value: 'calm' as const, label: '차분한', description: '안정적이고 담담한 톤' },
   { value: 'cheerful' as const, label: '밝은', description: '긍정적이고 활기찬 톤' },
+  { value: 'realistic' as const, label: '현실적인', description: '솔직하고 담백한 톤' },
 ];
+
+const SPEECH_STYLE_OPTIONS = [
+  { value: 'formal' as const, label: '존댓말', description: '정중하고 예의 바른 말투' },
+  { value: 'casual' as const, label: '반말', description: '편안한 친구 같은 말투' },
+];
+
+function getAvatarImageUri(avatar: string | null | undefined): string | null {
+  if (!avatar || avatar.length === 0) return null;
+  if (avatar.startsWith('http')) return avatar;
+  if (avatar.startsWith('/uploads/')) return `http://localhost:8080${avatar}`;
+  return null; // 이모지 등 비정상 값은 무시
+}
 
 export default function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
@@ -30,20 +46,25 @@ export default function SettingsScreen() {
   const { isPremium } = useSubscription();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [companion, setCompanion] = useState<CompanionProfile | null>(null);
+  const [companionSettings, setCompanionSettings] = useState<CompanionSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingCompanion, setIsSavingCompanion] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
   const [newAiName, setNewAiName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
-      const [settingsData, companionData] = await Promise.all([
+      const [settingsData, companionData, companionSettingsData] = await Promise.all([
         settingsApi.get(),
         companionApi.getProfile(),
+        companionApi.getSettings(),
       ]);
       setSettings(settingsData);
       setCompanion(companionData);
+      setCompanionSettings(companionSettingsData);
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -75,6 +96,88 @@ export default function SettingsScreen() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const updateCompanionSettings = async (updates: Partial<CompanionSettings>) => {
+    if (!companionSettings) return;
+
+    const newSettings = { ...companionSettings, ...updates };
+    setCompanionSettings(newSettings);
+    setIsSavingCompanion(true);
+
+    try {
+      const result = await companionApi.updateSettings({
+        speechStyle: newSettings.speechStyle,
+        aiTone: newSettings.aiTone,
+      });
+      setCompanionSettings(result);
+    } catch (error) {
+      setCompanionSettings(companionSettings);
+      const message = error instanceof ApiError
+        ? error.message
+        : '설정 저장에 실패했습니다.';
+      Alert.alert('오류', message);
+    } finally {
+      setIsSavingCompanion(false);
+    }
+  };
+
+  const handlePickAvatar = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert('권한 필요', '사진 라이브러리 접근 권한이 필요합니다.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets?.[0]) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      const updated = await companionApi.uploadAvatar(result.assets[0].uri);
+      setCompanionSettings(updated);
+    } catch (error) {
+      const message = error instanceof ApiError
+        ? error.message
+        : '프로필 사진 업로드에 실패했습니다.';
+      Alert.alert('오류', message);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    Alert.alert(
+      '프로필 사진 삭제',
+      '기본 이모지로 되돌리시겠어요?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            setIsUploadingAvatar(true);
+            try {
+              const updated = await companionApi.removeAvatar();
+              setCompanionSettings(updated);
+            } catch (error) {
+              const message = error instanceof ApiError
+                ? error.message
+                : '프로필 사진 삭제에 실패했습니다.';
+              Alert.alert('오류', message);
+            } finally {
+              setIsUploadingAvatar(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleOpenNameModal = () => {
@@ -127,6 +230,8 @@ export default function SettingsScreen() {
     );
   }
 
+  const avatarUrl = getAvatarImageUri(companionSettings?.avatar);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -138,19 +243,53 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-        {/* AI 친구 설정 */}
+        {/* AI 친구 프로필 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>AI 친구</Text>
 
-          <TouchableOpacity style={styles.settingRow} onPress={handleOpenNameModal}>
-            <View style={styles.settingRowLeft}>
-              <Text style={styles.settingLabel}>AI 친구 이름</Text>
-              <Text style={styles.settingDescription}>
-                {companion?.aiName ?? '마음이'}
+          <View style={styles.profileCard}>
+            <TouchableOpacity
+              style={styles.profileAvatarWrap}
+              onPress={handlePickAvatar}
+              disabled={isUploadingAvatar}
+            >
+              {isUploadingAvatar ? (
+                <View style={styles.profileAvatarLoading}>
+                  <ActivityIndicator size="small" color="#FF9B7A" />
+                </View>
+              ) : avatarUrl ? (
+                <Image
+                  source={{ uri: avatarUrl }}
+                  style={styles.profileAvatarImage}
+                  onError={() => setCompanionSettings(prev =>
+                    prev ? { ...prev, avatar: null } : prev
+                  )}
+                />
+              ) : (
+                <Text style={styles.profileAvatarEmoji}>
+                  {companion ? getCompanionConfig(companion.level).emoji : '🌱'}
+                </Text>
+              )}
+              <View style={styles.profileAvatarBadge}>
+                <Text style={styles.profileAvatarBadgeText}>📷</Text>
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.profileInfo}>
+              <TouchableOpacity style={styles.profileNameRow} onPress={handleOpenNameModal}>
+                <Text style={styles.profileName}>{companion?.aiName ?? '마음이'}</Text>
+                <Text style={styles.profileEditIcon}>✏️</Text>
+              </TouchableOpacity>
+              <Text style={styles.profileSub}>
+                {avatarUrl ? '사진 탭하여 변경' : '사진 탭하여 설정'}
               </Text>
+              {avatarUrl && (
+                <TouchableOpacity onPress={handleRemoveAvatar} disabled={isUploadingAvatar}>
+                  <Text style={styles.profileResetText}>기본 이모지로 되돌리기</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
+          </View>
         </View>
 
         {/* AI 코멘트 설정 */}
@@ -180,15 +319,15 @@ export default function SettingsScreen() {
                   key={option.value}
                   style={[
                     styles.toneOption,
-                    settings?.aiTone === option.value && styles.toneOptionSelected,
+                    companionSettings?.aiTone === option.value && styles.toneOptionSelected,
                   ]}
-                  onPress={() => updateSettings({ aiTone: option.value })}
-                  disabled={isSaving}
+                  onPress={() => updateCompanionSettings({ aiTone: option.value })}
+                  disabled={isSavingCompanion}
                 >
                   <Text
                     style={[
                       styles.toneLabel,
-                      settings?.aiTone === option.value && styles.toneLabelSelected,
+                      companionSettings?.aiTone === option.value && styles.toneLabelSelected,
                     ]}
                   >
                     {option.label}
@@ -196,7 +335,41 @@ export default function SettingsScreen() {
                   <Text
                     style={[
                       styles.toneDescription,
-                      settings?.aiTone === option.value && styles.toneDescriptionSelected,
+                      companionSettings?.aiTone === option.value && styles.toneDescriptionSelected,
+                    ]}
+                  >
+                    {option.description}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={[styles.settingGroup, { marginTop: 12 }]}>
+            <Text style={styles.settingLabel}>말투 스타일</Text>
+            <View style={styles.toneOptions}>
+              {SPEECH_STYLE_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.toneOption,
+                    companionSettings?.speechStyle === option.value && styles.toneOptionSelected,
+                  ]}
+                  onPress={() => updateCompanionSettings({ speechStyle: option.value })}
+                  disabled={isSavingCompanion}
+                >
+                  <Text
+                    style={[
+                      styles.toneLabel,
+                      companionSettings?.speechStyle === option.value && styles.toneLabelSelected,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.toneDescription,
+                      companionSettings?.speechStyle === option.value && styles.toneDescriptionSelected,
                     ]}
                   >
                     {option.description}
@@ -396,6 +569,82 @@ const styles = StyleSheet.create({
   },
   toneDescriptionSelected: {
     color: '#FF9B7A',
+  },
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    gap: 16,
+  },
+  profileAvatarWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#FFF0EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  profileAvatarImage: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+  },
+  profileAvatarEmoji: {
+    fontSize: 36,
+  },
+  profileAvatarLoading: {
+    width: 68,
+    height: 68,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileAvatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  profileAvatarBadgeText: {
+    fontSize: 10,
+  },
+  profileInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  profileNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2D2D2D',
+  },
+  profileEditIcon: {
+    fontSize: 14,
+  },
+  profileSub: {
+    fontSize: 13,
+    color: '#999',
+  },
+  profileResetText: {
+    fontSize: 12,
+    color: '#FF9B7A',
+    marginTop: 2,
   },
   logoutButton: {
     backgroundColor: '#fff',

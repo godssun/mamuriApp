@@ -18,43 +18,81 @@ type Props = {
   navigation: NativeStackNavigationProp<MainStackParamList, 'Subscription'>;
 };
 
-const PLANS = [
+type PlanTier = 'deluxe' | 'premium';
+type PlanPeriod = 'monthly' | 'yearly';
+
+interface Plan {
+  tier: PlanTier;
+  period: PlanPeriod;
+  name: string;
+  price: string;
+  periodLabel: string;
+  priceId: string;
+  features: string[];
+  badge?: string;
+}
+
+const PLANS: Plan[] = [
   {
-    id: 'monthly',
-    name: '월간',
+    tier: 'deluxe',
+    period: 'monthly',
+    name: '디럭스',
     price: '4,900원',
-    period: '/월',
-    priceId: 'price_monthly',
+    periodLabel: '/월',
+    priceId: 'price_deluxe_monthly',
+    features: ['하루 3회 대화', 'AI 친구 개인화', '스트릭 기능'],
   },
   {
-    id: 'yearly',
-    name: '연간',
+    tier: 'deluxe',
+    period: 'yearly',
+    name: '디럭스 연간',
     price: '49,000원',
-    period: '/년',
-    priceId: 'price_yearly',
+    periodLabel: '/년',
+    priceId: 'price_deluxe_yearly',
+    features: ['하루 3회 대화', 'AI 친구 개인화', '스트릭 기능'],
+    badge: '17% 할인',
+  },
+  {
+    tier: 'premium',
+    period: 'monthly',
+    name: '프리미엄',
+    price: '9,900원',
+    periodLabel: '/월',
+    priceId: 'price_premium_monthly',
+    features: ['무제한 대화', 'AI 친구 개인화', '스트릭 기능', '우선 응답'],
+  },
+  {
+    tier: 'premium',
+    period: 'yearly',
+    name: '프리미엄 연간',
+    price: '99,000원',
+    periodLabel: '/년',
+    priceId: 'price_premium_yearly',
+    features: ['무제한 대화', 'AI 친구 개인화', '스트릭 기능', '우선 응답'],
     badge: '17% 할인',
   },
 ];
 
 export default function SubscriptionScreen({ navigation }: Props) {
-  const { info, isPremium, quotaRemaining, refresh } = useSubscription();
-  const [selectedPlan, setSelectedPlan] = useState('monthly');
+  const { info, isSubscribed, refresh } = useSubscription();
+  const [selectedTier, setSelectedTier] = useState<PlanTier>('deluxe');
+  const [selectedPeriod, setSelectedPeriod] = useState<PlanPeriod>('monthly');
   const [isLoading, setIsLoading] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
 
-  const quotaUsed = info?.quotaUsed ?? 0;
-  const quotaLimit = info?.quotaLimit ?? 20;
-  const quotaProgress = quotaLimit > 0 ? Math.min(quotaUsed / quotaLimit, 1) : 0;
+  const selectedPlan = PLANS.find(
+    (p) => p.tier === selectedTier && p.period === selectedPeriod
+  );
+
+  const currentTier = info?.tier ?? 'FREE';
 
   const handleCheckout = async () => {
-    const plan = PLANS.find((p) => p.id === selectedPlan);
-    if (!plan) return;
+    if (!selectedPlan) return;
 
     setIsLoading(true);
     try {
-      const { checkoutUrl } = await subscriptionApi.createCheckout(plan.priceId);
+      const { checkoutUrl } = await subscriptionApi.createCheckout(selectedPlan.priceId);
       await Linking.openURL(checkoutUrl);
-      // 결제 완료 후 돌아오면 상태 갱신
       setTimeout(() => refresh(), 3000);
     } catch (error) {
       const message = error instanceof ApiError
@@ -101,6 +139,14 @@ export default function SubscriptionScreen({ navigation }: Props) {
     return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
 
+  const getTierLabel = (tier: string) => {
+    switch (tier) {
+      case 'DELUXE': return '디럭스';
+      case 'PREMIUM': return '프리미엄';
+      default: return '무료';
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -116,90 +162,96 @@ export default function SubscriptionScreen({ navigation }: Props) {
         <View style={styles.statusCard}>
           <View style={styles.statusHeader}>
             <Text style={styles.statusLabel}>현재 플랜</Text>
-            <View style={[styles.statusBadge, isPremium && styles.statusBadgePremium]}>
-              <Text style={[styles.statusBadgeText, isPremium && styles.statusBadgeTextPremium]}>
-                {isPremium ? '프리미엄' : '무료'}
+            <View style={[styles.statusBadge, isSubscribed && styles.statusBadgePremium]}>
+              <Text style={[styles.statusBadgeText, isSubscribed && styles.statusBadgeTextPremium]}>
+                {getTierLabel(currentTier)}
               </Text>
             </View>
           </View>
 
-          {isPremium && info?.currentPeriodEnd && (
+          {info?.trialActive && (
+            <Text style={styles.trialText}>
+              체험 기간: {formatDate(info.trialEnd)}까지
+            </Text>
+          )}
+
+          {isSubscribed && info?.currentPeriodEnd && !info.trialActive && (
             <Text style={styles.periodText}>
               다음 결제일: {formatDate(info.currentPeriodEnd)}
             </Text>
           )}
-
-          {/* 쿼터 사용량 */}
-          {!isPremium && (
-            <View style={styles.quotaSection}>
-              <View style={styles.quotaHeader}>
-                <Text style={styles.quotaLabel}>AI 코멘트 사용량</Text>
-                <Text style={styles.quotaCount}>{quotaUsed}/{quotaLimit}</Text>
-              </View>
-              <View style={styles.quotaBarBg}>
-                <View
-                  style={[
-                    styles.quotaBarFill,
-                    { width: `${quotaProgress * 100}%` },
-                    quotaProgress >= 0.8 && styles.quotaBarWarning,
-                    quotaProgress >= 1 && styles.quotaBarFull,
-                  ]}
-                />
-              </View>
-              {quotaRemaining <= 5 && quotaRemaining > 0 && (
-                <Text style={styles.quotaWarning}>
-                  {quotaRemaining}건 남았어요
-                </Text>
-              )}
-              {quotaRemaining <= 0 && (
-                <Text style={styles.quotaExhausted}>
-                  이번 달 사용량을 모두 소진했어요
-                </Text>
-              )}
-            </View>
-          )}
         </View>
 
-        {/* 프리미엄 플랜 선택 (비프리미엄만) */}
-        {!isPremium && (
+        {/* 플랜 선택 (미구독자만) */}
+        {!isSubscribed && (
           <>
-            <Text style={styles.sectionTitle}>프리미엄 플랜</Text>
-            <View style={styles.plansContainer}>
-              {PLANS.map((plan) => (
-                <TouchableOpacity
-                  key={plan.id}
-                  style={[
-                    styles.planCard,
-                    selectedPlan === plan.id && styles.planCardSelected,
-                  ]}
-                  onPress={() => setSelectedPlan(plan.id)}
-                >
-                  {plan.badge && (
-                    <View style={styles.planBadge}>
-                      <Text style={styles.planBadgeText}>{plan.badge}</Text>
-                    </View>
-                  )}
-                  <Text style={[
-                    styles.planName,
-                    selectedPlan === plan.id && styles.planNameSelected,
-                  ]}>
-                    {plan.name}
-                  </Text>
-                  <Text style={[
-                    styles.planPrice,
-                    selectedPlan === plan.id && styles.planPriceSelected,
-                  ]}>
-                    {plan.price}
-                  </Text>
-                  <Text style={[
-                    styles.planPeriod,
-                    selectedPlan === plan.id && styles.planPeriodSelected,
-                  ]}>
-                    {plan.period}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            {/* 티어 선택 */}
+            <Text style={styles.sectionTitle}>플랜 선택</Text>
+            <View style={styles.tierSelector}>
+              <TouchableOpacity
+                style={[styles.tierTab, selectedTier === 'deluxe' && styles.tierTabSelected]}
+                onPress={() => setSelectedTier('deluxe')}
+              >
+                <Text style={[styles.tierTabText, selectedTier === 'deluxe' && styles.tierTabTextSelected]}>
+                  디럭스
+                </Text>
+                <Text style={[styles.tierTabPrice, selectedTier === 'deluxe' && styles.tierTabPriceSelected]}>
+                  월 4,900원
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tierTab, selectedTier === 'premium' && styles.tierTabSelected]}
+                onPress={() => setSelectedTier('premium')}
+              >
+                <Text style={[styles.tierTabText, selectedTier === 'premium' && styles.tierTabTextSelected]}>
+                  프리미엄
+                </Text>
+                <Text style={[styles.tierTabPrice, selectedTier === 'premium' && styles.tierTabPriceSelected]}>
+                  월 9,900원
+                </Text>
+              </TouchableOpacity>
             </View>
+
+            {/* 기간 선택 */}
+            <View style={styles.periodSelector}>
+              <TouchableOpacity
+                style={[styles.periodTab, selectedPeriod === 'monthly' && styles.periodTabSelected]}
+                onPress={() => setSelectedPeriod('monthly')}
+              >
+                <Text style={[styles.periodTabText, selectedPeriod === 'monthly' && styles.periodTabTextSelected]}>
+                  월간
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.periodTab, selectedPeriod === 'yearly' && styles.periodTabSelected]}
+                onPress={() => setSelectedPeriod('yearly')}
+              >
+                <Text style={[styles.periodTabText, selectedPeriod === 'yearly' && styles.periodTabTextSelected]}>
+                  연간 (17% 할인)
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* 선택된 플랜 상세 */}
+            {selectedPlan && (
+              <View style={styles.planDetail}>
+                <Text style={styles.planDetailName}>{selectedPlan.name}</Text>
+                <Text style={styles.planDetailPrice}>
+                  {selectedPlan.price}{selectedPlan.periodLabel}
+                </Text>
+                <View style={styles.featureList}>
+                  {selectedPlan.features.map((feature, i) => (
+                    <Text key={i} style={styles.featureItem}>
+                      ✓ {feature}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <Text style={styles.trialInfo}>
+              첫 구독 시 7일간 무료로 체험할 수 있어요
+            </Text>
 
             <TouchableOpacity
               style={[styles.checkoutButton, isLoading && styles.checkoutButtonDisabled]}
@@ -215,8 +267,8 @@ export default function SubscriptionScreen({ navigation }: Props) {
           </>
         )}
 
-        {/* 구독 취소 (프리미엄만) */}
-        {isPremium && (
+        {/* 구독 취소 (구독자만) */}
+        {isSubscribed && (
           <TouchableOpacity
             style={styles.cancelButton}
             onPress={handleCancel}
@@ -276,7 +328,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   statusLabel: {
     fontSize: 14,
@@ -299,55 +351,14 @@ const styles = StyleSheet.create({
   statusBadgeTextPremium: {
     color: '#FF9B7A',
   },
+  trialText: {
+    fontSize: 13,
+    color: '#FF9B7A',
+    fontWeight: '500',
+  },
   periodText: {
     fontSize: 13,
     color: '#666',
-  },
-  quotaSection: {
-    marginTop: 4,
-  },
-  quotaHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  quotaLabel: {
-    fontSize: 14,
-    color: '#2D2D2D',
-    fontWeight: '500',
-  },
-  quotaCount: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '600',
-  },
-  quotaBarBg: {
-    height: 8,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  quotaBarFill: {
-    height: '100%',
-    backgroundColor: '#FF9B7A',
-    borderRadius: 4,
-  },
-  quotaBarWarning: {
-    backgroundColor: '#FFB347',
-  },
-  quotaBarFull: {
-    backgroundColor: '#FF6B6B',
-  },
-  quotaWarning: {
-    fontSize: 12,
-    color: '#FFB347',
-    marginTop: 6,
-  },
-  quotaExhausted: {
-    fontSize: 12,
-    color: '#FF6B6B',
-    marginTop: 6,
   },
   sectionTitle: {
     fontSize: 14,
@@ -355,62 +366,96 @@ const styles = StyleSheet.create({
     color: '#999',
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  plansContainer: {
+  tierSelector: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 16,
   },
-  planCard: {
+  tierTab: {
     flex: 1,
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#E5E5E5',
   },
-  planCardSelected: {
+  tierTabSelected: {
     borderColor: '#FF9B7A',
     backgroundColor: '#FFF9F5',
   },
-  planBadge: {
-    backgroundColor: '#FF9B7A',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginBottom: 8,
-  },
-  planBadgeText: {
-    fontSize: 11,
-    color: '#fff',
+  tierTabText: {
+    fontSize: 15,
     fontWeight: '600',
-  },
-  planName: {
-    fontSize: 14,
     color: '#666',
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  planNameSelected: {
-    color: '#FF9B7A',
-    fontWeight: '600',
-  },
-  planPrice: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#2D2D2D',
-    marginBottom: 2,
-  },
-  planPriceSelected: {
+  tierTabTextSelected: {
     color: '#FF9B7A',
   },
-  planPeriod: {
+  tierTabPrice: {
     fontSize: 13,
     color: '#999',
   },
-  planPeriodSelected: {
+  tierTabPriceSelected: {
     color: '#FF9B7A',
+  },
+  periodSelector: {
+    flexDirection: 'row',
+    backgroundColor: '#F0F0F0',
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 20,
+  },
+  periodTab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  periodTabSelected: {
+    backgroundColor: '#fff',
+  },
+  periodTabText: {
+    fontSize: 14,
+    color: '#999',
+  },
+  periodTabTextSelected: {
+    color: '#2D2D2D',
+    fontWeight: '600',
+  },
+  planDetail: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+  },
+  planDetailName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2D2D2D',
+    marginBottom: 4,
+  },
+  planDetailPrice: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FF9B7A',
+    marginBottom: 16,
+  },
+  featureList: {
+    gap: 8,
+  },
+  featureItem: {
+    fontSize: 14,
+    color: '#666',
+  },
+  trialInfo: {
+    fontSize: 13,
+    color: '#FF9B7A',
+    textAlign: 'center',
+    marginBottom: 16,
   },
   checkoutButton: {
     backgroundColor: '#FF9B7A',

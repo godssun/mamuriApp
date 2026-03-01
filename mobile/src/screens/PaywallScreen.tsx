@@ -15,14 +15,32 @@ type Props = {
   navigation: NativeStackNavigationProp<MainStackParamList, 'Paywall'>;
 };
 
-const BENEFITS = [
-  { icon: '♾️', title: '무제한 AI 코멘트', description: '매일 마음 놓고 일기를 써요' },
-  { icon: '🌱', title: '성장 제한 해제', description: 'AI 친구의 레벨 제한이 사라져요' },
-  { icon: '📊', title: '성장 리포트', description: '월간 감정 변화를 확인해요 (예정)' },
+const PLANS = [
+  {
+    tier: 'DELUXE',
+    label: '디럭스',
+    price: '월 4,900원',
+    highlight: false,
+    benefits: [
+      '하루 3회 AI 답변',
+      'AI 친구와 매일 대화',
+    ],
+  },
+  {
+    tier: 'PREMIUM',
+    label: '프리미엄',
+    price: '월 9,900원',
+    highlight: true,
+    benefits: [
+      '무제한 AI 답변',
+      'AI 친구의 레벨 제한 해제',
+      '월간 감정 리포트 (예정)',
+    ],
+  },
 ];
 
 export default function PaywallScreen({ navigation }: Props) {
-  const { hasCrisisFlag, quotaRemaining } = useSubscription();
+  const { hasCrisisFlag } = useSubscription();
 
   return (
     <View style={styles.container}>
@@ -41,33 +59,43 @@ export default function PaywallScreen({ navigation }: Props) {
         <View style={styles.heroSection}>
           <Text style={styles.heroEmoji}>📝</Text>
           <Text style={styles.heroTitle}>
-            이번 달 AI 코멘트를{'\n'}모두 사용했어요
+            오늘의 대화 횟수를{'\n'}모두 사용했어요
           </Text>
           <Text style={styles.heroSubtitle}>
-            프리미엄으로 업그레이드하면{'\n'}
-            무제한으로 AI 코멘트를 받을 수 있어요
+            구독하면 더 많은 AI 대화를 나눌 수 있어요
           </Text>
         </View>
 
-        <View style={styles.benefitsSection}>
-          <Text style={styles.benefitsTitle}>프리미엄 혜택</Text>
-          {BENEFITS.map((benefit) => (
-            <View key={benefit.title} style={styles.benefitRow}>
-              <Text style={styles.benefitIcon}>{benefit.icon}</Text>
-              <View style={styles.benefitText}>
-                <Text style={styles.benefitTitle}>{benefit.title}</Text>
-                <Text style={styles.benefitDescription}>{benefit.description}</Text>
+        <View style={styles.plansSection}>
+          {PLANS.map((plan) => (
+            <TouchableOpacity
+              key={plan.tier}
+              style={[styles.planCard, plan.highlight && styles.planCardHighlight]}
+              onPress={() => navigation.replace('Subscription')}
+            >
+              <View style={styles.planHeader}>
+                <Text style={[styles.planLabel, plan.highlight && styles.planLabelHighlight]}>
+                  {plan.label}
+                </Text>
+                <Text style={[styles.planPrice, plan.highlight && styles.planPriceHighlight]}>
+                  {plan.price}
+                </Text>
               </View>
-            </View>
+              {plan.benefits.map((benefit) => (
+                <Text key={benefit} style={[styles.planBenefit, plan.highlight && styles.planBenefitHighlight]}>
+                  {'  '}
+                  {benefit}
+                </Text>
+              ))}
+            </TouchableOpacity>
           ))}
         </View>
 
         <TouchableOpacity
-          style={styles.premiumButton}
+          style={styles.ctaButton}
           onPress={() => navigation.replace('Subscription')}
         >
-          <Text style={styles.premiumButtonText}>프리미엄 시작하기</Text>
-          <Text style={styles.premiumPriceText}>월 4,900원</Text>
+          <Text style={styles.ctaButtonText}>요금제 보기</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -75,13 +103,12 @@ export default function PaywallScreen({ navigation }: Props) {
           onPress={() => navigation.goBack()}
         >
           <Text style={styles.freeButtonText}>
-            계속 무료로 사용하기
-            {quotaRemaining > 0 && ` (${quotaRemaining}건 남음)`}
+            나중에
           </Text>
         </TouchableOpacity>
 
         <Text style={styles.disclaimer}>
-          일기는 AI 코멘트 없이도 저장할 수 있어요
+          일기는 AI 답변 없이도 저장할 수 있어요
         </Text>
       </ScrollView>
     </View>
@@ -131,44 +158,53 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  benefitsSection: {
+  plansSection: {
     paddingHorizontal: 24,
-    marginBottom: 32,
+    marginBottom: 24,
+    gap: 12,
   },
-  benefitsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#999',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 16,
-  },
-  benefitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  planCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 14,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  planCardHighlight: {
+    backgroundColor: '#FFF0EB',
+    borderColor: '#FF9B7A',
+  },
+  planHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 10,
   },
-  benefitIcon: {
-    fontSize: 28,
-    marginRight: 14,
-  },
-  benefitText: {
-    flex: 1,
-  },
-  benefitTitle: {
-    fontSize: 15,
-    fontWeight: '600',
+  planLabel: {
+    fontSize: 16,
+    fontWeight: '700',
     color: '#2D2D2D',
-    marginBottom: 2,
   },
-  benefitDescription: {
+  planLabelHighlight: {
+    color: '#FF9B7A',
+  },
+  planPrice: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  planPriceHighlight: {
+    color: '#FF9B7A',
+  },
+  planBenefit: {
     fontSize: 13,
-    color: '#999',
+    color: '#666',
+    lineHeight: 22,
   },
-  premiumButton: {
+  planBenefitHighlight: {
+    color: '#CC6B50',
+  },
+  ctaButton: {
     backgroundColor: '#FF9B7A',
     borderRadius: 14,
     paddingVertical: 16,
@@ -176,15 +212,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  premiumButtonText: {
+  ctaButtonText: {
     color: '#fff',
     fontSize: 17,
     fontWeight: '700',
-  },
-  premiumPriceText: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 13,
-    marginTop: 4,
   },
   freeButton: {
     paddingVertical: 12,

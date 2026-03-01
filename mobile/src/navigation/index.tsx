@@ -22,6 +22,7 @@ import CompanionScreen from '../screens/CompanionScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import SubscriptionScreen from '../screens/SubscriptionScreen';
+import CompanionSetupScreen from '../screens/CompanionSetupScreen';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -102,14 +103,22 @@ function MainTabsNavigator() {
   );
 }
 
-// 메인 스택 (탭 + 설정)
+// 메인 스택 (탭 + 설정 + 온보딩)
 function MainNavigator() {
+  const { isNewUser } = useAuth();
+
   return (
     <MainStack.Navigator screenOptions={{ headerShown: false }}>
-      <MainStack.Screen name="MainTabs" component={MainTabsNavigator} />
-      <MainStack.Screen name="Settings" component={SettingsScreen} />
-      <MainStack.Screen name="Paywall" component={PaywallScreen} />
-      <MainStack.Screen name="Subscription" component={SubscriptionScreen} />
+      {isNewUser ? (
+        <MainStack.Screen name="CompanionSetup" component={CompanionSetupScreen} />
+      ) : (
+        <>
+          <MainStack.Screen name="MainTabs" component={MainTabsNavigator} />
+          <MainStack.Screen name="Settings" component={SettingsScreen} />
+          <MainStack.Screen name="Paywall" component={PaywallScreen} />
+          <MainStack.Screen name="Subscription" component={SubscriptionScreen} />
+        </>
+      )}
     </MainStack.Navigator>
   );
 }

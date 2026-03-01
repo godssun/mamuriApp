@@ -5,10 +5,12 @@ import { SignupRequest, LoginRequest } from '../types';
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
+  isNewUser: boolean;
   login: (data: LoginRequest) => Promise<void>;
   signup: (data: SignupRequest) => Promise<void>;
   logout: () => Promise<void>;
   forceLogout: () => void;
+  completeOnboarding: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,11 +18,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   // forceLogout: API client에서 TOKEN_REUSE_DETECTED 등 호출
   const forceLogout = useCallback(() => {
     tokenStorage.clear();
     setIsAuthenticated(false);
+    setIsNewUser(false);
   }, []);
 
   // API client에 forceLogout 핸들러 등록/해제
@@ -60,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = useCallback(async (data: SignupRequest) => {
     await authApi.signup(data);
+    setIsNewUser(true);
     setIsAuthenticated(true);
   }, []);
 
@@ -70,10 +75,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 서버 로그아웃 실패해도 로컬 상태는 초기화
     }
     setIsAuthenticated(false);
+    setIsNewUser(false);
+  }, []);
+
+  const completeOnboarding = useCallback(() => {
+    setIsNewUser(false);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, login, signup, logout, forceLogout }}>
+    <AuthContext.Provider value={{
+      isAuthenticated, isLoading, isNewUser,
+      login, signup, logout, forceLogout, completeOnboarding,
+    }}>
       {children}
     </AuthContext.Provider>
   );

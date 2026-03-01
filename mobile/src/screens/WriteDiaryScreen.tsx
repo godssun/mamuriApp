@@ -155,12 +155,12 @@ export default function WriteDiaryScreen({ navigation }: Props) {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>일기 쓰기</Text>
-          {!isPremium && quotaRemaining !== Infinity && (
+          {!isPremium && info?.dailyRepliesMax !== -1 && (
             <Text style={[
               styles.quotaCounter,
-              quotaRemaining <= 5 && styles.quotaCounterWarn,
+              (info?.dailyRepliesMax ?? 0) <= 1 && styles.quotaCounterWarn,
             ]}>
-              AI 코멘트 {(info?.quotaUsed ?? 0)}/{(info?.quotaLimit ?? 20)}
+              일일 대화 {info?.dailyRepliesMax ?? 0}회
             </Text>
           )}
         </View>
