@@ -79,6 +79,17 @@ public class User {
     @Column(name = "crisis_flag_until")
     private LocalDateTime crisisFlagUntil;
 
+    // -- 스트릭 필드 --
+
+    @Column(name = "current_streak", nullable = false)
+    private int currentStreak = 0;
+
+    @Column(name = "longest_streak", nullable = false)
+    private int longestStreak = 0;
+
+    @Column(name = "last_diary_date")
+    private LocalDate lastDiaryDate;
+
     @Version
     @Column(name = "version", nullable = false)
     private Long version = 0L;
@@ -158,5 +169,43 @@ public class User {
 
     public void updateGracePeriodEnd(LocalDateTime end) {
         this.gracePeriodEnd = end;
+    }
+
+    // -- 스트릭 메서드 --
+
+    public void updateStreak(LocalDate diaryDate) {
+        if (diaryDate == null) return;
+
+        if (this.lastDiaryDate == null) {
+            // 첫 일기
+            this.currentStreak = 1;
+            this.longestStreak = Math.max(this.longestStreak, 1);
+            this.lastDiaryDate = diaryDate;
+        } else if (diaryDate.equals(this.lastDiaryDate)) {
+            // 같은 날 → 변화 없음
+        } else if (diaryDate.isBefore(this.lastDiaryDate)) {
+            // 과거 날짜 → 무시 (MVP)
+        } else if (diaryDate.equals(this.lastDiaryDate.plusDays(1))) {
+            // 연속일
+            this.currentStreak++;
+            this.longestStreak = Math.max(this.longestStreak, this.currentStreak);
+            this.lastDiaryDate = diaryDate;
+        } else {
+            // 공백 → 리셋
+            this.currentStreak = 1;
+            this.longestStreak = Math.max(this.longestStreak, this.currentStreak);
+            this.lastDiaryDate = diaryDate;
+        }
+    }
+
+    public void resetStreakData() {
+        this.currentStreak = 0;
+        this.lastDiaryDate = null;
+    }
+
+    public void setStreakData(int currentStreak, LocalDate lastDiaryDate) {
+        this.currentStreak = currentStreak;
+        this.lastDiaryDate = lastDiaryDate;
+        // longestStreak은 줄이지 않음
     }
 }
