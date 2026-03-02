@@ -67,6 +67,26 @@ export default function PaywallScreen({ navigation }: Props) {
           </Text>
         </View>
 
+        <TouchableOpacity
+          style={styles.trialBanner}
+          onPress={() => navigation.replace('Subscription')}
+        >
+          <Text style={styles.trialBadge}>추천</Text>
+          <Text style={styles.trialTitle}>7일 무료 체험 시작하기</Text>
+          <Text style={styles.trialSubtitle}>
+            체험 기간 동안 하루 3회 AI 답변을 받을 수 있어요
+          </Text>
+          <Text style={styles.trialNote}>
+            체험 종료 후 자동 결제 · 언제든 취소 가능
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>또는 바로 구독</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
         <View style={styles.plansSection}>
           {PLANS.map((plan) => (
             <TouchableOpacity
@@ -154,6 +174,61 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  trialBanner: {
+    backgroundColor: '#FFF0EB',
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 24,
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: '#FF9B7A',
+    alignItems: 'center',
+  },
+  trialBadge: {
+    backgroundColor: '#FF9B7A',
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  trialTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FF9B7A',
+    marginBottom: 6,
+  },
+  trialSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  trialNote: {
+    fontSize: 11,
+    color: '#999',
+    textAlign: 'center',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 24,
+    marginBottom: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E8E8E8',
+  },
+  dividerText: {
+    fontSize: 12,
+    color: '#999',
+    paddingHorizontal: 12,
   },
   plansSection: {
     paddingHorizontal: 24,

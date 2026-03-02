@@ -30,7 +30,7 @@ export default function UpgradeModal({ visible, aiName, onUpgrade, onDismiss }: 
           <View style={styles.tiers}>
             <View style={styles.tierRow}>
               <Text style={styles.tierName}>무료</Text>
-              <Text style={styles.tierLimit}>체험 만료 후 이용 불가</Text>
+              <Text style={styles.tierLimit}>하루 1회 맛보기</Text>
             </View>
             <View style={styles.tierRow}>
               <Text style={styles.tierName}>디럭스</Text>

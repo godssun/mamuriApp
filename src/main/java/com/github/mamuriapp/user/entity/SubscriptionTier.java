@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum SubscriptionTier {
 
-    FREE(0),        // 체험 만료 후 대화 불가
+    FREE(1),        // 하루 1회 맛보기
     DELUXE(3),      // 하루 3회
     PREMIUM(-1);    // 무제한 (-1)
 
@@ -41,9 +41,9 @@ public enum SubscriptionTier {
     }
 
     /**
-     * 대화가 차단된 티어인지 확인한다 (체험 만료된 FREE).
+     * 대화가 완전 차단된 티어인지 확인한다.
      *
-     * @return 차단 상태이면 true
+     * @return 일일 허용 횟수가 0이면 true
      */
     public boolean isBlocked() {
         return maxRepliesPerDay == 0;

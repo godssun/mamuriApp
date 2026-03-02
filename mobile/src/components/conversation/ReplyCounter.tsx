@@ -11,14 +11,14 @@ export default function ReplyCounter({ limits }: Props) {
     return null; // 무제한이면 표시하지 않음
   }
 
-  const isLow = limits.remainingReplies <= 1;
-  const isBlocked = limits.maxRepliesPerDay === 0;
+  const isLow = limits.remainingReplies <= 0;
+  const isFree = limits.maxRepliesPerDay === 1;
 
-  if (isBlocked) {
+  if (isLow && isFree) {
     return (
       <View style={styles.container}>
         <Text style={styles.blockedText}>
-          체험이 만료되었습니다. 구독을 시작해주세요.
+          오늘의 맛보기 답변을 사용했어요
         </Text>
       </View>
     );
@@ -29,6 +29,11 @@ export default function ReplyCounter({ limits }: Props) {
       <Text style={[styles.text, isLow && styles.lowText]}>
         오늘 남은 답변 {limits.remainingReplies}/{limits.maxRepliesPerDay}
       </Text>
+      {isFree && (
+        <Text style={styles.hintText}>
+          구독하면 더 많은 대화를 나눌 수 있어요
+        </Text>
+      )}
     </View>
   );
 }
@@ -48,7 +53,12 @@ const styles = StyleSheet.create({
   },
   blockedText: {
     fontSize: 12,
-    color: '#FF6B6B',
+    color: '#FF9B7A',
     fontWeight: '500',
+  },
+  hintText: {
+    fontSize: 11,
+    color: '#BBB',
+    marginTop: 2,
   },
 });

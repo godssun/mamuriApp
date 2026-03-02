@@ -134,22 +134,43 @@ class ConversationServiceTest {
     // --- 티어별 답변 제한 (일별) ---
 
     @Nested
-    @DisplayName("FREE 티어 답변 제한")
+    @DisplayName("FREE 티어 답변 제한 (하루 1회 맛보기)")
     class FreeTierLimit {
 
         @Test
-        @DisplayName("FREE: 체험 만료 후 TRIAL_EXPIRED(402) 에러를 반환한다")
-        void free_trialExpired_blocked() {
-            // given - FREE 유저 (maxRepliesPerDay = 0, isBlocked = true)
+        @DisplayName("FREE: 오늘 0회 사용 시 첫 답변은 성공한다")
+        void free_firstReply_success() {
+            // given - FREE 유저 (maxRepliesPerDay = 1)
             when(diaryRepository.findByIdAndUserIdWithUser(1L, 1L))
                     .thenReturn(Optional.of(testDiary));
+            when(conversationMessageRepository.countByUserIdAndRoleAndCreatedAtAfter(
+                    eq(1L), eq("AI"), any(LocalDateTime.class))).thenReturn(0);
+            when(conversationMessageRepository.findByDiaryIdOrderBySequenceNumberAsc(1L))
+                    .thenReturn(List.of());
+
+            // when
+            ConversationReplyResponse response = conversationService.sendReply(1L, 1L, "안녕하세요");
+
+            // then
+            assertThat(response).isNotNull();
+            assertThat(response.getRemainingReplies()).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("FREE: 오늘 1회 사용 후 2번째 답변은 REPLY_LIMIT_EXCEEDED 에러를 반환한다")
+        void free_secondReply_limitExceeded() {
+            // given - FREE 유저, 오늘 1회 사용
+            when(diaryRepository.findByIdAndUserIdWithUser(1L, 1L))
+                    .thenReturn(Optional.of(testDiary));
+            when(conversationMessageRepository.countByUserIdAndRoleAndCreatedAtAfter(
+                    eq(1L), eq("AI"), any(LocalDateTime.class))).thenReturn(1);
 
             // when & then
             assertThatThrownBy(() -> conversationService.sendReply(1L, 1L, "안녕하세요"))
                     .isInstanceOf(CustomException.class)
                     .satisfies(ex -> {
                         CustomException ce = (CustomException) ex;
-                        assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.TRIAL_EXPIRED);
+                        assertThat(ce.getErrorCode()).isEqualTo(ErrorCode.REPLY_LIMIT_EXCEEDED);
                     });
         }
     }
