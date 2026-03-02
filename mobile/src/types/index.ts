@@ -141,6 +141,13 @@ export interface ConversationReplyResponse {
   createdAt: string;
 }
 
+// 계정 삭제
+export interface DeleteAccountRequest {
+  password: string;
+  reason: string;
+  reasonDetail?: string;
+}
+
 // 구독
 export type SubscriptionTier = 'FREE' | 'DELUXE' | 'PREMIUM';
 

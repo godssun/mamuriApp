@@ -20,6 +20,7 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { companionApi, ApiError } from '../api/client';
 import { CompanionProfile, CompanionSettings, MainStackParamList } from '../types';
+import DeleteAccountModal from '../components/settings/DeleteAccountModal';
 
 function getAvatarImageUri(avatar: string | null | undefined): string | null {
   if (!avatar || avatar.length === 0) return null;
@@ -50,7 +51,7 @@ const FONT_FAMILY_OPTIONS = [
 
 export default function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const { logout } = useAuth();
+  const { logout, forceLogout } = useAuth();
   const { isPremium } = useSubscription();
   const { theme, updateAppearance } = useTheme();
   const [companion, setCompanion] = useState<CompanionProfile | null>(null);
@@ -60,6 +61,7 @@ export default function SettingsScreen() {
   const [showNameModal, setShowNameModal] = useState(false);
   const [newAiName, setNewAiName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -397,6 +399,13 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Text style={styles.logoutText}>로그아웃</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.deleteAccountButton}
+            onPress={() => setShowDeleteModal(true)}
+          >
+            <Text style={styles.deleteAccountText}>계정 삭제</Text>
+          </TouchableOpacity>
         </View>
 
         {/* 앱 정보 */}
@@ -446,6 +455,13 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      <DeleteAccountModal
+        visible={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onDeleted={forceLogout}
+        isPremium={isPremium}
+      />
     </View>
   );
 }
@@ -597,6 +613,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FF6B6B',
     fontWeight: '500',
+  },
+  deleteAccountButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  deleteAccountText: {
+    fontSize: 14,
+    color: '#999',
   },
   versionText: {
     fontSize: 14,

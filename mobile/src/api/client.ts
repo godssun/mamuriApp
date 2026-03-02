@@ -20,6 +20,7 @@ import {
   StreakResponse,
   ConversationHistoryResponse,
   ConversationReplyResponse,
+  DeleteAccountRequest,
 } from '../types';
 
 // Android 에뮬레이터에서는 10.0.2.2가 호스트 머신의 localhost
@@ -447,6 +448,16 @@ export const subscriptionApi = {
 
   async cancel(): Promise<void> {
     await request<void>('/subscription/cancel', { method: 'POST' });
+  },
+};
+
+// 계정 API
+export const accountApi = {
+  async deleteAccount(data: DeleteAccountRequest): Promise<void> {
+    await request<void>('/user/delete-account', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 };
 
