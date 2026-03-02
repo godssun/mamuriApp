@@ -50,3 +50,6 @@ Thumbs.db
 
 ### Playwright MCP ###
 .playwright-mcp/
+
+### User uploads ###
+uploads/
