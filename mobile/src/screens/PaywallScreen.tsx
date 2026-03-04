@@ -59,10 +59,10 @@ export default function PaywallScreen({ navigation }: Props) {
         {hasCrisisFlag && <CrisisBanner />}
 
         <View style={styles.heroSection}>
-          <Text style={styles.heroTitle}>
+          <Text style={[styles.heroTitle, { color: theme.colors.text }]}>
             오늘의 대화 횟수를{'\n'}모두 사용했어요
           </Text>
-          <Text style={styles.heroSubtitle}>
+          <Text style={[styles.heroSubtitle, { color: theme.colors.textSecondary }]}>
             구독하면 더 많은 AI 대화를 나눌 수 있어요
           </Text>
         </View>
@@ -73,37 +73,37 @@ export default function PaywallScreen({ navigation }: Props) {
         >
           <Text style={styles.trialBadge}>추천</Text>
           <Text style={styles.trialTitle}>7일 무료 체험 시작하기</Text>
-          <Text style={styles.trialSubtitle}>
+          <Text style={[styles.trialSubtitle, { color: theme.colors.textSecondary }]}>
             체험 기간 동안 하루 3회 AI 답변을 받을 수 있어요
           </Text>
-          <Text style={styles.trialNote}>
+          <Text style={[styles.trialNote, { color: theme.colors.textSecondary }]}>
             체험 종료 후 자동 결제 · 언제든 취소 가능
           </Text>
         </TouchableOpacity>
 
         <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>또는 바로 구독</Text>
-          <View style={styles.dividerLine} />
+          <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
+          <Text style={[styles.dividerText, { color: theme.colors.textSecondary }]}>또는 바로 구독</Text>
+          <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
         </View>
 
         <View style={styles.plansSection}>
           {PLANS.map((plan) => (
             <TouchableOpacity
               key={plan.tier}
-              style={[styles.planCard, plan.highlight && styles.planCardHighlight]}
+              style={[styles.planCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }, plan.highlight && styles.planCardHighlight]}
               onPress={() => navigation.replace('Subscription')}
             >
               <View style={styles.planHeader}>
-                <Text style={[styles.planLabel, plan.highlight && styles.planLabelHighlight]}>
+                <Text style={[styles.planLabel, { color: theme.colors.text }, plan.highlight && styles.planLabelHighlight]}>
                   {plan.label}
                 </Text>
-                <Text style={[styles.planPrice, plan.highlight && styles.planPriceHighlight]}>
+                <Text style={[styles.planPrice, { color: theme.colors.textSecondary }, plan.highlight && styles.planPriceHighlight]}>
                   {plan.price}
                 </Text>
               </View>
               {plan.benefits.map((benefit) => (
-                <Text key={benefit} style={[styles.planBenefit, plan.highlight && styles.planBenefitHighlight]}>
+                <Text key={benefit} style={[styles.planBenefit, { color: theme.colors.textSecondary }, plan.highlight && styles.planBenefitHighlight]}>
                   {'  '}
                   {benefit}
                 </Text>
@@ -123,12 +123,12 @@ export default function PaywallScreen({ navigation }: Props) {
           style={styles.freeButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.freeButtonText}>
+          <Text style={[styles.freeButtonText, { color: theme.colors.textSecondary }]}>
             나중에
           </Text>
         </TouchableOpacity>
 
-        <Text style={styles.disclaimer}>
+        <Text style={[styles.disclaimer, { color: theme.colors.textSecondary }]}>
           일기는 AI 답변 없이도 저장할 수 있어요
         </Text>
       </ScrollView>

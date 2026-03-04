@@ -161,11 +161,11 @@ export default function SubscriptionScreen({ navigation }: Props) {
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         {/* 현재 상태 */}
-        <View style={styles.statusCard}>
+        <View style={[styles.statusCard, { backgroundColor: theme.colors.card }]}>
           <View style={styles.statusHeader}>
-            <Text style={styles.statusLabel}>현재 플랜</Text>
-            <View style={[styles.statusBadge, isSubscribed && styles.statusBadgePremium]}>
-              <Text style={[styles.statusBadgeText, isSubscribed && styles.statusBadgeTextPremium]}>
+            <Text style={[styles.statusLabel, { color: theme.colors.textSecondary }]}>현재 플랜</Text>
+            <View style={[styles.statusBadge, { backgroundColor: theme.colors.border }, isSubscribed && styles.statusBadgePremium]}>
+              <Text style={[styles.statusBadgeText, { color: theme.colors.textSecondary }, isSubscribed && styles.statusBadgeTextPremium]}>
                 {getTierLabel(currentTier)}
               </Text>
             </View>
@@ -178,7 +178,7 @@ export default function SubscriptionScreen({ navigation }: Props) {
           )}
 
           {isSubscribed && info?.currentPeriodEnd && !info.trialActive && (
-            <Text style={styles.periodText}>
+            <Text style={[styles.periodText, { color: theme.colors.textSecondary }]}>
               다음 결제일: {formatDate(info.currentPeriodEnd)}
             </Text>
           )}
@@ -188,47 +188,47 @@ export default function SubscriptionScreen({ navigation }: Props) {
         {!isSubscribed && (
           <>
             {/* 티어 선택 */}
-            <Text style={styles.sectionTitle}>플랜 선택</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>플랜 선택</Text>
             <View style={styles.tierSelector}>
               <TouchableOpacity
-                style={[styles.tierTab, selectedTier === 'deluxe' && styles.tierTabSelected]}
+                style={[styles.tierTab, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }, selectedTier === 'deluxe' && styles.tierTabSelected]}
                 onPress={() => setSelectedTier('deluxe')}
               >
-                <Text style={[styles.tierTabText, selectedTier === 'deluxe' && styles.tierTabTextSelected]}>
+                <Text style={[styles.tierTabText, { color: theme.colors.textSecondary }, selectedTier === 'deluxe' && styles.tierTabTextSelected]}>
                   디럭스
                 </Text>
-                <Text style={[styles.tierTabPrice, selectedTier === 'deluxe' && styles.tierTabPriceSelected]}>
+                <Text style={[styles.tierTabPrice, { color: theme.colors.textSecondary }, selectedTier === 'deluxe' && styles.tierTabPriceSelected]}>
                   월 4,900원
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.tierTab, selectedTier === 'premium' && styles.tierTabSelected]}
+                style={[styles.tierTab, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }, selectedTier === 'premium' && styles.tierTabSelected]}
                 onPress={() => setSelectedTier('premium')}
               >
-                <Text style={[styles.tierTabText, selectedTier === 'premium' && styles.tierTabTextSelected]}>
+                <Text style={[styles.tierTabText, { color: theme.colors.textSecondary }, selectedTier === 'premium' && styles.tierTabTextSelected]}>
                   프리미엄
                 </Text>
-                <Text style={[styles.tierTabPrice, selectedTier === 'premium' && styles.tierTabPriceSelected]}>
+                <Text style={[styles.tierTabPrice, { color: theme.colors.textSecondary }, selectedTier === 'premium' && styles.tierTabPriceSelected]}>
                   월 9,900원
                 </Text>
               </TouchableOpacity>
             </View>
 
             {/* 기간 선택 */}
-            <View style={styles.periodSelector}>
+            <View style={[styles.periodSelector, { backgroundColor: theme.colors.border }]}>
               <TouchableOpacity
-                style={[styles.periodTab, selectedPeriod === 'monthly' && styles.periodTabSelected]}
+                style={[styles.periodTab, selectedPeriod === 'monthly' && [styles.periodTabSelected, { backgroundColor: theme.colors.card }]]}
                 onPress={() => setSelectedPeriod('monthly')}
               >
-                <Text style={[styles.periodTabText, selectedPeriod === 'monthly' && styles.periodTabTextSelected]}>
+                <Text style={[styles.periodTabText, { color: theme.colors.textSecondary }, selectedPeriod === 'monthly' && [styles.periodTabTextSelected, { color: theme.colors.text }]]}>
                   월간
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.periodTab, selectedPeriod === 'yearly' && styles.periodTabSelected]}
+                style={[styles.periodTab, selectedPeriod === 'yearly' && [styles.periodTabSelected, { backgroundColor: theme.colors.card }]]}
                 onPress={() => setSelectedPeriod('yearly')}
               >
-                <Text style={[styles.periodTabText, selectedPeriod === 'yearly' && styles.periodTabTextSelected]}>
+                <Text style={[styles.periodTabText, { color: theme.colors.textSecondary }, selectedPeriod === 'yearly' && [styles.periodTabTextSelected, { color: theme.colors.text }]]}>
                   연간 (17% 할인)
                 </Text>
               </TouchableOpacity>
@@ -236,14 +236,14 @@ export default function SubscriptionScreen({ navigation }: Props) {
 
             {/* 선택된 플랜 상세 */}
             {selectedPlan && (
-              <View style={styles.planDetail}>
-                <Text style={styles.planDetailName}>{selectedPlan.name}</Text>
+              <View style={[styles.planDetail, { backgroundColor: theme.colors.card }]}>
+                <Text style={[styles.planDetailName, { color: theme.colors.text }]}>{selectedPlan.name}</Text>
                 <Text style={styles.planDetailPrice}>
                   {selectedPlan.price}{selectedPlan.periodLabel}
                 </Text>
                 <View style={styles.featureList}>
                   {selectedPlan.features.map((feature, i) => (
-                    <Text key={i} style={styles.featureItem}>
+                    <Text key={i} style={[styles.featureItem, { color: theme.colors.textSecondary }]}>
                       ✓ {feature}
                     </Text>
                   ))}
@@ -272,7 +272,7 @@ export default function SubscriptionScreen({ navigation }: Props) {
         {/* 구독 취소 (구독자만) */}
         {isSubscribed && (
           <TouchableOpacity
-            style={styles.cancelButton}
+            style={[styles.cancelButton, { backgroundColor: theme.colors.card }]}
             onPress={handleCancel}
             disabled={isCanceling}
           >

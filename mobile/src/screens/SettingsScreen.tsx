@@ -236,10 +236,10 @@ export default function SettingsScreen() {
 
             <View style={styles.profileInfo}>
               <TouchableOpacity style={styles.profileNameRow} onPress={handleOpenNameModal}>
-                <Text style={styles.profileName}>{companion?.aiName ?? '마음이'}</Text>
+                <Text style={[styles.profileName, { color: theme.colors.text }]}>{companion?.aiName ?? '마음이'}</Text>
                 <Text style={styles.profileEditText}>변경</Text>
               </TouchableOpacity>
-              <Text style={styles.profileSub}>
+              <Text style={[styles.profileSub, { color: theme.colors.textSecondary }]}>
                 {avatarUrl ? '사진 탭하여 변경' : '사진 탭하여 설정'}
               </Text>
               {avatarUrl && (
@@ -295,7 +295,7 @@ export default function SettingsScreen() {
                       key={opt.value}
                       style={[
                         styles.fontSizeCard,
-                        { borderColor: theme.colors.border },
+                        { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
                         isSelected && styles.fontSizeCardSelected,
                       ]}
                       onPress={() => updateAppearance({ fontSize: opt.value })}
@@ -334,7 +334,7 @@ export default function SettingsScreen() {
                       key={opt.value}
                       style={[
                         styles.fontFamilyCard,
-                        { borderColor: theme.colors.border },
+                        { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
                         isSelected && styles.fontFamilyCardSelected,
                       ]}
                       onPress={() => updateAppearance({ fontFamily: opt.value })}
@@ -379,24 +379,24 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>구독</Text>
 
           <TouchableOpacity
-            style={styles.settingRow}
+            style={[styles.settingRow, { backgroundColor: theme.colors.card }]}
             onPress={() => navigation.navigate('Subscription')}
           >
             <View style={styles.settingRowLeft}>
-              <Text style={styles.settingLabel}>구독 관리</Text>
-              <Text style={styles.settingDescription}>
+              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>구독 관리</Text>
+              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
                 {isPremium ? '프리미엄 이용 중' : '무료 플랜'}
               </Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <Text style={[styles.chevron, { color: theme.colors.textSecondary }]}>›</Text>
           </TouchableOpacity>
         </View>
 
         {/* 계정 섹션 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>계정</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>계정</Text>
 
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <TouchableOpacity style={[styles.logoutButton, { backgroundColor: theme.colors.card }]} onPress={handleLogout}>
             <Text style={styles.logoutText}>로그아웃</Text>
           </TouchableOpacity>
 
@@ -404,15 +404,15 @@ export default function SettingsScreen() {
             style={styles.deleteAccountButton}
             onPress={() => setShowDeleteModal(true)}
           >
-            <Text style={styles.deleteAccountText}>계정 삭제</Text>
+            <Text style={[styles.deleteAccountText, { color: theme.colors.textSecondary }]}>계정 삭제</Text>
           </TouchableOpacity>
         </View>
 
         {/* 앱 정보 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>앱 정보</Text>
-          <Text style={styles.versionText}>마무리 v1.0.0</Text>
-          <Text style={styles.disclaimerText}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>앱 정보</Text>
+          <Text style={[styles.versionText, { color: theme.colors.textSecondary }]}>마무리 v1.0.0</Text>
+          <Text style={[styles.disclaimerText, { color: theme.colors.textSecondary }]}>
             AI 코멘트는 외부 LLM API를 통해 생성됩니다.{'\n'}
             전문적인 상담이 필요한 경우 전문가의 도움을 받으세요.
           </Text>
@@ -422,23 +422,23 @@ export default function SettingsScreen() {
       {/* AI 이름 변경 모달 */}
       <Modal visible={showNameModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.nameModal}>
-            <Text style={styles.modalTitle}>이름 변경</Text>
+          <View style={[styles.nameModal, { backgroundColor: theme.colors.card }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>이름 변경</Text>
             <TextInput
-              style={styles.nameInput}
+              style={[styles.nameInput, { backgroundColor: theme.colors.border, color: theme.colors.text, borderColor: theme.colors.border }]}
               value={newAiName}
               onChangeText={setNewAiName}
               placeholder="새 이름을 입력해주세요"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.textSecondary}
               maxLength={20}
               autoFocus
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={styles.modalCancelButton}
+                style={[styles.modalCancelButton, { backgroundColor: theme.colors.border }]}
                 onPress={() => setShowNameModal(false)}
               >
-                <Text style={styles.modalCancelText}>취소</Text>
+                <Text style={[styles.modalCancelText, { color: theme.colors.textSecondary }]}>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalSaveButton, isSavingName && styles.modalSaveButtonDisabled]}

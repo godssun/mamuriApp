@@ -2,9 +2,9 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { useThemeV2 } from '../design-system-v2';
 import { companionApi } from '../api/client';
 import {
   RootStackParamList,
@@ -14,17 +14,22 @@ import {
   DiaryStackParamList,
 } from '../types';
 
-// Screens
-import LoginScreen from '../screens/LoginScreen';
-import SignupScreen from '../screens/SignupScreen';
-import DiaryListScreen from '../screens/DiaryListScreen';
-import WriteDiaryScreen from '../screens/WriteDiaryScreen';
-import DiaryDetailScreen from '../screens/DiaryDetailScreen';
-import CompanionScreen from '../screens/CompanionScreen';
-import SettingsScreen from '../screens/SettingsScreen';
-import PaywallScreen from '../screens/PaywallScreen';
-import SubscriptionScreen from '../screens/SubscriptionScreen';
-import CompanionSetupScreen from '../screens/CompanionSetupScreen';
+// V2 Screens
+import { LoginScreenV2 } from '../screens_v2/LoginScreenV2';
+import { SignupScreenV2 } from '../screens_v2/SignupScreenV2';
+import { DiaryListScreenV2 } from '../screens_v2/DiaryListScreenV2';
+import { DiaryWriteScreenV2 } from '../screens_v2/DiaryWriteScreenV2';
+import { DiaryDetailScreenV2 } from '../screens_v2/DiaryDetailScreenV2';
+import { AICommentScreenV2 } from '../screens_v2/AICommentScreenV2';
+
+// V2 Screens (migrated)
+import { CompanionScreenV2 } from '../screens_v2/CompanionScreenV2';
+import { SettingsScreenV2 } from '../screens_v2/SettingsScreenV2';
+import { PaywallScreenV2 } from '../screens_v2/PaywallScreenV2';
+import { SubscriptionScreenV2 } from '../screens_v2/SubscriptionScreenV2';
+import { CompanionSetupScreenV2 } from '../screens_v2/CompanionSetupScreenV2';
+import { DiaryArchiveScreenV2 } from '../screens_v2/DiaryArchiveScreenV2';
+import { CustomTabBar } from '../screens_v2/components/CustomTabBar';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -32,30 +37,12 @@ const MainStack = createNativeStackNavigator<MainStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
 const DiaryStack = createNativeStackNavigator<DiaryStackParamList>();
 
-// 탭 아이콘 컴포넌트
-function TabIcon({ label, icon, focused }: { label: string; icon?: string; focused: boolean }) {
-  return (
-    <View style={styles.tabIconContainer}>
-      {icon ? (
-        <Text style={styles.tabIcon}>{icon}</Text>
-      ) : (
-        <View style={[styles.tabDot, focused && styles.tabDotFocused]} />
-      )}
-      <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>
-        {label}
-      </Text>
-    </View>
-  );
-}
-
 // 인증 스택
 function AuthNavigator() {
   return (
-    <AuthStack.Navigator
-      screenOptions={{ headerShown: false }}
-    >
-      <AuthStack.Screen name="Login" component={LoginScreen} />
-      <AuthStack.Screen name="Signup" component={SignupScreen} />
+    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack.Screen name="Login" component={LoginScreenV2} />
+      <AuthStack.Screen name="Signup" component={SignupScreenV2} />
     </AuthStack.Navigator>
   );
 }
@@ -63,12 +50,11 @@ function AuthNavigator() {
 // 일기 스택
 function DiaryNavigator() {
   return (
-    <DiaryStack.Navigator
-      screenOptions={{ headerShown: false }}
-    >
-      <DiaryStack.Screen name="DiaryListHome" component={DiaryListScreen} />
-      <DiaryStack.Screen name="WriteDiary" component={WriteDiaryScreen} />
-      <DiaryStack.Screen name="DiaryDetail" component={DiaryDetailScreen} />
+    <DiaryStack.Navigator screenOptions={{ headerShown: false }}>
+      <DiaryStack.Screen name="DiaryListHome" component={DiaryListScreenV2} />
+      <DiaryStack.Screen name="WriteDiary" component={DiaryWriteScreenV2} />
+      <DiaryStack.Screen name="DiaryDetail" component={DiaryDetailScreenV2} />
+      <DiaryStack.Screen name="AIComment" component={AICommentScreenV2} />
     </DiaryStack.Navigator>
   );
 }
@@ -89,28 +75,18 @@ function MainTabsNavigator() {
 
   return (
     <MainTab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: '#FF9B7A',
-        tabBarInactiveTintColor: '#999',
-      }}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <CustomTabBar {...props} />}
     >
       <MainTab.Screen
         name="DiaryList"
         component={DiaryNavigator}
-        options={{
-          tabBarLabel: () => null,
-          tabBarIcon: ({ focused }) => <TabIcon label="일기" focused={focused} />,
-        }}
+        options={{ title: '일기' }}
       />
       <MainTab.Screen
         name="Companion"
-        component={CompanionScreen}
-        options={{
-          tabBarLabel: () => null,
-          tabBarIcon: ({ focused }) => <TabIcon label={tabLabel} focused={focused} />,
-        }}
+        component={CompanionScreenV2}
+        options={{ title: tabLabel }}
       />
     </MainTab.Navigator>
   );
@@ -123,13 +99,15 @@ function MainNavigator() {
   return (
     <MainStack.Navigator screenOptions={{ headerShown: false }}>
       {isNewUser ? (
-        <MainStack.Screen name="CompanionSetup" component={CompanionSetupScreen} />
+        <MainStack.Screen name="CompanionSetup" component={CompanionSetupScreenV2} />
       ) : (
         <>
           <MainStack.Screen name="MainTabs" component={MainTabsNavigator} />
-          <MainStack.Screen name="Settings" component={SettingsScreen} />
-          <MainStack.Screen name="Paywall" component={PaywallScreen} />
-          <MainStack.Screen name="Subscription" component={SubscriptionScreen} />
+          <MainStack.Screen name="Settings" component={SettingsScreenV2} />
+          <MainStack.Screen name="Paywall" component={PaywallScreenV2} />
+          <MainStack.Screen name="Subscription" component={SubscriptionScreenV2} />
+          <MainStack.Screen name="DiaryArchive" component={DiaryArchiveScreenV2} />
+          <MainStack.Screen name="DiaryDetailFromArchive" component={DiaryDetailScreenV2 as any} />
         </>
       )}
     </MainStack.Navigator>
@@ -139,12 +117,13 @@ function MainNavigator() {
 // 루트 네비게이션
 export default function Navigation() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { theme } = useTheme();
+  const { theme } = useThemeV2();
 
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
-        <Text style={styles.loadingText}>마무리</Text>
+        <Text style={[styles.loadingText, { color: theme.colors.primary }]}>마무리</Text>
+        <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 16 }} />
       </View>
     );
   }
@@ -167,44 +146,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF9F5',
   },
   loadingText: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#FF9B7A',
-  },
-  tabBar: {
-    backgroundColor: '#fff',
-    borderTopColor: '#F0F0F0',
-    height: 80,
-    paddingBottom: 20,
-    paddingTop: 8,
-  },
-  tabIconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  tabDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#999',
-    marginBottom: 4,
-  },
-  tabDotFocused: {
-    backgroundColor: '#FF9B7A',
-  },
-  tabLabel: {
-    fontSize: 11,
-    color: '#999',
-  },
-  tabLabelFocused: {
-    color: '#FF9B7A',
-    fontWeight: '500',
   },
 });

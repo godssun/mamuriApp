@@ -167,7 +167,7 @@ export default function CompanionScreen() {
   if (!profile) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
-        <Text style={styles.errorText}>프로필을 불러올 수 없습니다.</Text>
+        <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>프로필을 불러올 수 없습니다.</Text>
         <TouchableOpacity style={styles.retryButton} onPress={loadProfile}>
           <Text style={styles.retryButtonText}>다시 시도</Text>
         </TouchableOpacity>
@@ -180,7 +180,7 @@ export default function CompanionScreen() {
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>{profile.aiName}</Text>
         <TouchableOpacity onPress={() => mainNavigation.navigate('Settings')}>
-          <Text style={styles.settingsIcon}>설정</Text>
+          <Text style={[styles.settingsIcon, { color: theme.colors.textSecondary }]}>설정</Text>
         </TouchableOpacity>
       </View>
 
@@ -211,7 +211,7 @@ export default function CompanionScreen() {
             <Text style={styles.editIcon}>변경</Text>
           </TouchableOpacity>
 
-          <Text style={[styles.profileDescription, { fontFamily: theme.fontFamily }]}>
+          <Text style={[styles.profileDescription, { fontFamily: theme.fontFamily, color: theme.colors.textSecondary }]}>
             누구에게도 말하지 못한 당신의 일상을 공유해주세요
           </Text>
         </View>
@@ -233,29 +233,29 @@ export default function CompanionScreen() {
           activeOpacity={0.7}
         >
           <Text style={[styles.sectionTitle, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>AI 코멘트 설정</Text>
-          <Text style={styles.settingChevron}>
+          <Text style={[styles.settingChevron, { color: theme.colors.textSecondary }]}>
             {showAiSettings ? '∧' : '∨'}
           </Text>
         </TouchableOpacity>
 
         {showAiSettings && (
           <View style={styles.settingsContent}>
-            <View style={styles.settingRow}>
+            <View style={[styles.settingRow, { backgroundColor: theme.colors.card }]}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.settingLabel, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>AI 코멘트 받기</Text>
-                <Text style={[styles.settingDescription, { fontFamily: theme.fontFamily }]}>
+                <Text style={[styles.settingDescription, { fontFamily: theme.fontFamily, color: theme.colors.textSecondary }]}>
                   일기 작성 시 AI 코멘트를 받습니다
                 </Text>
               </View>
               <Switch
                 value={settings?.aiEnabled ?? true}
                 onValueChange={(value) => updateSettings({ aiEnabled: value })}
-                trackColor={{ false: '#E5E5E5', true: '#FFD0C2' }}
+                trackColor={{ false: theme.colors.border, true: '#FFD0C2' }}
                 thumbColor={settings?.aiEnabled ? '#FF9B7A' : '#fff'}
               />
             </View>
 
-            <View style={styles.settingGroup}>
+            <View style={[styles.settingGroup, { backgroundColor: theme.colors.card }]}>
               <Text style={[styles.settingLabel, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>AI 톤</Text>
               <View style={styles.toneOptions}>
                 {AI_TONE_OPTIONS.map((option) => (
@@ -263,6 +263,7 @@ export default function CompanionScreen() {
                     key={option.value}
                     style={[
                       styles.toneOption,
+                      { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
                       companionSettings?.aiTone === option.value && styles.toneOptionSelected,
                     ]}
                     onPress={() => updateCompanionSettings({ aiTone: option.value })}
@@ -271,6 +272,7 @@ export default function CompanionScreen() {
                     <Text
                       style={[
                         styles.toneLabel,
+                        { color: theme.colors.text },
                         companionSettings?.aiTone === option.value && styles.toneLabelSelected,
                       ]}
                     >
@@ -279,6 +281,7 @@ export default function CompanionScreen() {
                     <Text
                       style={[
                         styles.toneDescription,
+                        { color: theme.colors.textSecondary },
                         companionSettings?.aiTone === option.value && styles.toneDescriptionSelected,
                       ]}
                     >
@@ -289,7 +292,7 @@ export default function CompanionScreen() {
               </View>
             </View>
 
-            <View style={[styles.settingGroup, { marginTop: 12 }]}>
+            <View style={[styles.settingGroup, { marginTop: 12, backgroundColor: theme.colors.card }]}>
               <Text style={[styles.settingLabel, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>말투 스타일</Text>
               <View style={styles.toneOptions}>
                 {SPEECH_STYLE_OPTIONS.map((option) => (
@@ -297,6 +300,7 @@ export default function CompanionScreen() {
                     key={option.value}
                     style={[
                       styles.toneOption,
+                      { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
                       companionSettings?.speechStyle === option.value && styles.toneOptionSelected,
                     ]}
                     onPress={() => updateCompanionSettings({ speechStyle: option.value })}
@@ -305,6 +309,7 @@ export default function CompanionScreen() {
                     <Text
                       style={[
                         styles.toneLabel,
+                        { color: theme.colors.text },
                         companionSettings?.speechStyle === option.value && styles.toneLabelSelected,
                       ]}
                     >
@@ -313,6 +318,7 @@ export default function CompanionScreen() {
                     <Text
                       style={[
                         styles.toneDescription,
+                        { color: theme.colors.textSecondary },
                         companionSettings?.speechStyle === option.value && styles.toneDescriptionSelected,
                       ]}
                     >
@@ -329,23 +335,23 @@ export default function CompanionScreen() {
       {/* 이름 변경 모달 */}
       <Modal visible={showNameModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.nameModal}>
-            <Text style={styles.modalTitle}>이름 변경</Text>
+          <View style={[styles.nameModal, { backgroundColor: theme.colors.card }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>이름 변경</Text>
             <TextInput
-              style={styles.nameInput}
+              style={[styles.nameInput, { backgroundColor: theme.colors.border, color: theme.colors.text, borderColor: theme.colors.border }]}
               value={newName}
               onChangeText={setNewName}
               placeholder="새 이름을 입력해주세요"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.textSecondary}
               maxLength={20}
               autoFocus
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={styles.modalCancelButton}
+                style={[styles.modalCancelButton, { backgroundColor: theme.colors.border }]}
                 onPress={() => setShowNameModal(false)}
               >
-                <Text style={styles.modalCancelText}>취소</Text>
+                <Text style={[styles.modalCancelText, { color: theme.colors.textSecondary }]}>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalSaveButton, isSavingName && styles.modalSaveButtonDisabled]}

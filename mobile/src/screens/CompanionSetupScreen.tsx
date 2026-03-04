@@ -102,8 +102,8 @@ export default function CompanionSetupScreen() {
       >
         {/* 헤더 */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>나만의 친구를 만나보세요</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>나만의 친구를 만나보세요</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
             매일 일기를 함께 나눌 친구를 설정해주세요
           </Text>
         </View>
@@ -113,23 +113,23 @@ export default function CompanionSetupScreen() {
           {[0, 1, 2].map((s) => (
             <View
               key={s}
-              style={[styles.stepDot, s <= step && styles.stepDotActive]}
+              style={[styles.stepDot, { backgroundColor: theme.colors.border }, s <= step && styles.stepDotActive]}
             />
           ))}
         </View>
 
         {step === 0 && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>친구의 이름을 지어주세요</Text>
-            <Text style={styles.stepDescription}>
+            <Text style={[styles.stepTitle, { color: theme.colors.text }]}>친구의 이름을 지어주세요</Text>
+            <Text style={[styles.stepDescription, { color: theme.colors.textSecondary }]}>
               나만의 친구에게 이름을 붙여주세요
             </Text>
             <TextInput
-              style={styles.nameInput}
+              style={[styles.nameInput, { backgroundColor: theme.colors.card, color: theme.colors.text, borderColor: theme.colors.border }]}
               value={aiName}
               onChangeText={setAiName}
               placeholder="예: 마음이, 소리, 하늘이"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.textSecondary}
               maxLength={20}
               autoFocus
             />
@@ -138,15 +138,16 @@ export default function CompanionSetupScreen() {
 
         {step === 1 && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>친구의 성격을 골라주세요</Text>
+            <Text style={[styles.stepTitle, { color: theme.colors.text }]}>친구의 성격을 골라주세요</Text>
 
-            <Text style={styles.optionGroupLabel}>톤</Text>
+            <Text style={[styles.optionGroupLabel, { color: theme.colors.textSecondary }]}>톤</Text>
             <View style={styles.optionGroup}>
               {AI_TONE_OPTIONS.map((option) => (
                 <TouchableOpacity
                   key={option.value}
                   style={[
                     styles.optionCard,
+                    { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
                     aiTone === option.value && styles.optionCardSelected,
                   ]}
                   onPress={() => setAiTone(option.value)}
@@ -154,6 +155,7 @@ export default function CompanionSetupScreen() {
                   <Text
                     style={[
                       styles.optionLabel,
+                      { color: theme.colors.text },
                       aiTone === option.value && styles.optionLabelSelected,
                     ]}
                   >
@@ -162,6 +164,7 @@ export default function CompanionSetupScreen() {
                   <Text
                     style={[
                       styles.optionDesc,
+                      { color: theme.colors.textSecondary },
                       aiTone === option.value && styles.optionDescSelected,
                     ]}
                   >
@@ -171,13 +174,14 @@ export default function CompanionSetupScreen() {
               ))}
             </View>
 
-            <Text style={[styles.optionGroupLabel, { marginTop: 20 }]}>말투</Text>
+            <Text style={[styles.optionGroupLabel, { marginTop: 20, color: theme.colors.textSecondary }]}>말투</Text>
             <View style={styles.optionGroup}>
               {SPEECH_STYLE_OPTIONS.map((option) => (
                 <TouchableOpacity
                   key={option.value}
                   style={[
                     styles.optionCard,
+                    { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
                     speechStyle === option.value && styles.optionCardSelected,
                   ]}
                   onPress={() => setSpeechStyle(option.value)}
@@ -185,6 +189,7 @@ export default function CompanionSetupScreen() {
                   <Text
                     style={[
                       styles.optionLabel,
+                      { color: theme.colors.text },
                       speechStyle === option.value && styles.optionLabelSelected,
                     ]}
                   >
@@ -193,6 +198,7 @@ export default function CompanionSetupScreen() {
                   <Text
                     style={[
                       styles.optionDesc,
+                      { color: theme.colors.textSecondary },
                       speechStyle === option.value && styles.optionDescSelected,
                     ]}
                   >
@@ -206,21 +212,21 @@ export default function CompanionSetupScreen() {
 
         {step === 2 && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>프로필 사진을 설정해보세요</Text>
-            <Text style={styles.stepDescription}>
+            <Text style={[styles.stepTitle, { color: theme.colors.text }]}>프로필 사진을 설정해보세요</Text>
+            <Text style={[styles.stepDescription, { color: theme.colors.textSecondary }]}>
               나중에 설정에서 언제든 변경할 수 있어요
             </Text>
 
             <TouchableOpacity
-              style={styles.avatarPicker}
+              style={[styles.avatarPicker, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
               onPress={handlePickAvatar}
             >
               {avatarUri ? (
                 <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarPlaceholderIcon}>+</Text>
-                  <Text style={styles.avatarPlaceholderText}>탭하여 사진 선택</Text>
+                  <Text style={[styles.avatarPlaceholderIcon, { color: theme.colors.textSecondary }]}>+</Text>
+                  <Text style={[styles.avatarPlaceholderText, { color: theme.colors.textSecondary }]}>탭하여 사진 선택</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -252,7 +258,7 @@ export default function CompanionSetupScreen() {
         )}
 
         <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-          <Text style={styles.skipButtonText}>나중에 설정하기</Text>
+          <Text style={[styles.skipButtonText, { color: theme.colors.textSecondary }]}>나중에 설정하기</Text>
         </TouchableOpacity>
       </View>
     </View>
