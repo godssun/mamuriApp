@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import i18n from '../i18n/i18n';
 import {
   ApiResponse,
   TokenResponse,
@@ -87,7 +88,7 @@ async function refreshAccessToken(): Promise<TokenResponse> {
     try {
       const currentTokens = await tokenStorage.get();
       if (!currentTokens?.refreshToken) {
-        throw new ApiError('리프레시 토큰이 없습니다.', 401, true);
+        throw new ApiError(i18n.t('error.noRefreshToken'), 401, true);
       }
 
       // request() 대신 직접 fetch 사용 (무한 루프 방지)
@@ -104,7 +105,7 @@ async function refreshAccessToken(): Promise<TokenResponse> {
 
       if (!response.ok || !json.success || !json.data) {
         throw new ApiError(
-          json.message || '토큰 갱신에 실패했습니다.',
+          json.message || i18n.t('error.tokenRefreshFailed'),
           response.status,
           true
         );
@@ -130,6 +131,7 @@ async function request<T>(
   const url = `${BASE_URL}${endpoint}`;
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    'Accept-Language': i18n.language,
     ...options.headers,
   };
 
@@ -154,7 +156,7 @@ async function request<T>(
   } catch (error: unknown) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new ApiError('요청 시간이 초과되었습니다.', 408, false, 'TIMEOUT');
+      throw new ApiError(i18n.t('error.timeout'), 408, false, 'TIMEOUT');
     }
     throw error;
   } finally {
@@ -167,7 +169,7 @@ async function request<T>(
     json = text ? JSON.parse(text) : { success: false, data: null, message: null };
   } catch {
     throw new ApiError(
-      '서버 응답을 처리할 수 없습니다.',
+      i18n.t('error.parseError'),
       response.status,
       response.status === 401
     );
@@ -193,7 +195,7 @@ async function request<T>(
         await tokenStorage.clear();
         forceLogoutHandler?.();
         throw new ApiError(
-          message || '인증이 만료되었습니다. 다시 로그인해주세요.',
+          message || i18n.t('error.authExpired'),
           401,
           true
         );
@@ -212,7 +214,7 @@ async function request<T>(
 
   if (!response.ok || !json.success) {
     throw new ApiError(
-      json.message || '요청 처리 중 오류가 발생했습니다.',
+      json.message || i18n.t('error.generic'),
       response.status,
       false
     );
@@ -249,7 +251,7 @@ async function requestMultipart<T>(
   } catch (error: unknown) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new ApiError('요청 시간이 초과되었습니다.', 408, false, 'TIMEOUT');
+      throw new ApiError(i18n.t('error.timeout'), 408, false, 'TIMEOUT');
     }
     throw error;
   } finally {
@@ -277,7 +279,7 @@ async function requestMultipart<T>(
 
   if (!response.ok || !json.success) {
     throw new ApiError(
-      json.message || '요청 처리 중 오류가 발생했습니다.',
+      json.message || i18n.t('error.generic'),
       response.status,
       false
     );

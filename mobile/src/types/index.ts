@@ -96,6 +96,7 @@ export interface UserSettings {
   backgroundTheme: 'warm' | 'light' | 'dark';
   fontFamily: 'system' | 'serif';
   fontSize: 'small' | 'medium' | 'large';
+  language?: 'ko' | 'en' | 'ja' | 'zh';
 }
 
 // 컴패니언 개인화 설정
@@ -184,6 +185,8 @@ export type MainStackParamList = {
   Settings: undefined;
   Paywall: undefined;
   Subscription: undefined;
+  DiaryArchive: undefined;
+  DiaryDetailFromArchive: { diaryId: number };
 };
 
 export type MainTabParamList = {
@@ -193,6 +196,7 @@ export type MainTabParamList = {
 
 export type DiaryStackParamList = {
   DiaryListHome: undefined;
-  WriteDiary: undefined;
+  WriteDiary: { editDiaryId: number } | undefined;
   DiaryDetail: { diaryId: number };
+  AIComment: { diaryId: number };
 };
