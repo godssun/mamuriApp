@@ -25,7 +25,10 @@ public class SafetyCheckService {
             "자살", "자해", "죽고 싶", "죽고싶", "죽을 거",
             "죽을거", "목숨을 끊", "목숨을끊", "끝내고 싶",
             "끝내고싶", "살고 싶지 않", "살고싶지않",
-            "세상을 떠나", "세상을떠나"
+            "세상을 떠나", "세상을떠나",
+            "사라지고 싶", "사라지고싶", "모든 게 끝났으면", "모든게 끝났으면",
+            "없어지고 싶", "없어지고싶", "더 이상 못 버티", "더이상 못버티",
+            "삶이 의미 없", "삶이 의미없", "다 포기하고 싶", "다 포기하고싶"
     );
 
     /**
@@ -47,6 +50,30 @@ public class SafetyCheckService {
             String normalizedKeyword = keyword.replace(" ", "");
             if (normalized.contains(normalizedKeyword)) {
                 recordSafetyEvent(diary, keyword);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * 텍스트 내용의 안전 검사를 수행한다 (대화 답장용).
+     * 위기 키워드가 감지되면 false를 반환한다.
+     *
+     * @param text 검사할 텍스트
+     * @return 안전하면 true, 위기 신호 감지 시 false
+     */
+    public boolean checkText(String text) {
+        if (text == null || text.isBlank()) {
+            return true;
+        }
+
+        String normalized = text.replace(" ", "");
+        for (String keyword : CRISIS_KEYWORDS) {
+            String normalizedKeyword = keyword.replace(" ", "");
+            if (normalized.contains(normalizedKeyword)) {
+                log.warn("대화 안전 이벤트 감지 (keyword={})", keyword);
                 return false;
             }
         }

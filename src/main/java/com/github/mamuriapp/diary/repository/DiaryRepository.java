@@ -70,4 +70,48 @@ public interface DiaryRepository extends JpaRepository<Diary, Long> {
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    /**
+     * 사용자의 특정 날짜 일기 목록을 조회한다.
+     *
+     * @param userId 사용자 ID
+     * @param date   조회 날짜
+     * @return 일기 목록
+     */
+    @Query("SELECT d FROM Diary d WHERE d.user.id = :userId " +
+           "AND d.diaryDate = :date " +
+           "ORDER BY d.createdAt DESC")
+    List<Diary> findByUserIdAndDiaryDate(
+            @Param("userId") Long userId,
+            @Param("date") LocalDate date);
+
+    long countByUserId(Long userId);
+
+    /**
+     * 사용자의 최근 일기를 최대 10건 조회한다 (스트릭 재계산용).
+     *
+     * @param userId 사용자 ID
+     * @return 최근 일기 목록 (최대 10건)
+     */
+    List<Diary> findTop10ByUserIdOrderByDiaryDateDesc(Long userId);
+
+    /**
+     * 사용자의 최근 일기를 최대 5건 조회한다 (특정 일기 제외).
+     * AI 프롬프트의 "최근 기록" 컨텍스트에 사용된다.
+     *
+     * @param userId    사용자 ID
+     * @param excludeId 제외할 일기 ID (현재 대상 일기)
+     * @return 최근 일기 목록 (최대 5건)
+     */
+    List<Diary> findTop5ByUserIdAndIdNotOrderByCreatedAtDesc(Long userId, Long excludeId);
+
+    /**
+     * Diary와 User를 JOIN FETCH로 한 번에 조회한다.
+     *
+     * @param id     일기 ID
+     * @param userId 사용자 ID
+     * @return 일기 Optional (User 즉시 로드)
+     */
+    @Query("SELECT d FROM Diary d JOIN FETCH d.user WHERE d.id = :id AND d.user.id = :userId")
+    Optional<Diary> findByIdAndUserIdWithUser(@Param("id") Long id, @Param("userId") Long userId);
 }

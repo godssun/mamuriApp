@@ -38,10 +38,10 @@ public class AiController {
             @PathVariable Long diaryId) {
         Long userId = (Long) authentication.getPrincipal();
 
-        Diary diary = diaryRepository.findByIdAndUserId(diaryId, userId)
+        Diary diary = diaryRepository.findByIdAndUserIdWithUser(diaryId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DIARY_NOT_FOUND));
 
-        AiCommentResponse response = aiCommentService.retryComment(diaryId, diary);
+        AiCommentResponse response = aiCommentService.retryComment(diaryId, diary, diary.getUser());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

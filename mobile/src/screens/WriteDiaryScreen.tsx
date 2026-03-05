@@ -14,8 +14,13 @@ import {
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation as useRootNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp as RootNav } from '@react-navigation/native-stack';
 import { diaryApi, ApiError } from '../api/client';
-import { DiaryStackParamList } from '../types';
+import { DiaryStackParamList, MainStackParamList } from '../types';
+import { useSubscription } from '../contexts/SubscriptionContext';
+import CrisisBanner from '../components/CrisisBanner';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<DiaryStackParamList, 'WriteDiary'>;
@@ -38,6 +43,9 @@ const formatDateISO = (date: Date): string => {
 };
 
 export default function WriteDiaryScreen({ navigation }: Props) {
+  const rootNavigation = useRootNavigation<RootNav<MainStackParamList>>();
+  const { info, isPremium, quotaRemaining, hasCrisisFlag, refresh: refreshSubscription } = useSubscription();
+  const { theme } = useTheme();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [diaryDate, setDiaryDate] = useState(new Date());
@@ -79,8 +87,15 @@ export default function WriteDiaryScreen({ navigation }: Props) {
         diaryDate: formatDateISO(diaryDate),
       });
 
+      // AI 성공 후 구독 상태 갱신 (쿼터 반영)
+      refreshSubscription();
       navigation.replace('DiaryDetail', { diaryId: diary.id });
     } catch (error) {
+      if (error instanceof ApiError && error.status === 429) {
+        // 쿼터 초과 → 페이월로 이동
+        rootNavigation.navigate('Paywall');
+        return;
+      }
       const message = error instanceof ApiError
         ? error.message
         : '일기 저장 중 오류가 발생했습니다.';
@@ -108,14 +123,24 @@ export default function WriteDiaryScreen({ navigation }: Props) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
         <TouchableOpacity onPress={handleCancel}>
           <Text style={styles.cancelButton}>취소</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>일기 쓰기</Text>
+        <View style={styles.headerCenter}>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>일기 쓰기</Text>
+          {!isPremium && info?.dailyRepliesMax !== -1 && (
+            <Text style={[
+              styles.quotaCounter,
+              (info?.dailyRepliesMax ?? 0) <= 1 && styles.quotaCounterWarn,
+            ]}>
+              일일 대화 {info?.dailyRepliesMax ?? 0}회
+            </Text>
+          )}
+        </View>
         <TouchableOpacity
           onPress={handleSave}
           disabled={isLoading}
@@ -128,6 +153,8 @@ export default function WriteDiaryScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
+      {hasCrisisFlag && <CrisisBanner />}
+
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
@@ -138,25 +165,25 @@ export default function WriteDiaryScreen({ navigation }: Props) {
           style={styles.dateSelector}
           onPress={() => setShowDatePicker(true)}
         >
-          <Text style={styles.dateIcon}>📅</Text>
-          <Text style={styles.dateText}>{formatDateKorean(diaryDate)}</Text>
+          <View style={styles.dateDot} />
+          <Text style={[styles.dateText, { color: theme.colors.text, fontFamily: theme.fontFamily }]}>{formatDateKorean(diaryDate)}</Text>
           {isToday && <Text style={styles.todayBadge}>오늘</Text>}
           <Text style={styles.dateChevron}>›</Text>
         </TouchableOpacity>
 
         <TextInput
-          style={styles.titleInput}
+          style={[styles.titleInput, { color: theme.colors.text, borderBottomColor: theme.colors.border, fontFamily: theme.fontFamily, fontSize: Math.round(24 * theme.fontScale) }]}
           placeholder={getDefaultTitle()}
-          placeholderTextColor="#CCC"
+          placeholderTextColor={theme.colors.textSecondary}
           value={title}
           onChangeText={setTitle}
           maxLength={100}
         />
 
         <TextInput
-          style={styles.contentInput}
+          style={[styles.contentInput, { color: theme.colors.text, fontFamily: theme.fontFamily, fontSize: Math.round(16 * theme.fontScale), lineHeight: Math.round(26 * theme.fontScale) }]}
           placeholder="오늘 하루는 어떠셨나요?&#10;당신의 이야기를 들려주세요."
-          placeholderTextColor="#CCC"
+          placeholderTextColor={theme.colors.textSecondary}
           value={content}
           onChangeText={setContent}
           multiline
@@ -165,7 +192,7 @@ export default function WriteDiaryScreen({ navigation }: Props) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
+        <Text style={[styles.footerText, { fontFamily: theme.fontFamily }]}>
           AI가 당신의 일기를 읽고 따뜻한 코멘트를 남겨드릴게요
         </Text>
       </View>
@@ -231,10 +258,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
+  headerCenter: {
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: 17,
     fontWeight: '600',
     color: '#2D2D2D',
+  },
+  quotaCounter: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 2,
+  },
+  quotaCounterWarn: {
+    color: '#FF9B7A',
+    fontWeight: '600',
   },
   cancelButton: {
     fontSize: 16,
@@ -266,8 +305,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  dateIcon: {
-    fontSize: 18,
+  dateDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FF9B7A',
     marginRight: 10,
   },
   dateText: {

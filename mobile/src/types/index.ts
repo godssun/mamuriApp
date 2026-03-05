@@ -22,6 +22,30 @@ export interface LoginRequest {
   password: string;
 }
 
+// AI 친구
+export interface CompanionProfile {
+  aiName: string;
+  level: number;
+  diaryCount: number;
+  nextLevelDiaryCount: number;
+  maxLevel: boolean;
+}
+
+export interface CompanionUpdateRequest {
+  aiName: string;
+}
+
+export interface LevelUpInfo {
+  oldLevel: number;
+  newLevel: number;
+}
+
+export interface StreakInfo {
+  currentStreak: number;
+  longestStreak: number;
+  streakActive: boolean;
+}
+
 // 일기
 export interface AiComment {
   id: number;
@@ -35,6 +59,8 @@ export interface Diary {
   content: string;
   diaryDate: string; // YYYY-MM-DD
   aiComment: AiComment | null;
+  levelUp?: LevelUpInfo | null;
+  streakInfo?: StreakInfo | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,6 +77,12 @@ export interface DiaryUpdateRequest {
   diaryDate?: string; // YYYY-MM-DD (선택적)
 }
 
+export interface StreakResponse {
+  currentStreak: number;
+  longestStreak: number;
+  lastDiaryDate: string | null;
+}
+
 export interface DiaryCalendarResponse {
   year: number;
   month: number;
@@ -59,8 +91,81 @@ export interface DiaryCalendarResponse {
 
 // 설정
 export interface UserSettings {
-  aiTone: 'warm' | 'calm' | 'cheerful';
+  aiTone: 'warm' | 'calm' | 'cheerful' | 'realistic';
   aiEnabled: boolean;
+  backgroundTheme: 'warm' | 'light' | 'dark';
+  fontFamily: 'system' | 'serif';
+  fontSize: 'small' | 'medium' | 'large';
+  language?: 'ko' | 'en' | 'ja' | 'zh';
+}
+
+// 컴패니언 개인화 설정
+export interface CompanionSettings {
+  avatar: string | null;
+  speechStyle: 'formal' | 'casual';
+  aiTone: 'warm' | 'calm' | 'cheerful' | 'realistic';
+  aiEnabled: boolean;
+}
+
+export interface CompanionSettingsUpdateRequest {
+  speechStyle: 'formal' | 'casual';
+  aiTone: 'warm' | 'calm' | 'cheerful' | 'realistic';
+}
+
+// 대화
+export interface ConversationMessage {
+  id: number;
+  role: 'USER' | 'AI';
+  content: string;
+  createdAt: string;
+}
+
+export interface ConversationLimits {
+  maxRepliesPerDay: number;
+  usedRepliesToday: number;
+  remainingReplies: number | null; // null이면 무제한
+  tier: string;
+  trialActive: boolean;
+}
+
+export interface ConversationHistoryResponse {
+  diaryId: number;
+  messages: ConversationMessage[];
+  limits: ConversationLimits;
+}
+
+export interface ConversationReplyResponse {
+  userMessageId: number;
+  aiMessageId: number;
+  aiResponse: string;
+  remainingReplies: number | null; // null이면 무제한
+  createdAt: string;
+}
+
+// 계정 삭제
+export interface DeleteAccountRequest {
+  password: string;
+  reason: string;
+  reasonDetail?: string;
+}
+
+// 구독
+export type SubscriptionTier = 'FREE' | 'DELUXE' | 'PREMIUM';
+
+export type SubscriptionStatusType = 'FREE' | 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
+
+export interface SubscriptionInfo {
+  status: SubscriptionStatusType;
+  tier: string;
+  trialActive: boolean;
+  trialEnd: string | null;
+  dailyRepliesMax: number; // -1 = unlimited, 0 = blocked
+  currentPeriodEnd: string | null;
+  crisisFlag: boolean;
+}
+
+export interface CheckoutResponse {
+  checkoutUrl: string;
 }
 
 // 네비게이션
@@ -74,13 +179,24 @@ export type AuthStackParamList = {
   Signup: undefined;
 };
 
+export type MainStackParamList = {
+  MainTabs: undefined;
+  CompanionSetup: undefined;
+  Settings: undefined;
+  Paywall: undefined;
+  Subscription: undefined;
+  DiaryArchive: undefined;
+  DiaryDetailFromArchive: { diaryId: number };
+};
+
 export type MainTabParamList = {
   DiaryList: undefined;
-  Settings: undefined;
+  Companion: undefined;
 };
 
 export type DiaryStackParamList = {
   DiaryListHome: undefined;
-  WriteDiary: undefined;
+  WriteDiary: { editDiaryId: number } | undefined;
   DiaryDetail: { diaryId: number };
+  AIComment: { diaryId: number };
 };

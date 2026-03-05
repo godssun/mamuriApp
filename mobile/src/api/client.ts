@@ -1,4 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+import i18n from '../i18n/i18n';
 import {
   ApiResponse,
   TokenResponse,
@@ -10,11 +12,23 @@ import {
   DiaryCalendarResponse,
   AiComment,
   UserSettings,
+  CompanionProfile,
+  CompanionUpdateRequest,
+  CompanionSettings,
+  CompanionSettingsUpdateRequest,
+  SubscriptionInfo,
+  CheckoutResponse,
+  StreakResponse,
+  ConversationHistoryResponse,
+  ConversationReplyResponse,
+  DeleteAccountRequest,
 } from '../types';
 
-// 개발 환경에서는 localhost, 프로덕션에서는 실제 서버 URL
+// Android 에뮬레이터에서는 10.0.2.2가 호스트 머신의 localhost
+const DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+
 const BASE_URL = __DEV__
-  ? 'http://localhost:8080/api'
+  ? `http://${DEV_HOST}:8080/api`
   : 'https://api.mamuri.app/api';
 
 const TOKEN_KEY = 'auth_tokens';
@@ -45,22 +59,79 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public isUnauthorized: boolean = false
+    public isUnauthorized: boolean = false,
+    public code?: string
   ) {
     super(message);
     this.name = 'ApiError';
   }
 }
 
+// forceLogout 콜백 (React 트리 바깥에서 인증 상태 제어)
+let forceLogoutHandler: (() => void) | null = null;
+
+export function setForceLogoutHandler(handler: () => void): void {
+  forceLogoutHandler = handler;
+}
+
+export function clearForceLogoutHandler(): void {
+  forceLogoutHandler = null;
+}
+
+// 토큰 갱신 (동시 401 시 단일 갱신 보장)
+let refreshPromise: Promise<TokenResponse> | null = null;
+
+async function refreshAccessToken(): Promise<TokenResponse> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const currentTokens = await tokenStorage.get();
+      if (!currentTokens?.refreshToken) {
+        throw new ApiError(i18n.t('error.noRefreshToken'), 401, true);
+      }
+
+      // request() 대신 직접 fetch 사용 (무한 루프 방지)
+      const response = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: currentTokens.refreshToken }),
+      });
+
+      const text = await response.text();
+      const json: ApiResponse<TokenResponse> = text
+        ? JSON.parse(text)
+        : { success: false, data: null, message: null };
+
+      if (!response.ok || !json.success || !json.data) {
+        throw new ApiError(
+          json.message || i18n.t('error.tokenRefreshFailed'),
+          response.status,
+          true
+        );
+      }
+
+      await tokenStorage.save(json.data);
+      return json.data;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
 // 기본 fetch 래퍼
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
-  requireAuth: boolean = true
+  requireAuth: boolean = true,
+  _isRetry: boolean = false
 ): Promise<T> {
   const url = `${BASE_URL}${endpoint}`;
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    'Accept-Language': i18n.language,
     ...options.headers,
   };
 
@@ -71,19 +142,146 @@ async function request<T>(
     }
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  // 타임아웃 (15초)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-  const json: ApiResponse<T> = await response.json();
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (error: unknown) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiError(i18n.t('error.timeout'), 408, false, 'TIMEOUT');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  const text = await response.text();
+  let json: ApiResponse<T>;
+  try {
+    json = text ? JSON.parse(text) : { success: false, data: null, message: null };
+  } catch {
+    throw new ApiError(
+      i18n.t('error.parseError'),
+      response.status,
+      response.status === 401
+    );
+  }
+
+  // 401 인터셉터
+  if (response.status === 401) {
+    const message = json.message || '';
+
+    // TOKEN_REUSE_DETECTED → 즉시 로그아웃
+    if (message.includes('재사용')) {
+      await tokenStorage.clear();
+      forceLogoutHandler?.();
+      throw new ApiError(message, 401, true, 'TOKEN_REUSE_DETECTED');
+    }
+
+    // 첫 시도 + 인증 필요 요청 → 토큰 갱신 후 재시도
+    if (!_isRetry && requireAuth) {
+      try {
+        await refreshAccessToken();
+        return request<T>(endpoint, options, requireAuth, true);
+      } catch {
+        await tokenStorage.clear();
+        forceLogoutHandler?.();
+        throw new ApiError(
+          message || i18n.t('error.authExpired'),
+          401,
+          true
+        );
+      }
+    }
+
+    // 재시도 후에도 401 → 로그아웃
+    await tokenStorage.clear();
+    forceLogoutHandler?.();
+    throw new ApiError(
+      message || '인증이 만료되었습니다. 다시 로그인해주세요.',
+      401,
+      true
+    );
+  }
 
   if (!response.ok || !json.success) {
-    const isUnauthorized = response.status === 401;
     throw new ApiError(
-      json.message || '요청 처리 중 오류가 발생했습니다.',
+      json.message || i18n.t('error.generic'),
       response.status,
-      isUnauthorized
+      false
+    );
+  }
+
+  return json.data as T;
+}
+
+// multipart/form-data 요청 (이미지 업로드 등)
+async function requestMultipart<T>(
+  endpoint: string,
+  formData: FormData,
+  _isRetry: boolean = false
+): Promise<T> {
+  const url = `${BASE_URL}${endpoint}`;
+  const headers: Record<string, string> = {};
+
+  const tokens = await tokenStorage.get();
+  if (tokens?.accessToken) {
+    headers['Authorization'] = `Bearer ${tokens.accessToken}`;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+      signal: controller.signal,
+    });
+  } catch (error: unknown) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiError(i18n.t('error.timeout'), 408, false, 'TIMEOUT');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  const text = await response.text();
+  let json: ApiResponse<T>;
+  try {
+    json = text ? JSON.parse(text) : { success: false, data: null, message: null };
+  } catch {
+    throw new ApiError('서버 응답을 처리할 수 없습니다.', response.status, response.status === 401);
+  }
+
+  if (response.status === 401 && !_isRetry) {
+    try {
+      await refreshAccessToken();
+      return requestMultipart<T>(endpoint, formData, true);
+    } catch {
+      await tokenStorage.clear();
+      forceLogoutHandler?.();
+      throw new ApiError('인증이 만료되었습니다. 다시 로그인해주세요.', 401, true);
+    }
+  }
+
+  if (!response.ok || !json.success) {
+    throw new ApiError(
+      json.message || i18n.t('error.generic'),
+      response.status,
+      false
     );
   }
 
@@ -111,20 +309,15 @@ export const authApi = {
   },
 
   async refresh(): Promise<TokenResponse> {
-    const currentTokens = await tokenStorage.get();
-    if (!currentTokens?.refreshToken) {
-      throw new ApiError('리프레시 토큰이 없습니다.', 401, true);
-    }
-
-    const tokens = await request<TokenResponse>('/auth/refresh', {
-      method: 'POST',
-      body: JSON.stringify({ refreshToken: currentTokens.refreshToken }),
-    }, false);
-    await tokenStorage.save(tokens);
-    return tokens;
+    return refreshAccessToken();
   },
 
   async logout(): Promise<void> {
+    try {
+      await request<void>('/auth/logout', { method: 'POST' }, true);
+    } catch {
+      // 서버 로그아웃 실패해도 로컬 토큰은 삭제
+    }
     await tokenStorage.clear();
   },
 };
@@ -137,6 +330,10 @@ export const diaryApi = {
 
   async getListByMonth(year: number, month: number): Promise<Diary[]> {
     return request<Diary[]>(`/diaries?year=${year}&month=${month}`);
+  },
+
+  async getListByDate(date: string): Promise<Diary[]> {
+    return request<Diary[]>(`/diaries?date=${date}`);
   },
 
   async getCalendar(year: number, month: number): Promise<DiaryCalendarResponse> {
@@ -170,6 +367,98 @@ export const diaryApi = {
   async retryAiComment(diaryId: number): Promise<AiComment> {
     return request<AiComment>(`/diaries/${diaryId}/ai-comment/retry`, {
       method: 'POST',
+    });
+  },
+};
+
+// AI 친구 API
+export const companionApi = {
+  async getProfile(): Promise<CompanionProfile> {
+    return request<CompanionProfile>('/companion');
+  },
+
+  async updateName(data: CompanionUpdateRequest): Promise<CompanionProfile> {
+    return request<CompanionProfile>('/companion', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getStreak(): Promise<StreakResponse> {
+    return request<StreakResponse>('/companion/streak');
+  },
+
+  async getSettings(): Promise<CompanionSettings> {
+    return request<CompanionSettings>('/companion/settings');
+  },
+
+  async updateSettings(data: CompanionSettingsUpdateRequest): Promise<CompanionSettings> {
+    return request<CompanionSettings>('/companion/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async uploadAvatar(imageUri: string): Promise<CompanionSettings> {
+    const formData = new FormData();
+    const filename = imageUri.split('/').pop() ?? 'avatar.jpg';
+    const ext = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+
+    formData.append('file', {
+      uri: imageUri,
+      name: filename,
+      type: mimeType,
+    } as unknown as Blob);
+
+    return requestMultipart<CompanionSettings>('/companion/avatar', formData);
+  },
+
+  async removeAvatar(): Promise<CompanionSettings> {
+    return request<CompanionSettings>('/companion/avatar', {
+      method: 'DELETE',
+    });
+  },
+};
+
+// 대화 API
+export const conversationApi = {
+  async getConversation(diaryId: number): Promise<ConversationHistoryResponse> {
+    return request<ConversationHistoryResponse>(`/diaries/${diaryId}/conversation`);
+  },
+
+  async sendReply(diaryId: number, content: string): Promise<ConversationReplyResponse> {
+    return request<ConversationReplyResponse>(`/diaries/${diaryId}/conversation/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  },
+};
+
+// 구독 API
+export const subscriptionApi = {
+  async getStatus(): Promise<SubscriptionInfo> {
+    return request<SubscriptionInfo>('/subscription/status');
+  },
+
+  async createCheckout(priceId: string): Promise<CheckoutResponse> {
+    return request<CheckoutResponse>('/subscription/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ priceId }),
+    });
+  },
+
+  async cancel(): Promise<void> {
+    await request<void>('/subscription/cancel', { method: 'POST' });
+  },
+};
+
+// 계정 API
+export const accountApi = {
+  async deleteAccount(data: DeleteAccountRequest): Promise<void> {
+    await request<void>('/user/delete-account', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   },
 };

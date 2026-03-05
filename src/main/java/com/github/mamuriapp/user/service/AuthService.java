@@ -9,6 +9,7 @@ import com.github.mamuriapp.user.entity.UserSettings;
 import com.github.mamuriapp.user.repository.UserRepository;
 import com.github.mamuriapp.user.repository.UserSettingsRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 인증 서비스.
  * 회원가입, 로그인, 토큰 갱신을 처리한다.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -43,8 +45,9 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .nickname(request.getNickname())
+                .aiName(request.getAiName())
                 .build();
-        userRepository.save(user);
+        user = userRepository.save(user);
 
         UserSettings settings = UserSettings.builder()
                 .user(user)
@@ -76,27 +79,43 @@ public class AuthService {
 
     /**
      * 리프레시 토큰으로 새로운 토큰 쌍을 발급한다.
+     * 토큰 회전(rotation)을 적용하여, 이전 토큰 재사용 시 모든 토큰을 무효화한다.
      *
      * @param request 토큰 갱신 요청 DTO
      * @return 새로 발급된 토큰 응답
      */
     @Transactional
     public TokenResponse refresh(TokenRefreshRequest request) {
-        String refreshToken = request.getRefreshToken();
+        String oldRefreshToken = request.getRefreshToken();
 
-        if (!jwtTokenProvider.validateToken(refreshToken)) {
+        if (!jwtTokenProvider.validateToken(oldRefreshToken)) {
             throw new CustomException(ErrorCode.TOKEN_INVALID);
         }
 
-        Long userId = jwtTokenProvider.getUserId(refreshToken);
+        Long userId = jwtTokenProvider.getUserId(oldRefreshToken);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if (!refreshToken.equals(user.getRefreshToken())) {
-            throw new CustomException(ErrorCode.TOKEN_INVALID);
+        if (!oldRefreshToken.equals(user.getRefreshToken())) {
+            log.warn("Refresh token 재사용 감지 (userId={}). 모든 토큰 무효화.", userId);
+            user.updateRefreshToken(null);
+            throw new CustomException(ErrorCode.TOKEN_REUSE_DETECTED);
         }
 
         return issueTokens(user);
+    }
+
+    /**
+     * 로그아웃을 처리한다.
+     * 저장된 리프레시 토큰을 무효화한다.
+     *
+     * @param userId 로그아웃할 사용자 ID
+     */
+    @Transactional
+    public void logout(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        user.updateRefreshToken(null);
     }
 
     private TokenResponse issueTokens(User user) {

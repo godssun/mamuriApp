@@ -110,6 +110,8 @@ export default function SignupScreen({ navigation }: Props) {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
+                textContentType="oneTimeCode"
+                autoComplete="off"
               />
             </View>
 
@@ -122,6 +124,8 @@ export default function SignupScreen({ navigation }: Props) {
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
+                textContentType="oneTimeCode"
+                autoComplete="off"
               />
             </View>
 
