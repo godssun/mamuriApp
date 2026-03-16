@@ -23,6 +23,8 @@ public class UserSettingsDto {
 
     private String fontSize;
 
+    private boolean aiDataConsent;
+
     /**
      * 엔티티를 DTO로 변환한다.
      *
@@ -35,7 +37,8 @@ public class UserSettingsDto {
                 entity.isAiEnabled(),
                 entity.getBackgroundTheme(),
                 entity.getFontFamily(),
-                entity.getFontSize()
+                entity.getFontSize(),
+                entity.isAiDataConsent()
         );
     }
 }

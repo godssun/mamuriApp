@@ -52,10 +52,15 @@ public class UserSettings {
     @Column(name = "font_size", nullable = false)
     private String fontSize = "medium";
 
+    /** AI 데이터 처리 동의 여부 */
+    @Column(name = "ai_data_consent", nullable = false)
+    private boolean aiDataConsent = false;
+
     @Builder
     public UserSettings(User user, String aiTone, boolean aiEnabled,
                         String aiAvatar, String aiSpeechStyle,
-                        String backgroundTheme, String fontFamily, String fontSize) {
+                        String backgroundTheme, String fontFamily, String fontSize,
+                        boolean aiDataConsent) {
         this.user = user;
         this.aiTone = aiTone;
         this.aiEnabled = aiEnabled;
@@ -64,6 +69,7 @@ public class UserSettings {
         this.backgroundTheme = backgroundTheme != null ? backgroundTheme : "warm";
         this.fontFamily = fontFamily != null ? fontFamily : "system";
         this.fontSize = fontSize != null ? fontSize : "medium";
+        this.aiDataConsent = aiDataConsent;
     }
 
     /**
@@ -112,5 +118,14 @@ public class UserSettings {
 
     public void updateFontSize(String fontSize) {
         this.fontSize = fontSize;
+    }
+
+    /**
+     * AI 데이터 처리 동의 여부를 변경한다.
+     *
+     * @param aiDataConsent 동의 여부
+     */
+    public void updateAiDataConsent(boolean aiDataConsent) {
+        this.aiDataConsent = aiDataConsent;
     }
 }

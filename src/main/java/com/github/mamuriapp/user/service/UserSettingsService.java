@@ -45,6 +45,7 @@ public class UserSettingsService {
 
         settings.updateAiTone(request.getAiTone());
         settings.updateAiEnabled(request.isAiEnabled());
+        settings.updateAiDataConsent(request.isAiDataConsent());
 
         if (request.getBackgroundTheme() != null) {
             settings.updateBackgroundTheme(request.getBackgroundTheme());

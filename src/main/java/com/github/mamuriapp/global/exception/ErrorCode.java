@@ -17,6 +17,9 @@ public enum ErrorCode {
     TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다."),
     TOKEN_REUSE_DETECTED(HttpStatus.UNAUTHORIZED, "토큰이 재사용되었습니다. 보안을 위해 다시 로그인해주세요."),
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
+    SOCIAL_AUTH_FAILED(HttpStatus.UNAUTHORIZED, "소셜 인증에 실패했습니다."),
+    SOCIAL_PROVIDER_MISMATCH(HttpStatus.CONFLICT, "이미 다른 소셜 계정으로 가입된 이메일입니다."),
+    NICKNAME_REQUIRED(HttpStatus.BAD_REQUEST, "닉네임을 입력해주세요."),
 
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
