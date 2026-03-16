@@ -13,6 +13,7 @@ import com.github.mamuriapp.global.security.JwtAuthenticationFilter;
 import com.github.mamuriapp.global.security.JwtTokenProvider;
 import com.github.mamuriapp.user.dto.TokenResponse;
 import com.github.mamuriapp.user.service.AuthService;
+import com.github.mamuriapp.user.service.SocialAuthService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -82,6 +83,8 @@ class AuthControllerTest {
     @MockitoBean
     private AuthService authService;
 
+    @MockitoBean
+    private SocialAuthService socialAuthService;
 
     // --- Signup ---
 

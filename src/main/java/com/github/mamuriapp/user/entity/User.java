@@ -26,11 +26,21 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column
     private String password;
 
     @Column(nullable = false)
     private String nickname;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false)
+    private AuthProvider authProvider = AuthProvider.EMAIL;
+
+    @Column(name = "provider_uid")
+    private String providerUid;
+
+    @Column(name = "profile_image_url")
+    private String profileImageUrl;
 
     @Column(name = "ai_name")
     private String aiName = "마음이";
@@ -105,11 +115,22 @@ public class User {
     private Long version = 0L;
 
     @Builder
-    public User(String email, String password, String nickname, String aiName) {
+    public User(String email, String password, String nickname, String aiName,
+                AuthProvider authProvider, String providerUid, String profileImageUrl) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
         this.aiName = (aiName != null && !aiName.isBlank()) ? aiName : "마음이";
+        this.authProvider = (authProvider != null) ? authProvider : AuthProvider.EMAIL;
+        this.providerUid = providerUid;
+        this.profileImageUrl = profileImageUrl;
+    }
+
+    /**
+     * 소셜 사용자인지 확인한다.
+     */
+    public boolean isSocialUser() {
+        return authProvider != null && authProvider != AuthProvider.EMAIL;
     }
 
     /**

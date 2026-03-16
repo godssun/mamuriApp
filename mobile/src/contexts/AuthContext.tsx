@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi, tokenStorage, setForceLogoutHandler, clearForceLogoutHandler } from '../api/client';
-import { SignupRequest, LoginRequest } from '../types';
+import { SignupRequest, LoginRequest, SocialProvider } from '../types';
+import { signOutFromProviders } from '../services/socialAuth';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -10,6 +11,8 @@ interface AuthContextType {
   setCompanionName: (name: string) => void;
   login: (data: LoginRequest) => Promise<void>;
   signup: (data: SignupRequest) => Promise<void>;
+  socialLogin: (provider: SocialProvider, token: string) => Promise<{ isNewUser: boolean }>;
+  completeSocialSignup: (provider: SocialProvider, token: string, nickname: string) => Promise<void>;
   logout: () => Promise<void>;
   forceLogout: () => void;
   completeOnboarding: () => void;
@@ -71,12 +74,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthenticated(true);
   }, []);
 
+  const socialLogin = useCallback(async (provider: SocialProvider, token: string) => {
+    const response = await authApi.socialLogin({ provider, token });
+    if (!response.isNewUser && response.accessToken) {
+      // 기존 사용자 → 바로 로그인
+      setIsAuthenticated(true);
+      return { isNewUser: false };
+    }
+    // 신규 사용자 → 닉네임 입력 필요
+    return { isNewUser: true };
+  }, []);
+
+  const completeSocialSignup = useCallback(async (provider: SocialProvider, token: string, nickname: string) => {
+    const response = await authApi.socialLogin({ provider, token, nickname });
+    if (response.accessToken) {
+      setIsNewUser(true);
+      setIsAuthenticated(true);
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
     } catch {
       // 서버 로그아웃 실패해도 로컬 상태는 초기화
     }
+    // 소셜 SDK 로그아웃
+    await signOutFromProviders();
     setIsAuthenticated(false);
     setIsNewUser(false);
   }, []);
@@ -88,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       isAuthenticated, isLoading, isNewUser, companionName, setCompanionName,
-      login, signup, logout, forceLogout, completeOnboarding,
+      login, signup, socialLogin, completeSocialSignup, logout, forceLogout, completeOnboarding,
     }}>
       {children}
     </AuthContext.Provider>

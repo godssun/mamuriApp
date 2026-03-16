@@ -17,6 +17,8 @@ import {
   Animated,
   Alert,
   Dimensions,
+  Platform,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -27,7 +29,14 @@ import { useThemeV2 } from '../design-system-v2';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './components/Button';
 import { Input } from './components/Input';
-import { AuthStackParamList } from '../types';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
+import { AuthStackParamList, SocialProvider } from '../types';
+import {
+  signInWithGoogle,
+  signInWithApple,
+  isCancelledError,
+  isSocialAuthAvailable,
+} from '../services/socialAuth';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -44,11 +53,12 @@ export function LoginScreenV2({ navigation }: Props) {
   const { theme } = useThemeV2();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { login } = useAuth();
+  const { login, socialLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
 
   // Entrance animations
   const logoAnim = useRef(new Animated.Value(0)).current;
@@ -74,6 +84,30 @@ export function LoginScreenV2({ navigation }: Props) {
       }),
     ]).start();
   }, []);
+
+  const handleSocialLogin = async (signInFn: () => Promise<{ token: string; provider: SocialProvider }>) => {
+    const provider = signInFn === signInWithGoogle ? 'GOOGLE' as const
+      : 'APPLE' as const;
+    setSocialLoading(provider);
+    try {
+      const result = await signInFn();
+      const response = await socialLogin(result.provider, result.token);
+      if (response.isNewUser) {
+        navigation.navigate('SocialNickname', { provider: result.provider, token: result.token });
+      }
+    } catch (error: unknown) {
+      if (isCancelledError(error)) {
+        // 사용자 취소 → 조용히 무시
+        return;
+      }
+      Alert.alert(
+        t('common.error'),
+        (error instanceof Error ? error.message : null) || t('auth.socialLoginFailed')
+      );
+    } finally {
+      setSocialLoading(null);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -239,16 +273,62 @@ export function LoginScreenV2({ navigation }: Props) {
           opacity: footerAnim,
         },
       ]}>
-        <View style={styles.dividerRow}>
-          <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
-          <Text style={[
-            theme.typography.caption,
-            { color: theme.colors.textTertiary, marginHorizontal: theme.spacing.md },
-          ]}>
-            {t('auth.or')}
-          </Text>
-          <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
-        </View>
+        {isSocialAuthAvailable() && (
+          <>
+            <View style={styles.dividerRow}>
+              <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
+              <Text style={[
+                theme.typography.caption,
+                { color: theme.colors.textTertiary, marginHorizontal: theme.spacing.md },
+              ]}>
+                {t('auth.or')}
+              </Text>
+              <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
+            </View>
+
+            {/* 소셜 로그인 버튼 */}
+            <View style={[styles.socialButtons, { marginTop: theme.spacing.xl, gap: theme.spacing.sm }]}>
+              {/* Google */}
+              <TouchableOpacity
+                style={[styles.socialButton, {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                  borderRadius: theme.borderRadius.lg,
+                }]}
+                onPress={() => handleSocialLogin(signInWithGoogle)}
+                disabled={socialLoading !== null}
+              >
+                <View style={styles.socialButtonContent}>
+                  <AntDesign name="google" size={18} color="#4285F4" />
+                  <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary, marginLeft: 8 }]}>
+                    {socialLoading === 'GOOGLE' ? '...' : t('auth.socialGoogle')}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Apple (iOS only) */}
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  style={[styles.socialButton, {
+                    backgroundColor: theme.colors.textPrimary,
+                    borderColor: theme.colors.textPrimary,
+                    borderRadius: theme.borderRadius.lg,
+                  }]}
+                  onPress={() => handleSocialLogin(signInWithApple)}
+                  disabled={socialLoading !== null}
+                >
+                  <View style={styles.socialButtonContent}>
+                    <Ionicons name="logo-apple" size={20} color={theme.colors.background} />
+                    <Text style={[theme.typography.labelLarge, { color: theme.colors.background, marginLeft: 8 }]}>
+                      {socialLoading === 'APPLE' ? '...' : t('auth.socialApple')}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+
+            </View>
+          </>
+        )}
 
         <TouchableOpacity
           style={[styles.signupRow, { marginTop: theme.spacing.xl }]}
@@ -261,6 +341,20 @@ export function LoginScreenV2({ navigation }: Props) {
             {t('auth.signup')}
           </Text>
         </TouchableOpacity>
+
+        <View style={[styles.legalRow, { marginTop: theme.spacing.lg }]}>
+          <TouchableOpacity onPress={() => Linking.openURL('https://mamuri.app/privacy')}>
+            <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>
+              {t('auth.privacyPolicy')}
+            </Text>
+          </TouchableOpacity>
+          <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}> · </Text>
+          <TouchableOpacity onPress={() => Linking.openURL('https://mamuri.app/terms')}>
+            <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>
+              {t('auth.termsOfService')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
     </View>
   );
@@ -315,8 +409,27 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 1,
   },
+  socialButtons: {
+    width: '100%',
+  },
+  socialButton: {
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  socialButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   signupRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

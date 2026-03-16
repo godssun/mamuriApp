@@ -16,12 +16,14 @@ import {
   Animated,
   ScrollView,
   Alert,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useThemeV2 } from '../design-system-v2';
 import { useAuth } from '../contexts/AuthContext';
+import { consentStorage, settingsApi } from '../api/client';
 import { Button } from './components/Button';
 import { Input } from './components/Input';
 import { AuthStackParamList } from '../types';
@@ -39,6 +41,7 @@ export function SignupScreenV2({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [aiConsent, setAiConsent] = useState(false);
 
   // Entrance
   const contentAnim = useRef(new Animated.Value(0)).current;
@@ -66,6 +69,16 @@ export function SignupScreenV2({ navigation }: Props) {
     setLoading(true);
     try {
       await signup({ email: email.trim(), password, nickname: nickname.trim() });
+      // AI 동의 저장
+      await consentStorage.save(true);
+      try {
+        await settingsApi.update({
+          aiTone: 'warm', aiEnabled: true, backgroundTheme: 'warm',
+          fontFamily: 'system', fontSize: 'medium', aiDataConsent: true,
+        });
+      } catch {
+        // 서버 동기화 실패해도 로컬 동의 유지
+      }
       // 성공 시 isNewUser=true → CompanionSetup 자동 이동
     } catch (error: any) {
       Alert.alert(t('auth.signupFailed'), error?.message || t('common.retry'));
@@ -196,8 +209,33 @@ export function SignupScreenV2({ navigation }: Props) {
             onChangeText={setConfirmPassword}
             secureTextEntry
             error={passwordError}
-            containerStyle={{ marginBottom: theme.spacing['3xl'] }}
+            containerStyle={{ marginBottom: theme.spacing.xl }}
           />
+
+          {/* AI 동의 체크박스 */}
+          <TouchableOpacity
+            onPress={() => setAiConsent(!aiConsent)}
+            style={styles.consentRow}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, {
+              borderColor: aiConsent ? theme.colors.primary : theme.colors.border,
+              backgroundColor: aiConsent ? theme.colors.primary : 'transparent',
+              borderRadius: theme.borderRadius.xs,
+            }]}>
+              {aiConsent && (
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>✓</Text>
+              )}
+            </View>
+            <View style={styles.consentTextContainer}>
+              <Text style={[theme.typography.bodySmall, { color: theme.colors.textPrimary }]}>
+                {t('auth.aiConsentCheckbox')}
+              </Text>
+              <Text style={[theme.typography.caption, { color: theme.colors.textTertiary, marginTop: 2 }]}>
+                {t('auth.aiConsentCheckboxDesc')}
+              </Text>
+            </View>
+          </TouchableOpacity>
 
           <Button
             label={t('auth.start')}
@@ -205,7 +243,7 @@ export function SignupScreenV2({ navigation }: Props) {
             loading={loading}
             fullWidth
             size="lg"
-            disabled={!nickname || !email || !password || !!passwordError}
+            disabled={!nickname || !email || !password || !!passwordError || !aiConsent}
           />
 
           {/* Terms */}
@@ -219,9 +257,19 @@ export function SignupScreenV2({ navigation }: Props) {
             },
           ]}>
             {t('auth.termsPrefix')}
-            <Text style={{ color: theme.colors.primary }}>{t('auth.termsOfService')}</Text>
+            <Text
+              style={{ color: theme.colors.primary }}
+              onPress={() => Linking.openURL('https://mamuri.app/terms')}
+            >
+              {t('auth.termsOfService')}
+            </Text>
             {t('auth.termsAnd')}
-            <Text style={{ color: theme.colors.primary }}>{t('auth.privacyPolicy')}</Text>
+            <Text
+              style={{ color: theme.colors.primary }}
+              onPress={() => Linking.openURL('https://mamuri.app/privacy')}
+            >
+              {t('auth.privacyPolicy')}
+            </Text>
             {t('auth.termsSuffix')}
           </Text>
         </Animated.View>
@@ -273,5 +321,22 @@ const styles = StyleSheet.create({
   strengthBar: {
     flex: 1,
     height: 3,
+  },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 24,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  consentTextContainer: {
+    flex: 1,
   },
 });
