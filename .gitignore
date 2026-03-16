@@ -51,5 +51,11 @@ Thumbs.db
 ### Playwright MCP ###
 .playwright-mcp/
 
+### Firebase ###
+firebase-service-account.json
+src/main/resources/firebase-service-account.json
+*-firebase-adminsdk-*.json
+src/main/resources/*-firebase-adminsdk-*.json
+
 ### User uploads ###
 uploads/
