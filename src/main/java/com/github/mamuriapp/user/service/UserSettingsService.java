@@ -45,6 +45,17 @@ public class UserSettingsService {
 
         settings.updateAiTone(request.getAiTone());
         settings.updateAiEnabled(request.isAiEnabled());
+        settings.updateAiDataConsent(request.isAiDataConsent());
+
+        if (request.getBackgroundTheme() != null) {
+            settings.updateBackgroundTheme(request.getBackgroundTheme());
+        }
+        if (request.getFontFamily() != null) {
+            settings.updateFontFamily(request.getFontFamily());
+        }
+        if (request.getFontSize() != null) {
+            settings.updateFontSize(request.getFontSize());
+        }
 
         return UserSettingsDto.from(settings);
     }

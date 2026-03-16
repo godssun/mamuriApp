@@ -8,16 +8,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
 
   flyway:
     enabled: true
     baseline-on-migrate: true
 
 jwt:
-  secret: dev-only-secret-key-do-not-use-in-production-minimum-32-chars
-
-logging:
-  level:
-    com.github.mamuriapp: DEBUG
-    org.flywaydb: DEBUG
+  secret: ${JWT_SECRET:dev-only-secret-key-do-not-use-in-production-minimum-32-chars}

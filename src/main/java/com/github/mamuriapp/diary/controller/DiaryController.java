@@ -8,11 +8,13 @@ import com.github.mamuriapp.diary.service.DiaryService;
 import com.github.mamuriapp.global.dto.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -45,9 +47,12 @@ public class DiaryController {
 
     /**
      * 일기 목록을 조회한다.
-     * year와 month가 모두 제공되면 해당 월의 일기만 조회한다.
+     * date가 제공되면 해당 날짜의 일기를 조회한다.
+     * year와 month가 모두 제공되면 해당 월의 일기를 조회한다.
+     * 아무 파라미터도 없으면 전체 일기를 조회한다.
      *
      * @param authentication 인증 정보
+     * @param date           특정 날짜 (선택, YYYY-MM-DD)
      * @param year           연도 (선택)
      * @param month          월 (선택)
      * @return 일기 목록
@@ -55,12 +60,15 @@ public class DiaryController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<DiaryResponse>>> getList(
             Authentication authentication,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) Integer month) {
         Long userId = (Long) authentication.getPrincipal();
 
         List<DiaryResponse> response;
-        if (year != null && month != null) {
+        if (date != null) {
+            response = diaryService.getListByDate(userId, date);
+        } else if (year != null && month != null) {
             response = diaryService.getListByMonth(userId, year, month);
         } else {
             response = diaryService.getList(userId);

@@ -2,16 +2,19 @@ package com.github.mamuriapp.diary.service;
 
 import com.github.mamuriapp.ai.dto.AiCommentResponse;
 import com.github.mamuriapp.ai.service.AiCommentService;
+import com.github.mamuriapp.ai.service.SafetyCheckService;
 import com.github.mamuriapp.diary.dto.DiaryCalendarResponse;
 import com.github.mamuriapp.diary.dto.DiaryCreateRequest;
 import com.github.mamuriapp.diary.dto.DiaryResponse;
 import com.github.mamuriapp.diary.dto.DiaryUpdateRequest;
 import com.github.mamuriapp.diary.entity.Diary;
 import com.github.mamuriapp.diary.repository.DiaryRepository;
+import com.github.mamuriapp.global.config.FeatureFlags;
 import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
 import com.github.mamuriapp.user.entity.User;
 import com.github.mamuriapp.user.repository.UserRepository;
+import com.github.mamuriapp.user.service.CompanionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,9 +34,14 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class DiaryService {
 
+    private static final int FREE_MONTHLY_QUOTA = 20;
+
     private final DiaryRepository diaryRepository;
     private final UserRepository userRepository;
     private final AiCommentService aiCommentService;
+    private final SafetyCheckService safetyCheckService;
+    private final CompanionService companionService;
+    private final FeatureFlags featureFlags;
 
     /**
      * 새로운 일기를 작성한다.
@@ -48,6 +56,8 @@ public class DiaryService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+        int oldLevel = user.getMaxLevel();
+
         LocalDate diaryDate = request.getDiaryDate() != null
                 ? request.getDiaryDate()
                 : LocalDate.now();
@@ -59,15 +69,61 @@ public class DiaryService {
                 .diaryDate(diaryDate)
                 .build();
         diaryRepository.save(diary);
+        user.incrementDiaryCount();
 
+        // 1. SafetyCheck (항상 먼저)
+        boolean isSafe = safetyCheckService.check(diary);
+        if (!isSafe) {
+            user.setCrisisFlag();
+        }
+
+        // 2. QuotaCheck (Feature Flag ON + 비프리미엄 + 비위기 사용자만)
+        if (featureFlags.isQuotaEnforcementEnabled()
+                && !user.isPremium()
+                && !user.hasCrisisFlag()) {
+            // Lazy Reset: quotaResetDate가 과거이면 자동 리셋
+            if (user.getQuotaResetDate() != null
+                    && user.getQuotaResetDate().isBefore(LocalDate.now())) {
+                user.resetQuota();
+            }
+            if (user.getQuotaUsed() >= FREE_MONTHLY_QUOTA) {
+                throw new CustomException(ErrorCode.QUOTA_EXCEEDED);
+            }
+        }
+
+        // 스트릭 업데이트
+        user.updateStreak(diaryDate);
+
+        // 레벨업 감지
+        int newLevel = CompanionService.calculateLevel(user.getDiaryCount());
+        DiaryResponse.LevelUpInfo levelUpInfo = null;
+
+        if (newLevel > oldLevel) {
+            user.updateMaxLevel(newLevel);
+            levelUpInfo = new DiaryResponse.LevelUpInfo(oldLevel, newLevel);
+        }
+
+        // 3. AI 코멘트 생성
         AiCommentResponse aiComment = null;
         try {
-            aiComment = aiCommentService.generateComment(diary);
+            aiComment = aiCommentService.generateComment(diary, user, isSafe);
+
+            // AI 성공 후에만 쿼터 증가 (비프리미엄, 비위기 사용자)
+            if (aiComment != null
+                    && featureFlags.isQuotaEnforcementEnabled()
+                    && !user.isPremium()
+                    && !user.hasCrisisFlag()) {
+                user.incrementQuotaUsed();
+            }
         } catch (Exception e) {
             log.warn("AI 코멘트 생성 실패 (diaryId={}): {}", diary.getId(), e.getMessage());
         }
 
-        return DiaryResponse.of(diary, aiComment);
+        DiaryResponse.StreakInfo streakInfo = new DiaryResponse.StreakInfo(
+                user.getCurrentStreak(), user.getLongestStreak(),
+                user.getLastDiaryDate() != null && user.getLastDiaryDate().equals(diaryDate)
+        );
+        return DiaryResponse.of(diary, aiComment, levelUpInfo, streakInfo);
     }
 
     /**
@@ -120,14 +176,29 @@ public class DiaryService {
     }
 
     /**
+     * 사용자의 특정 날짜 일기 목록을 조회한다.
+     *
+     * @param userId 사용자 ID
+     * @param date   조회 날짜
+     * @return 일기 응답 목록
+     */
+    public List<DiaryResponse> getListByDate(Long userId, LocalDate date) {
+        return diaryRepository.findByUserIdAndDiaryDate(userId, date).stream()
+                .map(DiaryResponse::from)
+                .toList();
+    }
+
+    /**
      * 일기 상세를 조회한다.
+     * JOIN FETCH로 User를 즉시 로딩하여 추가 쿼리를 방지한다.
      *
      * @param userId  사용자 ID
      * @param diaryId 일기 ID
      * @return 일기 응답 (AI 코멘트 포함)
      */
     public DiaryResponse getDetail(Long userId, Long diaryId) {
-        Diary diary = findUserDiary(userId, diaryId);
+        Diary diary = diaryRepository.findByIdAndUserIdWithUser(diaryId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.DIARY_NOT_FOUND));
         AiCommentResponse aiComment = aiCommentService.getComment(diaryId);
         return DiaryResponse.of(diary, aiComment);
     }
@@ -156,7 +227,43 @@ public class DiaryService {
     @Transactional
     public void delete(Long userId, Long diaryId) {
         Diary diary = findUserDiary(userId, diaryId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        user.decrementDiaryCount();
+
+        LocalDate deletedDate = diary.getDiaryDate();
         diaryRepository.delete(diary);
+
+        // 스트릭 재계산: 삭제된 일기가 lastDiaryDate와 같으면
+        if (deletedDate.equals(user.getLastDiaryDate())) {
+            recalculateStreak(user);
+        }
+    }
+
+    private void recalculateStreak(User user) {
+        List<Diary> recentDiaries = diaryRepository.findTop10ByUserIdOrderByDiaryDateDesc(user.getId());
+        if (recentDiaries.isEmpty()) {
+            user.resetStreakData();
+            return;
+        }
+
+        // 가장 최근 일기 날짜부터 연속성 체크
+        LocalDate lastDate = recentDiaries.get(0).getDiaryDate();
+        int streak = 1;
+
+        for (int i = 1; i < recentDiaries.size(); i++) {
+            LocalDate currentDate = recentDiaries.get(i).getDiaryDate();
+            if (currentDate.equals(lastDate)) continue; // 같은 날 일기
+            if (currentDate.equals(lastDate.minusDays(1))) {
+                streak++;
+                lastDate = currentDate;
+            } else {
+                break;
+            }
+        }
+
+        user.setStreakData(streak, recentDiaries.get(0).getDiaryDate());
     }
 
     private Diary findUserDiary(Long userId, Long diaryId) {

@@ -146,14 +146,17 @@
 **Query Parameters** (선택):
 | 파라미터 | 설명 |
 |----------|------|
+| date | 특정 날짜 (YYYY-MM-DD). 지정 시 해당 날짜의 일기만 조회. |
 | year | 연도 (month와 함께 사용) |
 | month | 월 (1-12, year와 함께 사용) |
 
+- `date`를 지정하면 해당 날짜의 일기만 조회 (우선순위 최상)
 - `year`와 `month`를 모두 지정하면 해당 월의 일기만 조회
 - 미지정 시 전체 일기 조회 (최신순)
 
 **예시**:
 - `GET /diaries` - 전체 일기
+- `GET /diaries?date=2024-02-07` - 2024년 2월 7일 일기
 - `GET /diaries?year=2024&month=2` - 2024년 2월 일기
 
 **Response** (200):

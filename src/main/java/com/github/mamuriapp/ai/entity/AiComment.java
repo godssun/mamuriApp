@@ -37,16 +37,21 @@ public class AiComment {
     @Column(name = "prompt_version")
     private String promptVersion;
 
+    @Column(name = "followup_question", columnDefinition = "TEXT")
+    private String followupQuestion;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Builder
-    public AiComment(Diary diary, String content, String modelName, String promptVersion) {
+    public AiComment(Diary diary, String content, String modelName, String promptVersion,
+                     String followupQuestion) {
         this.diary = diary;
         this.content = content;
         this.modelName = modelName;
         this.promptVersion = promptVersion;
+        this.followupQuestion = followupQuestion;
     }
 
     /**
@@ -56,5 +61,16 @@ public class AiComment {
      */
     public void updateContent(String content) {
         this.content = content;
+    }
+
+    /**
+     * AI 코멘트 내용과 후속 질문을 갱신한다 (재생성 시 사용).
+     *
+     * @param content          새로운 코멘트 내용
+     * @param followupQuestion 새로운 후속 질문
+     */
+    public void updateContent(String content, String followupQuestion) {
+        this.content = content;
+        this.followupQuestion = followupQuestion;
     }
 }

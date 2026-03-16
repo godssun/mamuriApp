@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Mamuri</title>
+  <style>
+    :root {
+      --bg: #FAFAFA;
+      --surface: #FFFFFF;
+      --text: #1A1A2E;
+      --text-secondary: #4A4A68;
+      --accent: #5B5FC7;
+      --border: #E8E8F0;
+      --table-header: #F5F5FA;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0F0F1A;
+        --surface: #1A1A2E;
+        --text: #E8E8F0;
+        --text-secondary: #A0A0B8;
+        --accent: #7B7FD7;
+        --border: #2A2A3E;
+        --table-header: #22223A;
+      }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-top: 40px;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-top: 24px;
+      margin-bottom: 12px;
+    }
+    p, li {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    ul {
+      padding-left: 24px;
+      margin-bottom: 16px;
+    }
+    li { margin-bottom: 6px; }
+    strong { color: var(--text); font-weight: 600; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .meta {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+    th {
+      background: var(--table-header);
+      text-align: left;
+      padding: 10px 12px;
+      font-weight: 600;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .highlight {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 16px 0;
+    }
+    .lang-switch {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+    .lang-switch a {
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+    .lang-switch a.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    .section-ko { display: none; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Privacy Policy</h1>
+    <p class="meta">Effective Date: April 1, 2026 | Last Updated: April 1, 2026</p>
+
+    <div class="lang-switch">
+      <a href="#" class="active" onclick="switchLang('en'); return false;">English</a>
+      <a href="#" onclick="switchLang('ko'); return false;">한국어</a>
+    </div>
+
+    <!-- English Version -->
+    <div id="en" class="section-en">
+
+      <h2>1. Introduction</h2>
+      <p>Mamuri ("we," "us," or "our") operates the Mamuri mobile application (the "App"). This Privacy Policy explains how we collect, use, store, share, and protect your personal information when you use our App.</p>
+      <p>By using Mamuri, you agree to the collection and use of information as described in this policy. If you do not agree, please do not use the App.</p>
+      <p><strong>Contact:</strong> <a href="mailto:sunjunapps@gmail.com">sunjunapps@gmail.com</a></p>
+
+      <h2>2. Information We Collect</h2>
+
+      <h3>2.1 Account Information</h3>
+      <table>
+        <tr><th>Data</th><th>Purpose</th><th>Required</th></tr>
+        <tr><td>Email address</td><td>Account authentication, communication</td><td>Yes</td></tr>
+        <tr><td>Password</td><td>Account security (stored as bcrypt hash)</td><td>Yes (email signup)</td></tr>
+        <tr><td>Nickname</td><td>Personalization, displayed in-app</td><td>Yes</td></tr>
+        <tr><td>AI companion name</td><td>Personalize AI responses</td><td>Optional</td></tr>
+      </table>
+
+      <h3>2.2 Social Login Information</h3>
+      <p>If you sign in with Google or Apple, we receive:</p>
+      <table>
+        <tr><th>Data</th><th>Source</th><th>Purpose</th></tr>
+        <tr><td>OAuth provider identifier</td><td>Google / Apple</td><td>Link your social account</td></tr>
+        <tr><td>Profile image URL</td><td>Google / Apple</td><td>Display your avatar (optional)</td></tr>
+        <tr><td>Email address</td><td>Google / Apple</td><td>Account identification</td></tr>
+      </table>
+      <p>We do <strong>not</strong> receive or store your social media passwords.</p>
+
+      <h3>2.3 User-Generated Content</h3>
+      <table>
+        <tr><th>Data</th><th>Purpose</th></tr>
+        <tr><td>Diary entries (title, content, date)</td><td>Core app functionality</td></tr>
+        <tr><td>Conversation messages with AI</td><td>AI companion interaction</td></tr>
+      </table>
+
+      <h3>2.4 Automatically Collected Data</h3>
+      <table>
+        <tr><th>Data</th><th>Purpose</th></tr>
+        <tr><td>AI usage metrics (token count, model used)</td><td>Service quality and cost management</td></tr>
+        <tr><td>Device language preference</td><td>Localization</td></tr>
+        <tr><td>Authentication tokens</td><td>Secure session management</td></tr>
+      </table>
+
+      <h3>2.5 Information We Do NOT Collect</h3>
+      <ul>
+        <li>Location data</li>
+        <li>Phone number</li>
+        <li>Government-issued ID</li>
+        <li>Biometric data</li>
+        <li>Contacts or address book</li>
+        <li>Browsing history</li>
+        <li>Advertising identifiers</li>
+        <li>Analytics or tracking data</li>
+      </ul>
+
+      <h2>3. How We Use Your Information</h2>
+      <table>
+        <tr><th>Purpose</th><th>Data Used</th><th>Legal Basis</th></tr>
+        <tr><td>Provide the diary service</td><td>Diary content, account info</td><td>Contract performance</td></tr>
+        <tr><td>Generate AI companion responses</td><td>Diary content, nickname, AI name</td><td>Contract performance</td></tr>
+        <tr><td>Manage your account</td><td>Email, password, auth tokens</td><td>Contract performance</td></tr>
+        <tr><td>Process subscriptions</td><td>Email, Stripe customer ID</td><td>Contract performance</td></tr>
+        <tr><td>Detect crisis content</td><td>Diary content (keyword matching)</td><td>Legitimate interest (user safety)</td></tr>
+        <tr><td>Improve service quality</td><td>Anonymized usage metrics</td><td>Legitimate interest</td></tr>
+      </table>
+
+      <h2>4. AI Processing and Third-Party Data Sharing</h2>
+
+      <h3>4.1 OpenAI API</h3>
+      <div class="highlight">
+        <p><strong>Important:</strong> Your diary content is processed by OpenAI's API to generate AI companion responses.</p>
+      </div>
+      <p><strong>What is sent to OpenAI:</strong></p>
+      <ul>
+        <li>Your diary entry (title and content, up to 3,000 characters)</li>
+        <li>Your nickname (for personalized responses)</li>
+        <li>Your AI companion's name</li>
+        <li>Recent conversation history (up to 10 messages)</li>
+      </ul>
+      <p><strong>What is NOT sent to OpenAI:</strong></p>
+      <ul>
+        <li>Your email address</li>
+        <li>Your password</li>
+        <li>Your user ID</li>
+        <li>Payment information</li>
+        <li>Social login credentials</li>
+      </ul>
+      <p>OpenAI processes data according to their <a href="https://openai.com/policies/api-data-usage-policies">API data usage policy</a>. As of this policy's effective date, OpenAI states that API data is not used to train their models.</p>
+
+      <h3>4.2 Firebase Authentication (Google)</h3>
+      <p>We use Firebase Authentication for social login (Google and Apple Sign-In). See <a href="https://policies.google.com/privacy">Google's Privacy Policy</a>.</p>
+
+      <h3>4.3 Stripe (Payment Processing)</h3>
+      <p>Payment is processed by Stripe, Inc. We share your email and subscription selection. We do <strong>not</strong> store credit card information. See <a href="https://stripe.com/privacy">Stripe's Privacy Policy</a>.</p>
+
+      <h3>4.4 No Other Third-Party Sharing</h3>
+      <ul>
+        <li>We do <strong>not</strong> sell your personal data</li>
+        <li>We do <strong>not</strong> share data with advertising networks</li>
+        <li>We do <strong>not</strong> use analytics or tracking SDKs</li>
+        <li>We do <strong>not</strong> share data with data brokers</li>
+      </ul>
+
+      <h2>5. Data Storage and Security</h2>
+
+      <h3>5.1 Storage</h3>
+      <ul>
+        <li>Server-side data is stored in PostgreSQL databases hosted on Self-hosted, Republic of Korea</li>
+        <li>Device authentication tokens use native secure storage (iOS Keychain / Android Keystore)</li>
+        <li>Passwords are hashed using bcrypt</li>
+      </ul>
+
+      <h3>5.2 Security Measures</h3>
+      <ul>
+        <li>All communication uses HTTPS/TLS encryption</li>
+        <li>JWT access tokens expire after 1 hour</li>
+        <li>Refresh tokens expire after 7 days</li>
+        <li>Token reuse detection with automatic session invalidation</li>
+        <li>Password requirements: minimum 8 characters with letters and numbers</li>
+      </ul>
+
+      <h3>5.3 Data Retention</h3>
+      <table>
+        <tr><th>Data</th><th>Retention Period</th></tr>
+        <tr><td>Active account data</td><td>Until account deletion</td></tr>
+        <tr><td>Diary entries</td><td>Until individually deleted or account deletion</td></tr>
+        <tr><td>AI comments and conversations</td><td>Until associated diary or account is deleted</td></tr>
+        <tr><td>Account deletion records</td><td>Retained indefinitely (legal compliance)</td></tr>
+        <tr><td>AI usage logs</td><td>Retained indefinitely (anonymized)</td></tr>
+        <tr><td>Safety event records</td><td>Retained indefinitely (anonymized after deletion)</td></tr>
+      </table>
+
+      <h2>6. Crisis Detection and Safety</h2>
+      <div class="highlight">
+        <p>Mamuri includes an automated safety system that scans diary content for keywords indicating potential crisis situations (e.g., self-harm, suicidal ideation).</p>
+        <p>When detected, the AI responds with safety resources including professional help contacts. This processing is done on our servers and is <strong>not</strong> shared with any third party.</p>
+        <p><strong>Mamuri is not a substitute for professional mental health care.</strong></p>
+        <p>Crisis resources: Suicide Prevention Hotline 1393 | Mental Health Crisis Line 1577-0199</p>
+      </div>
+
+      <h2>7. Your Rights</h2>
+      <ul>
+        <li><strong>Access:</strong> View all your data within the App</li>
+        <li><strong>Correction:</strong> Edit diary entries and profile information anytime</li>
+        <li><strong>Deletion:</strong> Delete your account via Settings &gt; Account &gt; Delete Account (3-step process)</li>
+        <li><strong>Withdraw Consent:</strong> Stop using the App at any time</li>
+      </ul>
+      <p>EU/EEA users may have additional rights including objection to processing, restriction of processing, and filing complaints with data protection authorities. Contact <a href="mailto:sunjunapps@gmail.com">sunjunapps@gmail.com</a> to exercise your rights.</p>
+
+      <h2>8. International Data Transfers</h2>
+      <table>
+        <tr><th>Service</th><th>Location</th><th>Purpose</th></tr>
+        <tr><td>OpenAI</td><td>United States</td><td>AI response generation</td></tr>
+        <tr><td>Stripe</td><td>United States</td><td>Payment processing</td></tr>
+        <tr><td>Firebase</td><td>United States (Google Cloud)</td><td>Authentication</td></tr>
+        <tr><td>Mamuri Server</td><td>Republic of Korea</td><td>Primary data storage</td></tr>
+      </table>
+
+      <h2>9. Children's Privacy</h2>
+      <p>Mamuri does not knowingly collect personal information from children under 13 (or the minimum age required by applicable law). Contact <a href="mailto:sunjunapps@gmail.com">sunjunapps@gmail.com</a> if you believe a child has provided personal information.</p>
+
+      <h2>10. Subscriptions</h2>
+      <table>
+        <tr><th>Tier</th><th>AI Replies / Day</th><th>Price</th></tr>
+        <tr><td>Free</td><td>1</td><td>Free</td></tr>
+        <tr><td>Deluxe</td><td>3</td><td>₩4,900/month</td></tr>
+        <tr><td>Premium</td><td>Unlimited</td><td>₩9,900/month</td></tr>
+      </table>
+      <p>New users may receive a 7-day free trial. Subscriptions can be cancelled at any time.</p>
+
+      <h2>11. Changes to This Policy</h2>
+      <p>We may update this policy. Significant changes will be posted in the App with an updated "Last Updated" date.</p>
+
+      <h2>12. Contact Us</h2>
+      <p>Email: <a href="mailto:sunjunapps@gmail.com">sunjunapps@gmail.com</a></p>
+      <p>Developer: SUNJUN KIM</p>
+      <p>Address: 24, Suseong-ro 276beon-gil, Jangan-gu, Suwon-si, Gyeonggi-do, Republic of Korea</p>
+    </div>
+
+    <!-- Korean Version -->
+    <div id="ko" class="section-ko">
+
+      <h2>1. 소개</h2>
+      <p>마무리("당사")는 마무리 모바일 애플리케이션("앱")을 운영합니다. 본 개인정보 처리방침은 귀하가 앱을 사용할 때 당사가 개인정보를 수집, 이용, 저장, 공유 및 보호하는 방법을 설명합니다.</p>
+      <p>마무리를 사용함으로써 본 방침에 따른 정보 수집 및 이용에 동의하게 됩니다.</p>
+      <p><strong>연락처:</strong> <a href="mailto:sunjunapps@gmail.com">sunjunapps@gmail.com</a></p>
+
+      <h2>2. 수집하는 정보</h2>
+
+      <h3>2.1 계정 정보</h3>
+      <table>
+        <tr><th>데이터</th><th>목적</th><th>필수 여부</th></tr>
+        <tr><td>이메일 주소</td><td>계정 인증, 커뮤니케이션</td><td>필수</td></tr>
+        <tr><td>비밀번호</td><td>계정 보안 (bcrypt 해시로 저장)</td><td>필수 (이메일 가입)</td></tr>
+        <tr><td>닉네임</td><td>개인화, 앱 내 표시</td><td>필수</td></tr>
+        <tr><td>AI 친구 이름</td><td>AI 응답 개인화</td><td>선택</td></tr>
+      </table>
+
+      <h3>2.2 소셜 로그인 정보</h3>
+      <p>Google 또는 Apple로 로그인 시 수신하는 정보:</p>
+      <table>
+        <tr><th>데이터</th><th>출처</th><th>목적</th></tr>
+        <tr><td>OAuth 제공자 식별자</td><td>Google / Apple</td><td>소셜 계정 연결</td></tr>
+        <tr><td>프로필 이미지 URL</td><td>Google / Apple</td><td>아바타 표시 (선택)</td></tr>
+        <tr><td>이메일 주소</td><td>Google / Apple</td><td>계정 식별</td></tr>
+      </table>
+      <p>소셜 미디어 비밀번호는 수신하거나 저장하지 <strong>않습니다</strong>.</p>
+
+      <h3>2.3 사용자 생성 콘텐츠</h3>
+      <table>
+        <tr><th>데이터</th><th>목적</th></tr>
+        <tr><td>일기 항목 (제목, 내용, 날짜)</td><td>핵심 앱 기능</td></tr>
+        <tr><td>AI와의 대화 메시지</td><td>AI 친구 상호작용</td></tr>
+      </table>
+
+      <h3>2.4 자동 수집 데이터</h3>
+      <table>
+        <tr><th>데이터</th><th>목적</th></tr>
+        <tr><td>AI 사용 지표 (토큰 수, 사용 모델)</td><td>서비스 품질 및 비용 관리</td></tr>
+        <tr><td>기기 언어 설정</td><td>다국어 지원</td></tr>
+        <tr><td>인증 토큰</td><td>안전한 세션 관리</td></tr>
+      </table>
+
+      <h3>2.5 수집하지 않는 정보</h3>
+      <ul>
+        <li>위치 데이터</li>
+        <li>전화번호</li>
+        <li>정부 발급 신분증</li>
+        <li>생체 인식 데이터</li>
+        <li>연락처 또는 주소록</li>
+        <li>브라우징 기록</li>
+        <li>광고 식별자</li>
+        <li>분석 또는 추적 데이터</li>
+      </ul>
+
+      <h2>3. 정보 이용 방법</h2>
+      <table>
+        <tr><th>목적</th><th>사용 데이터</th><th>법적 근거</th></tr>
+        <tr><td>일기 서비스 제공</td><td>일기 내용, 계정 정보</td><td>계약 이행</td></tr>
+        <tr><td>AI 친구 응답 생성</td><td>일기 내용, 닉네임, AI 이름</td><td>계약 이행</td></tr>
+        <tr><td>계정 관리</td><td>이메일, 비밀번호, 인증 토큰</td><td>계약 이행</td></tr>
+        <tr><td>구독 처리</td><td>이메일, Stripe 고객 ID</td><td>계약 이행</td></tr>
+        <tr><td>위기 콘텐츠 감지</td><td>일기 내용 (키워드 매칭)</td><td>정당한 이익 (사용자 안전)</td></tr>
+        <tr><td>서비스 품질 개선</td><td>익명화된 사용 지표</td><td>정당한 이익</td></tr>
+      </table>
+
+      <h2>4. AI 처리 및 제3자 데이터 공유</h2>
+
+      <h3>4.1 OpenAI API</h3>
+      <div class="highlight">
+        <p><strong>중요:</strong> 귀하의 일기 내용은 AI 친구 응답을 생성하기 위해 OpenAI의 API로 처리됩니다.</p>
+      </div>
+      <p><strong>OpenAI에 전송되는 데이터:</strong></p>
+      <ul>
+        <li>일기 항목 (제목 및 내용, 최대 3,000자)</li>
+        <li>닉네임 (개인화된 응답을 위해)</li>
+        <li>AI 친구 이름</li>
+        <li>최근 대화 기록 (최대 10개 메시지)</li>
+      </ul>
+      <p><strong>OpenAI에 전송되지 않는 데이터:</strong></p>
+      <ul>
+        <li>이메일 주소</li>
+        <li>비밀번호</li>
+        <li>사용자 ID</li>
+        <li>결제 정보</li>
+        <li>소셜 로그인 자격 증명</li>
+      </ul>
+      <p>OpenAI는 <a href="https://openai.com/policies/api-data-usage-policies">API 데이터 사용 정책</a>에 따라 데이터를 처리합니다.</p>
+
+      <h3>4.2 Firebase Authentication (Google)</h3>
+      <p>소셜 로그인 관리를 위해 Firebase Authentication을 사용합니다. <a href="https://policies.google.com/privacy">Google 개인정보처리방침</a>을 참조하세요.</p>
+
+      <h3>4.3 Stripe (결제 처리)</h3>
+      <p>결제는 Stripe, Inc.를 통해 처리됩니다. 신용카드 정보는 저장하지 <strong>않습니다</strong>. <a href="https://stripe.com/privacy">Stripe 개인정보처리방침</a>을 참조하세요.</p>
+
+      <h3>4.4 기타 제3자 공유 없음</h3>
+      <ul>
+        <li>개인 데이터를 판매하지 <strong>않습니다</strong></li>
+        <li>광고 네트워크와 데이터를 공유하지 <strong>않습니다</strong></li>
+        <li>분석 또는 추적 SDK를 사용하지 <strong>않습니다</strong></li>
+        <li>데이터 브로커와 공유하지 <strong>않습니다</strong></li>
+      </ul>
+
+      <h2>5. 데이터 저장 및 보안</h2>
+
+      <h3>5.1 저장</h3>
+      <ul>
+        <li>서버 측 데이터는 자체 호스팅, 대한민국의 PostgreSQL 데이터베이스에 저장</li>
+        <li>기기 인증 토큰은 네이티브 보안 저장소 사용 (iOS Keychain / Android Keystore)</li>
+        <li>비밀번호는 bcrypt로 해시 처리</li>
+      </ul>
+
+      <h3>5.2 보안 조치</h3>
+      <ul>
+        <li>모든 통신에 HTTPS/TLS 암호화 사용</li>
+        <li>JWT 액세스 토큰 1시간 후 만료</li>
+        <li>리프레시 토큰 7일 후 만료</li>
+        <li>토큰 재사용 감지 및 자동 세션 무효화</li>
+        <li>비밀번호: 최소 8자, 영문자와 숫자 포함</li>
+      </ul>
+
+      <h3>5.3 데이터 보존</h3>
+      <table>
+        <tr><th>데이터</th><th>보존 기간</th></tr>
+        <tr><td>활성 계정 데이터</td><td>계정 삭제 시까지</td></tr>
+        <tr><td>일기 항목</td><td>개별 삭제 또는 계정 삭제 시까지</td></tr>
+        <tr><td>AI 댓글 및 대화</td><td>관련 일기 또는 계정 삭제 시까지</td></tr>
+        <tr><td>계정 삭제 기록</td><td>무기한 보존 (법적 준수)</td></tr>
+        <tr><td>AI 사용 로그</td><td>무기한 보존 (익명화)</td></tr>
+        <tr><td>안전 이벤트 기록</td><td>무기한 보존 (삭제 후 익명화)</td></tr>
+      </table>
+
+      <h2>6. 위기 감지 및 안전</h2>
+      <div class="highlight">
+        <p>마무리에는 자해, 자살 충동 등 잠재적 위기 상황을 나타내는 키워드를 자동으로 검사하는 안전 시스템이 포함되어 있습니다.</p>
+        <p>감지 시 AI가 전문적 도움 연락처를 포함한 안전 자원으로 응답합니다. 이 처리는 당사 서버에서 수행되며 제3자와 공유되지 <strong>않습니다</strong>.</p>
+        <p><strong>마무리는 전문적인 정신건강 관리를 대체할 수 없습니다.</strong></p>
+        <p>위기 자원: 자살예방상담전화 1393 | 정신건강위기상담전화 1577-0199</p>
+      </div>
+
+      <h2>7. 귀하의 권리</h2>
+      <ul>
+        <li><strong>접근:</strong> 앱 내에서 모든 데이터 확인 가능</li>
+        <li><strong>수정:</strong> 일기 항목 및 프로필 정보 언제든 수정 가능</li>
+        <li><strong>삭제:</strong> 설정 &gt; 계정 &gt; 계정 삭제로 삭제 가능 (3단계 프로세스)</li>
+        <li><strong>동의 철회:</strong> 언제든지 앱 사용 중단 가능</li>
+      </ul>
+      <p>EU/EEA 사용자는 처리에 대한 이의 제기, 처리 제한, 데이터 보호 기관에 불만 제기 등 추가 권리가 있을 수 있습니다. <a href="mailto:sunjunapps@gmail.com">sunjunapps@gmail.com</a>으로 연락해 주세요.</p>
+
+      <h2>8. 국제 데이터 이전</h2>
+      <table>
+        <tr><th>서비스</th><th>위치</th><th>목적</th></tr>
+        <tr><td>OpenAI</td><td>미국</td><td>AI 응답 생성</td></tr>
+        <tr><td>Stripe</td><td>미국</td><td>결제 처리</td></tr>
+        <tr><td>Firebase</td><td>미국 (Google Cloud)</td><td>인증</td></tr>
+        <tr><td>Mamuri Server</td><td>대한민국</td><td>주 데이터 저장</td></tr>
+      </table>
+
+      <h2>9. 아동 개인정보 보호</h2>
+      <p>마무리는 13세 미만 아동의 개인정보를 의도적으로 수집하지 않습니다. 자녀가 개인정보를 제공했다고 판단되시면 <a href="mailto:sunjunapps@gmail.com">sunjunapps@gmail.com</a>으로 연락해 주세요.</p>
+
+      <h2>10. 구독</h2>
+      <table>
+        <tr><th>등급</th><th>일일 AI 응답 수</th><th>가격</th></tr>
+        <tr><td>Free</td><td>1회</td><td>무료</td></tr>
+        <tr><td>Deluxe</td><td>3회</td><td>월 4,900원</td></tr>
+        <tr><td>Premium</td><td>무제한</td><td>월 9,900원</td></tr>
+      </table>
+      <p>신규 사용자는 7일 무료 체험을 받을 수 있습니다. 구독은 언제든지 취소할 수 있습니다.</p>
+
+      <h2>11. 방침 변경</h2>
+      <p>본 방침은 수시로 업데이트될 수 있습니다. 중요한 변경은 앱 내에 게시되며 "최종 수정일"이 업데이트됩니다.</p>
+
+      <h2>12. 문의</h2>
+      <p>이메일: <a href="mailto:sunjunapps@gmail.com">sunjunapps@gmail.com</a></p>
+      <p>개발자: SUNJUN KIM</p>
+      <p>주소: 경기도 수원시 장안구 수성로276번길 24</p>
+    </div>
+
+  </div>
+
+  <script>
+    function switchLang(lang) {
+      document.querySelectorAll('.section-en, .section-ko').forEach(function(el) {
+        el.style.display = 'none';
+      });
+      document.getElementById(lang).style.display = 'block';
+      document.querySelectorAll('.lang-switch a').forEach(function(a) {
+        a.classList.remove('active');
+      });
+      event.target.classList.add('active');
+    }
+    // Show English by default
+    document.getElementById('en').style.display = 'block';
+  </script>
+</body>
+</html>
