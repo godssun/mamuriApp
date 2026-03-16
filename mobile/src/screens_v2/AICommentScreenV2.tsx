@@ -21,7 +21,6 @@ import {
   Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CommonActions } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useThemeV2 } from '../design-system-v2';
@@ -29,6 +28,7 @@ import { conversationApi, companionApi, ApiError } from '../api/client';
 import { ConversationMessage, ConversationLimits, DiaryStackParamList } from '../types';
 import { formatTime } from '../utils/dateFormat';
 import { ChatBubble } from './components/ChatBubble';
+import { ReportModal } from './components/ReportModal';
 
 type Props = NativeStackScreenProps<DiaryStackParamList, 'AIComment'>;
 
@@ -51,8 +51,10 @@ export function AICommentScreenV2({ navigation, route }: Props) {
   const [loading, setLoading] = useState(true);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [reportMessageId, setReportMessageId] = useState<number | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
+
   const headerAnim = useRef(new Animated.Value(0)).current;
   const suggestionsAnim = useRef(new Animated.Value(0)).current;
 
@@ -95,12 +97,6 @@ export function AICommentScreenV2({ navigation, route }: Props) {
     const messageText = (text || inputText).trim();
     if (!messageText) return;
 
-    // 쿼터 체크
-    if (limits && limits.remainingReplies !== null && limits.remainingReplies <= 0) {
-      navigation.dispatch(CommonActions.navigate({ name: 'Paywall' }));
-      return;
-    }
-
     setInputText('');
     setIsTyping(true);
 
@@ -134,7 +130,7 @@ export function AICommentScreenV2({ navigation, route }: Props) {
     } catch (error: any) {
       setMessages(prev => prev.filter(m => m.id !== optimisticId));
       if (error instanceof ApiError && error.status === 429) {
-        navigation.dispatch(CommonActions.navigate({ name: 'Paywall' }));
+        Alert.alert(t('common.alert'), error.message || t('common.retry'));
       } else {
         Alert.alert(t('diary.sendFailed'), error?.message || t('common.retry'));
       }
@@ -219,6 +215,8 @@ export function AICommentScreenV2({ navigation, route }: Props) {
             sender={msg.role === 'AI' ? 'ai' : 'user'}
             timestamp={formatTime(msg.createdAt)}
             animated={false}
+            messageId={msg.role === 'AI' ? msg.id : undefined}
+            onReport={msg.role === 'AI' ? setReportMessageId : undefined}
           />
         ))}
 
@@ -309,6 +307,13 @@ export function AICommentScreenV2({ navigation, route }: Props) {
           </TouchableOpacity>
         </View>
       </View>
+
+      <ReportModal
+        visible={reportMessageId !== null}
+        onClose={() => setReportMessageId(null)}
+        messageId={reportMessageId ?? 0}
+        diaryId={diaryId}
+      />
     </View>
   );
 }

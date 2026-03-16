@@ -6,6 +6,8 @@ import {
   TokenResponse,
   SignupRequest,
   LoginRequest,
+  SocialLoginRequest,
+  SocialLoginResponse,
   Diary,
   DiaryCreateRequest,
   DiaryUpdateRequest,
@@ -17,11 +19,11 @@ import {
   CompanionSettings,
   CompanionSettingsUpdateRequest,
   SubscriptionInfo,
-  CheckoutResponse,
   StreakResponse,
   ConversationHistoryResponse,
   ConversationReplyResponse,
   DeleteAccountRequest,
+  ReportRequest,
 } from '../types';
 
 // Android 에뮬레이터에서는 10.0.2.2가 호스트 머신의 localhost
@@ -32,6 +34,7 @@ const BASE_URL = __DEV__
   : 'https://api.mamuri.app/api';
 
 const TOKEN_KEY = 'auth_tokens';
+const AI_CONSENT_KEY = 'ai_data_consent';
 
 interface StoredTokens {
   accessToken: string;
@@ -51,6 +54,20 @@ export const tokenStorage = {
 
   async clear(): Promise<void> {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
+  },
+};
+
+// AI 데이터 처리 동의 캐시
+export const consentStorage = {
+  async get(): Promise<boolean> {
+    const val = await SecureStore.getItemAsync(AI_CONSENT_KEY);
+    return val === 'true';
+  },
+  async save(accepted: boolean): Promise<void> {
+    await SecureStore.setItemAsync(AI_CONSENT_KEY, String(accepted));
+  },
+  async clear(): Promise<void> {
+    await SecureStore.deleteItemAsync(AI_CONSENT_KEY);
   },
 };
 
@@ -319,6 +336,21 @@ export const authApi = {
       // 서버 로그아웃 실패해도 로컬 토큰은 삭제
     }
     await tokenStorage.clear();
+    await consentStorage.clear();
+  },
+
+  async socialLogin(data: SocialLoginRequest): Promise<SocialLoginResponse> {
+    const response = await request<SocialLoginResponse>('/auth/social', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, false);
+    if (!response.isNewUser && response.accessToken && response.refreshToken) {
+      await tokenStorage.save({
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      });
+    }
+    return response;
   },
 };
 
@@ -435,21 +467,20 @@ export const conversationApi = {
   },
 };
 
+// AI 응답 신고 API
+export const reportApi = {
+  async submit(report: ReportRequest): Promise<void> {
+    await request<void>('/reports/ai-response', {
+      method: 'POST',
+      body: JSON.stringify(report),
+    });
+  },
+};
+
 // 구독 API
 export const subscriptionApi = {
   async getStatus(): Promise<SubscriptionInfo> {
     return request<SubscriptionInfo>('/subscription/status');
-  },
-
-  async createCheckout(priceId: string): Promise<CheckoutResponse> {
-    return request<CheckoutResponse>('/subscription/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ priceId }),
-    });
-  },
-
-  async cancel(): Promise<void> {
-    await request<void>('/subscription/cancel', { method: 'POST' });
   },
 };
 

@@ -17,6 +17,7 @@ import {
 // V2 Screens
 import { LoginScreenV2 } from '../screens_v2/LoginScreenV2';
 import { SignupScreenV2 } from '../screens_v2/SignupScreenV2';
+import { SocialNicknameScreenV2 } from '../screens_v2/SocialNicknameScreenV2';
 import { DiaryListScreenV2 } from '../screens_v2/DiaryListScreenV2';
 import { DiaryWriteScreenV2 } from '../screens_v2/DiaryWriteScreenV2';
 import { DiaryDetailScreenV2 } from '../screens_v2/DiaryDetailScreenV2';
@@ -25,8 +26,6 @@ import { AICommentScreenV2 } from '../screens_v2/AICommentScreenV2';
 // V2 Screens (migrated)
 import { CompanionScreenV2 } from '../screens_v2/CompanionScreenV2';
 import { SettingsScreenV2 } from '../screens_v2/SettingsScreenV2';
-import { PaywallScreenV2 } from '../screens_v2/PaywallScreenV2';
-import { SubscriptionScreenV2 } from '../screens_v2/SubscriptionScreenV2';
 import { CompanionSetupScreenV2 } from '../screens_v2/CompanionSetupScreenV2';
 import { DiaryArchiveScreenV2 } from '../screens_v2/DiaryArchiveScreenV2';
 import { CustomTabBar } from '../screens_v2/components/CustomTabBar';
@@ -43,6 +42,7 @@ function AuthNavigator() {
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Login" component={LoginScreenV2} />
       <AuthStack.Screen name="Signup" component={SignupScreenV2} />
+      <AuthStack.Screen name="SocialNickname" component={SocialNicknameScreenV2} />
     </AuthStack.Navigator>
   );
 }
@@ -104,8 +104,6 @@ function MainNavigator() {
         <>
           <MainStack.Screen name="MainTabs" component={MainTabsNavigator} />
           <MainStack.Screen name="Settings" component={SettingsScreenV2} />
-          <MainStack.Screen name="Paywall" component={PaywallScreenV2} />
-          <MainStack.Screen name="Subscription" component={SubscriptionScreenV2} />
           <MainStack.Screen name="DiaryArchive" component={DiaryArchiveScreenV2} />
           <MainStack.Screen name="DiaryDetailFromArchive" component={DiaryDetailScreenV2 as any} />
         </>

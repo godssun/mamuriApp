@@ -97,6 +97,7 @@ export interface UserSettings {
   fontFamily: 'system' | 'serif';
   fontSize: 'small' | 'medium' | 'large';
   language?: 'ko' | 'en' | 'ja' | 'zh';
+  aiDataConsent?: boolean;
 }
 
 // 컴패니언 개인화 설정
@@ -142,6 +143,31 @@ export interface ConversationReplyResponse {
   createdAt: string;
 }
 
+// AI 응답 신고
+export type ReportReason = 'inappropriate' | 'inaccurate' | 'offensive' | 'other';
+
+export interface ReportRequest {
+  messageId: number;
+  diaryId: number;
+  reason: ReportReason;
+}
+
+// 소셜 로그인
+export type SocialProvider = 'GOOGLE' | 'APPLE';
+
+export interface SocialLoginRequest {
+  provider: SocialProvider;
+  token: string;
+  nickname?: string;
+}
+
+export interface SocialLoginResponse {
+  accessToken: string | null;
+  refreshToken: string | null;
+  isNewUser: boolean;
+  nickname: string | null;
+}
+
 // 계정 삭제
 export interface DeleteAccountRequest {
   password: string;
@@ -164,10 +190,6 @@ export interface SubscriptionInfo {
   crisisFlag: boolean;
 }
 
-export interface CheckoutResponse {
-  checkoutUrl: string;
-}
-
 // 네비게이션
 export type RootStackParamList = {
   Auth: undefined;
@@ -177,14 +199,13 @@ export type RootStackParamList = {
 export type AuthStackParamList = {
   Login: undefined;
   Signup: undefined;
+  SocialNickname: { provider: SocialProvider; token: string };
 };
 
 export type MainStackParamList = {
   MainTabs: undefined;
   CompanionSetup: undefined;
   Settings: undefined;
-  Paywall: undefined;
-  Subscription: undefined;
   DiaryArchive: undefined;
   DiaryDetailFromArchive: { diaryId: number };
 };

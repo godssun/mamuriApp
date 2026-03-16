@@ -98,20 +98,22 @@ public class ConversationService {
                 .orElseThrow(() -> new CustomException(ErrorCode.DIARY_NOT_FOUND));
         User user = diary.getUser();
 
-        // 3. 답변 제한 검사 (일별 제한, getEffectiveTier로 crisis/trial 포함)
+        // 3. 답변 제한 검사 (quotaEnforcementEnabled일 때만)
         SubscriptionTier effectiveTier = user.getEffectiveTier();
-
-        if (effectiveTier.isBlocked()) {
-            throw new CustomException(ErrorCode.TRIAL_EXPIRED);
-        }
-
         int usedToday = 0;
-        if (!effectiveTier.isUnlimited()) {
-            LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-            usedToday = conversationMessageRepository
-                    .countByUserIdAndRoleAndCreatedAtAfter(userId, "AI", todayStart);
-            if (!effectiveTier.canReply(usedToday)) {
-                throw new CustomException(ErrorCode.REPLY_LIMIT_EXCEEDED);
+
+        if (featureFlags.isQuotaEnforcementEnabled()) {
+            if (effectiveTier.isBlocked()) {
+                throw new CustomException(ErrorCode.TRIAL_EXPIRED);
+            }
+
+            if (!effectiveTier.isUnlimited()) {
+                LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+                usedToday = conversationMessageRepository
+                        .countByUserIdAndRoleAndCreatedAtAfter(userId, "AI", todayStart);
+                if (!effectiveTier.canReply(usedToday)) {
+                    throw new CustomException(ErrorCode.REPLY_LIMIT_EXCEEDED);
+                }
             }
         }
 
@@ -169,10 +171,13 @@ public class ConversationService {
                 .build();
         conversationMessageRepository.save(aiMessage);
 
-        // 8. 남은 횟수 계산 (일별 기준)
-        Integer remainingReplies = effectiveTier.isUnlimited()
-                ? null
-                : Math.max(0, effectiveTier.getMaxRepliesPerDay() - (usedToday + 1));
+        // 8. 남은 횟수 계산 (quotaEnforcementEnabled=false → 무제한)
+        Integer remainingReplies;
+        if (!featureFlags.isQuotaEnforcementEnabled() || effectiveTier.isUnlimited()) {
+            remainingReplies = null;
+        } else {
+            remainingReplies = Math.max(0, effectiveTier.getMaxRepliesPerDay() - (usedToday + 1));
+        }
 
         return ConversationReplyResponse.builder()
                 .userMessageId(userMessage.getId())
@@ -205,9 +210,9 @@ public class ConversationService {
 
         SubscriptionTier effectiveTier = user.getEffectiveTier();
 
-        // 일별 사용량 계산
+        // 일별 사용량 계산 (quotaEnforcementEnabled일 때만)
         int usedToday = 0;
-        if (!effectiveTier.isUnlimited()) {
+        if (featureFlags.isQuotaEnforcementEnabled() && !effectiveTier.isUnlimited()) {
             LocalDateTime todayStart = LocalDate.now().atStartOfDay();
             usedToday = conversationMessageRepository
                     .countByUserIdAndRoleAndCreatedAtAfter(user.getId(), "AI", todayStart);
@@ -217,10 +222,11 @@ public class ConversationService {
                 .map(ConversationHistoryResponse.MessageDto::from)
                 .toList();
 
+        boolean quotaEnabled = featureFlags.isQuotaEnforcementEnabled();
         ConversationHistoryResponse.LimitsDto limits = ConversationHistoryResponse.LimitsDto.builder()
-                .maxRepliesPerDay(effectiveTier.getMaxRepliesPerDay())
+                .maxRepliesPerDay(quotaEnabled ? effectiveTier.getMaxRepliesPerDay() : -1)
                 .usedRepliesToday(usedToday)
-                .remainingReplies(effectiveTier.isUnlimited()
+                .remainingReplies(!quotaEnabled || effectiveTier.isUnlimited()
                         ? null
                         : Math.max(0, effectiveTier.getMaxRepliesPerDay() - usedToday))
                 .tier(effectiveTier.name())

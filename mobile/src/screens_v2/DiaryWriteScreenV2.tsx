@@ -20,7 +20,6 @@ import {
   Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CommonActions } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useThemeV2 } from '../design-system-v2';
@@ -133,10 +132,7 @@ export function DiaryWriteScreenV2({ navigation, route }: Props) {
       }
     } catch (error: any) {
       if (error instanceof ApiError && error.status === 429) {
-        // 쿼터 초과 → Paywall 이동
-        navigation.dispatch(
-          CommonActions.navigate({ name: 'Paywall' }),
-        );
+        Alert.alert(t('common.alert'), error.message || t('common.retry'));
       } else {
         Alert.alert(isEditMode ? t('diary.editFailed') : t('diary.saveFailed'), error?.message || t('common.retry'));
       }

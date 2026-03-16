@@ -21,7 +21,7 @@ import {
   Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CommonActions, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useThemeV2 } from '../design-system-v2';
@@ -30,6 +30,7 @@ import { Diary, ConversationMessage, ConversationLimits, DiaryStackParamList } f
 import { formatDiaryDate, formatTime } from '../utils/dateFormat';
 import { Card } from './components/Card';
 import { ChatBubble } from './components/ChatBubble';
+import { ReportModal } from './components/ReportModal';
 
 type Props = NativeStackScreenProps<DiaryStackParamList, 'DiaryDetail'>;
 
@@ -45,6 +46,7 @@ export function DiaryDetailScreenV2({ navigation, route }: Props) {
   const [loading, setLoading] = useState(true);
   const [inputText, setInputText] = useState('');
   const [isAITyping, setIsAITyping] = useState(false);
+  const [reportMessageId, setReportMessageId] = useState<number | null>(null);
 
   const contentAnim = useRef(new Animated.Value(0)).current;
   const conversationAnim = useRef(new Animated.Value(0)).current;
@@ -93,12 +95,6 @@ export function DiaryDetailScreenV2({ navigation, route }: Props) {
     const text = inputText.trim();
     if (!text) return;
 
-    // 쿼터 체크
-    if (limits && limits.remainingReplies !== null && limits.remainingReplies <= 0) {
-      navigation.dispatch(CommonActions.navigate({ name: 'Paywall' }));
-      return;
-    }
-
     setInputText('');
     setIsAITyping(true);
 
@@ -134,7 +130,7 @@ export function DiaryDetailScreenV2({ navigation, route }: Props) {
       // 실패 시 optimistic 메시지 제거
       setMessages(prev => prev.filter(m => m.id !== optimisticUserMsg.id));
       if (error instanceof ApiError && error.status === 429) {
-        navigation.dispatch(CommonActions.navigate({ name: 'Paywall' }));
+        Alert.alert(t('common.alert'), error.message || t('common.retry'));
       } else {
         Alert.alert(t('diary.sendFailed'), error?.message || t('common.retry'));
       }
@@ -331,6 +327,8 @@ export function DiaryDetailScreenV2({ navigation, route }: Props) {
                   sender={msg.role === 'AI' ? 'ai' : 'user'}
                   timestamp={formatTime(msg.createdAt)}
                   animated={false}
+                  messageId={msg.role === 'AI' ? msg.id : undefined}
+                  onReport={msg.role === 'AI' ? setReportMessageId : undefined}
                 />
               ))}
               {isAITyping && (
@@ -387,6 +385,13 @@ export function DiaryDetailScreenV2({ navigation, route }: Props) {
           </TouchableOpacity>
         </View>
       </View>
+
+      <ReportModal
+        visible={reportMessageId !== null}
+        onClose={() => setReportMessageId(null)}
+        messageId={reportMessageId ?? 0}
+        diaryId={diaryId}
+      />
     </View>
   );
 }
