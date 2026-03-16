@@ -1,3 +1,4 @@
+// @ts-nocheck — v1 화면 비활성화 (v2로 마이그레이션 완료)
 import React, { useState, useCallback } from 'react';
 import {
   View,

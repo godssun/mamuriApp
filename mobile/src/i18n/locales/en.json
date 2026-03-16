@@ -34,7 +34,18 @@
     "passwordWeak": "Weak",
     "passwordFair": "Fair",
     "passwordGood": "Good",
-    "passwordStrong": "Strong"
+    "passwordStrong": "Strong",
+    "socialGoogle": "Sign in with Google",
+    "socialApple": "Sign in with Apple",
+    "socialKakao": "Sign in with Kakao",
+    "socialNickname": "Set your nickname",
+    "socialNicknameDesc": "Choose a nickname to use in Mamuri",
+    "socialNicknameLength": "Nickname must be 2-20 characters.",
+    "socialStart": "Get started",
+    "socialLoginFailed": "Social login failed",
+    "socialCancelled": "Login was cancelled",
+    "aiConsentCheckbox": "I agree to AI data processing",
+    "aiConsentCheckboxDesc": "Diary content is encrypted before being sent for AI responses. No one can view your entries."
   },
   "diary": {
     "myDiary": "My Diary",
@@ -170,6 +181,8 @@
     "logoutConfirm": "Are you sure you want to log out?",
     "deleteAccount": "Delete account",
     "appInfo": "App info",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
     "appVersion": "Mamuri v1.0.0",
     "aiDisclaimer": "AI comments are generated through an external LLM API.\nIf you need professional counseling, please seek help from a specialist.",
     "photoTapChange": "Tap photo to change",
@@ -282,6 +295,27 @@
     "authExpired": "Your session has expired. Please log in again.",
     "generic": "An error occurred while processing your request.",
     "dataLoadFailed": "Could not load data."
+  },
+  "report": {
+    "action": "Report",
+    "title": "Report Response",
+    "subtitle": "Let us know about inappropriate AI responses",
+    "reason_inappropriate": "Inappropriate content",
+    "reason_inaccurate": "Inaccurate information",
+    "reason_offensive": "Offensive or hurtful language",
+    "reason_other": "Other",
+    "submit": "Submit",
+    "thankYouTitle": "Thank you",
+    "thankYouMessage": "Your report has been received. We'll review it shortly.",
+    "submitFailed": "Failed to submit report. Please try again."
+  },
+  "consent": {
+    "title": "AI Data Processing Consent",
+    "body": "Your diary content will be sent to an external AI service (LLM API) to generate AI responses.\n\n\u2022 Data is transmitted through an encrypted connection\n\u2022 It is not used for any purpose other than generating AI responses\n\u2022 Please review our Privacy Policy for more details",
+    "privacyLink": "View Privacy Policy",
+    "accept": "I Agree",
+    "decline": "Decline",
+    "declinedInfo": "AI features are disabled because you haven't agreed to AI data processing. You can change this in Settings."
   },
   "date": {
     "yearMonth": "{{month}} {{year}}"

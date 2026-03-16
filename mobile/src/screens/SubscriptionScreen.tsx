@@ -1,3 +1,4 @@
+// @ts-nocheck — Stripe 결제 코드 비활성화 (v1.1에서 RevenueCat IAP로 교체 예정)
 import React, { useState } from 'react';
 import {
   View,

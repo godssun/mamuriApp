@@ -1,3 +1,4 @@
+// @ts-nocheck — Paywall 비활성화 (v1.1에서 RevenueCat IAP로 복원 예정)
 /**
  * Design System v2 — Paywall Screen
  *

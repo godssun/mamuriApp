@@ -12,8 +12,10 @@ import {
   Text,
   StyleSheet,
   Animated,
+  TouchableOpacity,
   ViewStyle,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useThemeV2 } from '../../design-system-v2';
 
 type BubbleSender = 'ai' | 'user';
@@ -24,6 +26,8 @@ interface ChatBubbleProps {
   timestamp?: string;
   isTyping?: boolean;
   animated?: boolean;
+  messageId?: number;
+  onReport?: (messageId: number) => void;
 }
 
 export function ChatBubble({
@@ -32,8 +36,11 @@ export function ChatBubble({
   timestamp,
   isTyping = false,
   animated = true,
+  messageId,
+  onReport,
 }: ChatBubbleProps) {
   const { theme } = useThemeV2();
+  const { t } = useTranslation();
   const fadeAnim = useRef(new Animated.Value(animated ? 0 : 1)).current;
   const slideAnim = useRef(new Animated.Value(animated ? 12 : 0)).current;
 
@@ -94,7 +101,12 @@ export function ChatBubble({
         </View>
       )}
 
-      <View style={bubbleStyle}>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onLongPress={isAI && onReport && messageId ? () => onReport(messageId) : undefined}
+        delayLongPress={500}
+        style={bubbleStyle}
+      >
         {isTyping ? (
           <TypingDots theme={theme} />
         ) : (
@@ -102,19 +114,34 @@ export function ChatBubble({
             {message}
           </Text>
         )}
-      </View>
+      </TouchableOpacity>
 
+      {/* Timestamp + report hint */}
       {timestamp && (
-        <Text style={[
-          theme.typography.caption,
-          {
-            color: theme.colors.textTertiary,
-            marginTop: theme.spacing.xxs,
-            paddingHorizontal: theme.spacing.xs,
-          },
-        ]}>
-          {timestamp}
-        </Text>
+        <View style={styles.timestampRow}>
+          <Text style={[
+            theme.typography.caption,
+            {
+              color: theme.colors.textTertiary,
+              paddingHorizontal: theme.spacing.xs,
+            },
+          ]}>
+            {timestamp}
+          </Text>
+          {isAI && onReport && messageId && (
+            <TouchableOpacity
+              onPress={() => onReport(messageId)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={[
+                theme.typography.caption,
+                { color: theme.colors.textDisabled },
+              ]}>
+                {t('report.action')}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       )}
     </Animated.View>
   );
@@ -182,6 +209,12 @@ function TypingDots({ theme }: { theme: any }) {
 const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: 4,
+  },
+  timestampRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 2,
   },
   avatarDot: {
     width: 28,

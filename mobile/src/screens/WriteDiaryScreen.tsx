@@ -1,3 +1,4 @@
+// @ts-nocheck — Paywall 네비게이션 비활성화 (v1.1에서 복원 예정)
 import React, { useState } from 'react';
 import {
   View,

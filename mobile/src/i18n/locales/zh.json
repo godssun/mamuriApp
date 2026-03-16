@@ -34,7 +34,18 @@
     "passwordWeak": "弱",
     "passwordFair": "一般",
     "passwordGood": "良好",
-    "passwordStrong": "强"
+    "passwordStrong": "强",
+    "socialGoogle": "使用Google登录",
+    "socialApple": "使用Apple登录",
+    "socialKakao": "使用Kakao登录",
+    "socialNickname": "设置昵称",
+    "socialNicknameDesc": "请输入在Mamuri中使用的昵称",
+    "socialNicknameLength": "昵称需要2-20个字符。",
+    "socialStart": "开始使用",
+    "socialLoginFailed": "社交登录失败",
+    "socialCancelled": "登录已取消",
+    "aiConsentCheckbox": "我同意AI数据处理",
+    "aiConsentCheckboxDesc": "日记内容经过加密后用于生成AI回复，任何人都无法查看您的内容。"
   },
   "diary": {
     "myDiary": "我的日记",
@@ -170,6 +181,8 @@
     "logoutConfirm": "确定要退出登录吗？",
     "deleteAccount": "删除账号",
     "appInfo": "应用信息",
+    "privacyPolicy": "隐私政策",
+    "termsOfService": "服务条款",
     "appVersion": "Mamuri v1.0.0",
     "aiDisclaimer": "AI 评论通过外部 LLM API 生成。\n如需专业咨询，请寻求专业人士的帮助。",
     "photoTapChange": "点击照片更换",
@@ -282,6 +295,27 @@
     "authExpired": "身份验证已过期，请重新登录。",
     "generic": "处理请求时出现错误。",
     "dataLoadFailed": "无法加载数据。"
+  },
+  "report": {
+    "action": "举报",
+    "title": "举报回复",
+    "subtitle": "请告知我们不当的AI回复",
+    "reason_inappropriate": "不当内容",
+    "reason_inaccurate": "信息不准确",
+    "reason_offensive": "攻击性或冒犯性语言",
+    "reason_other": "其他",
+    "submit": "提交",
+    "thankYouTitle": "感谢您",
+    "thankYouMessage": "您的举报已收到，我们会尽快处理。",
+    "submitFailed": "举报提交失败，请重试。"
+  },
+  "consent": {
+    "title": "AI数据处理同意",
+    "body": "日记内容将被发送到外部AI服务（LLM API）以生成AI回复。\n\n\u2022 数据通过加密连接传输\n\u2022 不会用于生成AI回复以外的目的\n\u2022 详情请查看隐私政策",
+    "privacyLink": "查看隐私政策",
+    "accept": "我同意",
+    "decline": "不同意",
+    "declinedInfo": "由于未同意AI数据处理，AI功能已停用。可在设置中更改。"
   },
   "date": {
     "yearMonth": "{{year}}年{{month}}月"

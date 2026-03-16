@@ -15,6 +15,7 @@ import {
   Modal,
   Image,
   Platform,
+  Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -408,25 +409,6 @@ export function SettingsScreenV2() {
         </View>
       </View>
 
-      {/* 구독 섹션 */}
-      <View style={styles.section}>
-        <Text style={[theme.typography.labelMedium, { color: theme.colors.textTertiary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: theme.spacing.lg }]}>
-          {t('settings.subscription')}
-        </Text>
-        <TouchableOpacity
-          style={[styles.settingRow, { backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.md }]}
-          onPress={() => navigation.navigate('Subscription')}
-        >
-          <View style={styles.settingRowLeft}>
-            <Text style={[theme.typography.titleSmall, { color: theme.colors.textPrimary }]}>{t('settings.subscriptionManage')}</Text>
-            <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>
-              {isPremium ? t('settings.premiumActive') : t('settings.freePlan')}
-            </Text>
-          </View>
-          <Text style={[{ fontSize: 20, color: theme.colors.textTertiary, marginLeft: theme.spacing.sm }]}>›</Text>
-        </TouchableOpacity>
-      </View>
-
       {/* 계정 섹션 */}
       <View style={styles.section}>
         <Text style={[theme.typography.labelMedium, { color: theme.colors.textTertiary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: theme.spacing.lg }]}>
@@ -451,6 +433,28 @@ export function SettingsScreenV2() {
         <Text style={[theme.typography.labelMedium, { color: theme.colors.textTertiary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: theme.spacing.lg }]}>
           {t('settings.appInfo')}
         </Text>
+
+        <View style={[{ backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.md, overflow: 'hidden', marginBottom: theme.spacing.md }]}>
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => Linking.openURL('https://mamuri.app/privacy')}
+          >
+            <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, flex: 1 }]}>
+              {t('settings.privacyPolicy')}
+            </Text>
+            <Text style={{ fontSize: 20, color: theme.colors.textTertiary }}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.settingRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.border }]}
+            onPress={() => Linking.openURL('https://mamuri.app/terms')}
+          >
+            <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, flex: 1 }]}>
+              {t('settings.termsOfService')}
+            </Text>
+            <Text style={{ fontSize: 20, color: theme.colors.textTertiary }}>›</Text>
+          </TouchableOpacity>
+        </View>
+
         <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }]}>
           {t('settings.appVersion')}
         </Text>
