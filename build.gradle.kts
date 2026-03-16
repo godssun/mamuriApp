@@ -48,6 +48,9 @@ dependencies {
     // Stripe
     implementation("com.stripe:stripe-java:28.2.0")
 
+    // Firebase Admin SDK (소셜 로그인 토큰 검증)
+    implementation("com.google.firebase:firebase-admin:9.4.3")
+
     // Lombok
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
