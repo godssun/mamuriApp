@@ -58,6 +58,10 @@ upload:
   max-file-size: 5242880  # 5MB
 
 rate-limit:
+  auth:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    login-per-minute: 5
+    signup-per-minute: 3
   conversation:
     enabled: ${RATE_LIMIT_ENABLED:true}
     free:

@@ -37,6 +37,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.flywaydb:flyway-database-postgresql")
 
+    // Actuator (health checks for deployment)
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+
     // Security
     implementation("org.springframework.boot:spring-boot-starter-security")
 

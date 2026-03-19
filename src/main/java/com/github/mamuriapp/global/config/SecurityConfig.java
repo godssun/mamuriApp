@@ -1,6 +1,7 @@
 package com.github.mamuriapp.global.config;
 
 import com.github.mamuriapp.global.logging.RequestLoggingFilter;
+import com.github.mamuriapp.global.ratelimit.AuthRateLimitFilter;
 import com.github.mamuriapp.global.security.JwtAuthenticationEntryPoint;
 import com.github.mamuriapp.global.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
 
 /**
  * Spring Security 설정.
@@ -27,6 +29,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final RequestLoggingFilter requestLoggingFilter;
+    private final AuthRateLimitFilter authRateLimitFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
@@ -43,12 +46,24 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> headers
+                        .xssProtection(xss -> xss
+                                .headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
+                        .contentTypeOptions(opts -> {})
+                        .frameOptions(frame -> frame.deny())
+                        .cacheControl(cache -> {})
+                        .permissionsPolicy(permissions -> permissions
+                                .policy("camera=(), microphone=(), geolocation=()"))
+                )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/refresh", "/api/auth/social", "/api/stripe/webhook").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .anyRequest().authenticated())
+                .addFilterBefore(authRateLimitFilter,
+                        UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(requestLoggingFilter,
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter,
