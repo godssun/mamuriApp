@@ -44,6 +44,10 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+!.env.production.example
+
+### SSL Certificates ###
+deploy/nginx/ssl/
 
 ### Claude Code ###
 .claude/settings.local.json
@@ -59,3 +63,9 @@ src/main/resources/*-firebase-adminsdk-*.json
 
 ### User uploads ###
 uploads/
+
+### Secrets (production) ###
+secrets/
+
+### Backups ###
+backups/

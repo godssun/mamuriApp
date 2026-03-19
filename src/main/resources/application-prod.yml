@@ -1,13 +1,50 @@
+server:
+  port: 8080
+  shutdown: graceful
+  tomcat:
+    max-connections: 200
+    threads:
+      max: 20
+      min-spare: 5
+    connection-timeout: 5000
+  compression:
+    enabled: true
+    mime-types: application/json,text/html,text/plain
+
 spring:
   datasource:
     url: ${DATABASE_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 3
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 600000
 
   jpa:
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+  server:
+    port: 8080
 
 app:
   cors:
