@@ -117,8 +117,8 @@ docker compose version
 ### 서버 디렉토리 구조
 
 ```
-/home/juns/
-└── mamuriApp/                  ← git clone 결과
+/opt/
+└── mamuri/                     ← git clone 결과
     ├── Dockerfile
     ├── build.gradle.kts
     ├── src/                    ← Spring Boot 소스 (Docker 빌드에 사용)
@@ -164,8 +164,10 @@ docker compose version
 ```bash
 ssh juns@YOUR_STATIC_IP
 
-git clone https://github.com/sunjunkim/mamuriApp.git
-cd mamuriApp
+cd /opt
+sudo git clone https://github.com/godssun/mamuriApp.git mamuri
+sudo chown -R juns:juns /opt/mamuri
+cd /opt/mamuri
 ```
 
 ### Step 2: 프로덕션 환경변수 설정
@@ -186,11 +188,11 @@ nano .env.production
 ### Step 2.5: Firebase 서비스 계정 설정 (소셜 로그인 사용 시)
 
 ```bash
-mkdir -p ~/mamuriApp/secrets
+mkdir -p /opt/mamuri/secrets
 
 # Firebase 콘솔에서 다운로드한 서비스 계정 JSON 파일을 서버에 복사
 # (로컬에서 scp로 전송)
-scp firebase-service-account.json juns@YOUR_STATIC_IP:~/mamuriApp/secrets/
+scp firebase-service-account.json juns@YOUR_STATIC_IP:/opt/mamuri/secrets/
 ```
 
 `.env.production`에 경로가 설정되어 있는지 확인:
@@ -201,7 +203,7 @@ FIREBASE_CREDENTIALS_PATH=/app/secrets/firebase-service-account.json
 ### Step 3: Docker 이미지 빌드
 
 ```bash
-cd ~/mamuriApp
+cd /opt/mamuri
 docker build -t mamuri-backend:latest .
 ```
 
@@ -210,7 +212,7 @@ docker build -t mamuri-backend:latest .
 ### Step 4: PostgreSQL 먼저 시작
 
 ```bash
-cd ~/mamuriApp/deploy
+cd /opt/mamuri/deploy
 docker-compose -f docker-compose.prod.yml up -d postgres
 ```
 
@@ -288,7 +290,7 @@ sudo apt install -y certbot
 Nginx를 잠시 중지하고 standalone 모드로 발급:
 
 ```bash
-cd ~/mamuriApp/deploy
+cd /opt/mamuri/deploy
 docker-compose -f docker-compose.prod.yml stop nginx
 
 sudo certbot certonly --standalone -d api.mamuri.app
@@ -299,10 +301,10 @@ sudo certbot certonly --standalone -d api.mamuri.app
 ### Step 3: 인증서 복사
 
 ```bash
-mkdir -p ~/mamuriApp/deploy/nginx/ssl
-sudo cp /etc/letsencrypt/live/api.mamuri.app/fullchain.pem ~/mamuriApp/deploy/nginx/ssl/
-sudo cp /etc/letsencrypt/live/api.mamuri.app/privkey.pem ~/mamuriApp/deploy/nginx/ssl/
-sudo chown juns:juns ~/mamuriApp/deploy/nginx/ssl/*.pem
+mkdir -p /opt/mamuri/deploy/nginx/ssl
+sudo cp /etc/letsencrypt/live/api.mamuri.app/fullchain.pem /opt/mamuri/deploy/nginx/ssl/
+sudo cp /etc/letsencrypt/live/api.mamuri.app/privkey.pem /opt/mamuri/deploy/nginx/ssl/
+sudo chown juns:juns /opt/mamuri/deploy/nginx/ssl/*.pem
 ```
 
 ### Step 4: Nginx 설정에서 HTTPS 블록 활성화
@@ -334,7 +336,7 @@ Let's Encrypt 인증서는 90일마다 갱신이 필요하다:
 sudo crontab -e
 
 # 매월 1일 새벽 3시에 갱신 시도
-0 3 1 * * certbot renew --quiet && cp /etc/letsencrypt/live/api.mamuri.app/fullchain.pem /home/juns/mamuriApp/deploy/nginx/ssl/ && cp /etc/letsencrypt/live/api.mamuri.app/privkey.pem /home/juns/mamuriApp/deploy/nginx/ssl/ && docker exec mamuri-nginx nginx -s reload
+0 3 1 * * certbot renew --quiet && cp /etc/letsencrypt/live/api.mamuri.app/fullchain.pem /opt/mamuri/deploy/nginx/ssl/ && cp /etc/letsencrypt/live/api.mamuri.app/privkey.pem /opt/mamuri/deploy/nginx/ssl/ && docker exec mamuri-nginx nginx -s reload
 ```
 
 ---
@@ -345,7 +347,7 @@ sudo crontab -e
 
 ```bash
 ssh juns@YOUR_STATIC_IP
-cd ~/mamuriApp
+cd /opt/mamuri
 git pull origin main
 
 ./deploy/scripts/deploy.sh
@@ -420,13 +422,13 @@ deploy/
 ### 현재 활성 컬러 확인
 
 ```bash
-cat ~/mamuriApp/deploy/nginx/upstream.conf
+cat /opt/mamuri/deploy/nginx/upstream.conf
 ```
 
 ### 로그 확인
 
 ```bash
-cd ~/mamuriApp/deploy
+cd /opt/mamuri/deploy
 
 # 전체 서비스
 docker-compose -f docker-compose.prod.yml logs -f
@@ -494,11 +496,11 @@ Flyway 마이그레이션은 Spring Boot 시작 시 자동으로 실행된다.
 ### 수동 백업
 
 ```bash
-cd ~/mamuriApp
+cd /opt/mamuri
 ./deploy/scripts/backup.sh
 ```
 
-백업 파일은 `~/mamuriApp/backups/` 디렉토리에 `mamuri_YYYYMMDD_HHMMSS.sql.gz` 형식으로 저장된다.
+백업 파일은 `/opt/mamuri/backups/` 디렉토리에 `mamuri_YYYYMMDD_HHMMSS.sql.gz` 형식으로 저장된다.
 기본 7일 보관, `--keep-days 14`로 변경 가능.
 
 ### 자동 백업 (cron)
@@ -507,7 +509,7 @@ cd ~/mamuriApp
 # 매일 새벽 3시 백업
 crontab -e
 
-0 3 * * * /home/juns/mamuriApp/deploy/scripts/backup.sh >> /home/juns/mamuriApp/backups/cron.log 2>&1
+0 3 * * * /opt/mamuri/deploy/scripts/backup.sh >> /opt/mamuri/backups/cron.log 2>&1
 ```
 
 ### 복원
@@ -667,30 +669,30 @@ Blue-Green은 보통 서버 2대에서 운영하지만, 우리는 **컨테이너
 
 ```
 [ ] 2-1. 저장소 clone
-         └ 명령: git clone https://github.com/sunjunkim/mamuriApp.git
-         └ 확인: ls ~/mamuriApp/Dockerfile 이 존재함
+         └ 명령: cd /opt && sudo git clone https://github.com/godssun/mamuriApp.git mamuri && sudo chown -R juns:juns /opt/mamuri
+         └ 확인: ls /opt/mamuri/Dockerfile 이 존재함
 
 [ ] 2-2. .env.production 생성
-         └ 명령: cd ~/mamuriApp && cp .env.production.example .env.production
+         └ 명령: cd /opt/mamuri && cp .env.production.example .env.production
          └ 편집: nano .env.production
          └ 주의: DB_PASSWORD, JWT_SECRET은 반드시 openssl rand로 생성
          └ 주의: AI_API_KEY는 실제 키를 입력
          └ 확인: cat .env.production | grep -v "^#" | grep "CHANGE_ME" (결과 없어야 함)
 
 [ ] 2-3. Firebase 서비스 계정 설정 (소셜 로그인 사용 시)
-         └ 명령: mkdir -p ~/mamuriApp/secrets
-         └ 명령 (로컬에서): scp firebase-service-account.json juns@IP:~/mamuriApp/secrets/
-         └ 확인: ls ~/mamuriApp/secrets/firebase-service-account.json
+         └ 명령: mkdir -p /opt/mamuri/secrets
+         └ 명령 (로컬에서): scp firebase-service-account.json juns@IP:/opt/mamuri/secrets/
+         └ 확인: ls /opt/mamuri/secrets/firebase-service-account.json
 
 [ ] 2-4. SSL 디렉토리 생성
-         └ 명령: mkdir -p ~/mamuriApp/deploy/nginx/ssl
+         └ 명령: mkdir -p /opt/mamuri/deploy/nginx/ssl
 ```
 
 ### Phase 3: Docker 이미지 빌드
 
 ```
 [ ] 3-1. Docker 이미지 빌드
-         └ 명령: cd ~/mamuriApp && docker build -t mamuri-backend:latest .
+         └ 명령: cd /opt/mamuri && docker build -t mamuri-backend:latest .
          └ 확인: docker images | grep mamuri-backend
          └ 주의: 첫 빌드는 3-5분 소요 (의존성 다운로드)
 ```
@@ -699,7 +701,7 @@ Blue-Green은 보통 서버 2대에서 운영하지만, 우리는 **컨테이너
 
 ```
 [ ] 4-1. PostgreSQL 시작
-         └ 명령: cd ~/mamuriApp/deploy && docker-compose -f docker-compose.prod.yml up -d postgres
+         └ 명령: cd /opt/mamuri/deploy && docker-compose -f docker-compose.prod.yml up -d postgres
          └ 확인: docker inspect --format='{{.State.Health.Status}}' mamuri-postgres
          └ 기대: "healthy" (10-15초 대기)
          └ 주의: "healthy"가 아니면 다음 단계로 넘어가지 않는다
@@ -742,7 +744,7 @@ Blue-Green은 보통 서버 2대에서 운영하지만, 우리는 **컨테이너
          └ 명령: sudo apt update && sudo apt install -y certbot
 
 [ ] 6-2. Nginx 중지 (certbot standalone용)
-         └ 명령: cd ~/mamuriApp/deploy && docker-compose -f docker-compose.prod.yml stop nginx
+         └ 명령: cd /opt/mamuri/deploy && docker-compose -f docker-compose.prod.yml stop nginx
 
 [ ] 6-3. SSL 인증서 발급
          └ 명령: sudo certbot certonly --standalone -d api.mamuri.app
@@ -750,9 +752,9 @@ Blue-Green은 보통 서버 2대에서 운영하지만, 우리는 **컨테이너
 
 [ ] 6-4. 인증서 복사
          └ 명령:
-           sudo cp /etc/letsencrypt/live/api.mamuri.app/fullchain.pem ~/mamuriApp/deploy/nginx/ssl/
-           sudo cp /etc/letsencrypt/live/api.mamuri.app/privkey.pem ~/mamuriApp/deploy/nginx/ssl/
-           sudo chown juns:juns ~/mamuriApp/deploy/nginx/ssl/*.pem
+           sudo cp /etc/letsencrypt/live/api.mamuri.app/fullchain.pem /opt/mamuri/deploy/nginx/ssl/
+           sudo cp /etc/letsencrypt/live/api.mamuri.app/privkey.pem /opt/mamuri/deploy/nginx/ssl/
+           sudo chown juns:juns /opt/mamuri/deploy/nginx/ssl/*.pem
 
 [ ] 6-5. nginx.conf에서 HTTPS 블록 주석 해제
          └ 서버에서 직접 편집하거나, 로컬에서 수정 후 git push → git pull

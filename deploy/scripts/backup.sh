@@ -10,7 +10,7 @@
 #   ./backup.sh --keep-days 14     # 14일 보관
 #
 # Cron 예시 (매일 새벽 3시):
-#   0 3 * * * /home/juns/mamuri/deploy/scripts/backup.sh >> /home/juns/mamuri/backups/cron.log 2>&1
+#   0 3 * * * /opt/mamuri/deploy/scripts/backup.sh >> /opt/mamuri/backups/cron.log 2>&1
 
 set -euo pipefail
 
