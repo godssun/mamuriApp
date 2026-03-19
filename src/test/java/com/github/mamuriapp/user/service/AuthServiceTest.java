@@ -240,7 +240,8 @@ class AuthServiceTest {
             // then
             assertThat(response.getAccessToken()).isEqualTo("new-at");
             assertThat(response.getRefreshToken()).isEqualTo("new-rt");
-            assertThat(user.getRefreshToken()).isEqualTo("new-rt");
+            // refresh token은 SHA-256 해시로 저장되므로 matchesRefreshToken으로 검증
+            assertThat(user.matchesRefreshToken("new-rt")).isTrue();
         }
 
         @Test

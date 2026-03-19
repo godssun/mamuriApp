@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+
+# Build output
+build/
+.gradle/
+
+# Mobile app
+mobile/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Claude config
+.claude/
+
+# Secrets
+*.pem
+*.key
+*.p8
+*.p12
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Screenshots
+*.png
+*.jpg
+*.jpeg

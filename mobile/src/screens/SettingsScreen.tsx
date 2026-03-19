@@ -22,16 +22,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { companionApi, ApiError } from '../api/client';
 import { CompanionProfile, CompanionSettings, MainStackParamList } from '../types';
 import DeleteAccountModal from '../components/settings/DeleteAccountModal';
-
-function getAvatarImageUri(avatar: string | null | undefined): string | null {
-  if (!avatar || avatar.length === 0) return null;
-  if (avatar.startsWith('http')) return avatar;
-  if (avatar.startsWith('/uploads/')) {
-    const host = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-    return `http://${host}:8080${avatar}`;
-  }
-  return null; // 이모지 등 비정상 값은 무시
-}
+import { getAvatarImageUri } from '../utils/avatar';
 
 const THEME_OPTIONS = [
   { value: 'warm' as const, label: '따뜻한', bg: '#FFF9F5', border: '#F0F0F0' },

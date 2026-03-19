@@ -96,7 +96,7 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if (!oldRefreshToken.equals(user.getRefreshToken())) {
+        if (!user.matchesRefreshToken(oldRefreshToken)) {
             log.warn("Refresh token 재사용 감지 (userId={}). 모든 토큰 무효화.", userId);
             user.updateRefreshToken(null);
             throw new CustomException(ErrorCode.TOKEN_REUSE_DETECTED);

@@ -6,8 +6,12 @@ import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
 
 /**
  * 사용자 엔티티.
@@ -134,12 +138,34 @@ public class User {
     }
 
     /**
-     * 리프레시 토큰을 갱신한다.
+     * 리프레시 토큰을 SHA-256 해시하여 저장한다.
+     * null 입력 시 저장된 토큰을 무효화한다.
      *
-     * @param refreshToken 새로운 리프레시 토큰
+     * @param refreshToken 새로운 리프레시 토큰 (평문)
      */
     public void updateRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
+        this.refreshToken = refreshToken == null ? null : hashToken(refreshToken);
+    }
+
+    /**
+     * 평문 리프레시 토큰이 저장된 해시와 일치하는지 확인한다.
+     *
+     * @param rawToken 검증할 평문 토큰
+     * @return 일치하면 true
+     */
+    public boolean matchesRefreshToken(String rawToken) {
+        if (this.refreshToken == null || rawToken == null) return false;
+        return this.refreshToken.equals(hashToken(rawToken));
+    }
+
+    private static String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
     }
 
     public void updateAiName(String aiName) {

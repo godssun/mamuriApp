@@ -1,0 +1,113 @@
+services:
+  # ---- Reverse Proxy ----
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: mamuri-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/upstream.conf:/etc/nginx/conf.d/upstream.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend-blue
+      - backend-green
+    networks:
+      - mamuri-net
+    restart: unless-stopped
+
+  # ---- Database (shared, not duplicated) ----
+  postgres:
+    image: postgres:16-alpine
+    container_name: mamuri-postgres
+    # No port mapping — only accessible within mamuri-net
+    expose:
+      - "5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - mamuri-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---- Backend Blue ----
+  backend-blue:
+    image: mamuri-backend:latest
+    container_name: mamuri-blue
+    # No port mapping — only accessible within mamuri-net
+    expose:
+      - "8080"
+    env_file:
+      - ../.env.production
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+    volumes:
+      - uploads:/app/uploads
+      - ../secrets/firebase-service-account.json:/app/secrets/firebase-service-account.json:ro
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mamuri-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  # ---- Backend Green ----
+  backend-green:
+    image: mamuri-backend:latest
+    container_name: mamuri-green
+    expose:
+      - "8080"
+    env_file:
+      - ../.env.production
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+    volumes:
+      - uploads:/app/uploads
+      - ../secrets/firebase-service-account.json:/app/secrets/firebase-service-account.json:ro
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mamuri-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  pgdata:
+    driver: local
+  uploads:
+    driver: local
+
+networks:
+  mamuri-net:
+    driver: bridge

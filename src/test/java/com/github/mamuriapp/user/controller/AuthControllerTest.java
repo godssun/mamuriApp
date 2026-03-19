@@ -8,6 +8,7 @@ import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
 import com.github.mamuriapp.global.exception.GlobalExceptionHandler;
 import com.github.mamuriapp.global.logging.RequestLoggingFilter;
+import com.github.mamuriapp.global.ratelimit.AuthRateLimitFilter;
 import com.github.mamuriapp.global.security.JwtAuthenticationEntryPoint;
 import com.github.mamuriapp.global.security.JwtAuthenticationFilter;
 import com.github.mamuriapp.global.security.JwtTokenProvider;
@@ -46,6 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         GlobalExceptionHandler.class,
         JwtAuthenticationEntryPoint.class,
         JwtAuthenticationFilter.class,
+        AuthRateLimitFilter.class,
         RequestLoggingFilter.class,
         JwtTokenProvider.class,
         AuthControllerTest.TestJwtConfig.class
