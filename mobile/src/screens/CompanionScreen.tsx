@@ -21,6 +21,7 @@ import { companionApi, settingsApi, ApiError } from '../api/client';
 import { CompanionProfile, CompanionSettings, UserSettings, MainStackParamList } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { getAvatarImageUri } from '../utils/avatar';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -37,16 +38,6 @@ const SPEECH_STYLE_OPTIONS = [
   { value: 'formal' as const, label: '존댓말', description: '정중하고 예의 바른 말투' },
   { value: 'casual' as const, label: '반말', description: '편안한 친구 같은 말투' },
 ];
-
-function getAvatarImageUri(avatar: string | null | undefined): string | null {
-  if (!avatar || avatar.length === 0) return null;
-  if (avatar.startsWith('http')) return avatar;
-  if (avatar.startsWith('/uploads/')) {
-    const host = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-    return `http://${host}:8080${avatar}`;
-  }
-  return null; // 이모지 등 비정상 값은 무시
-}
 
 export default function CompanionScreen() {
   const mainNavigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();

@@ -1,5 +1,10 @@
 import { Platform } from 'react-native';
 
+const DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+const IMAGE_BASE_URL = __DEV__
+  ? `http://${DEV_HOST}:8080`
+  : 'https://api.mamuri.app';
+
 /**
  * Converts an avatar path/URL to a fully qualified image URI.
  * Returns null if the avatar is empty or invalid.
@@ -8,8 +13,7 @@ export function getAvatarImageUri(avatar: string | null | undefined): string | n
   if (!avatar || avatar.length === 0) return null;
   if (avatar.startsWith('http')) return avatar;
   if (avatar.startsWith('/uploads/')) {
-    const host = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-    return `http://${host}:8080${avatar}`;
+    return `${IMAGE_BASE_URL}${avatar}`;
   }
   return null;
 }

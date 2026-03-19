@@ -13,6 +13,7 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useThemeV2 } from '../../design-system-v2';
@@ -60,9 +61,7 @@ export function AiConsentModal({ visible, onAccept, onDecline }: AiConsentModalP
 
           <TouchableOpacity
             style={{ marginTop: theme.spacing.md }}
-            onPress={() => {
-              // TODO: 개인정보 처리방침 링크 열기
-            }}
+            onPress={() => Linking.openURL('https://mamuri.app/privacy')}
           >
             <Text style={[theme.typography.labelSmall, {
               color: theme.colors.primary,
