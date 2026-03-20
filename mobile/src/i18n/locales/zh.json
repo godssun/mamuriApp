@@ -272,7 +272,12 @@
     "passwordRequired": "请输入密码。",
     "deleteFailed": "删除账号时出现错误。",
     "deleteButton": "删除账号",
-    "previous": "上一步"
+    "previous": "上一步",
+    "socialConfirmTitle": "确认删除账号",
+    "socialConfirmSubtitle": "请在下方输入"删除"以确认删除账号。",
+    "socialConfirmWord": "删除",
+    "socialConfirmPlaceholder": "请输入"删除"",
+    "socialConfirmMismatch": "请准确输入"删除"。"
   },
   "common": {
     "alert": "提示",

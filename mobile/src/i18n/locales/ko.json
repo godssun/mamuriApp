@@ -272,7 +272,12 @@
     "passwordRequired": "비밀번호를 입력해주세요.",
     "deleteFailed": "계정 삭제 중 오류가 발생했습니다.",
     "deleteButton": "계정 삭제",
-    "previous": "이전"
+    "previous": "이전",
+    "socialConfirmTitle": "계정 삭제 확인",
+    "socialConfirmSubtitle": "계정을 삭제하려면 아래에 \"삭제\"를 입력해주세요.",
+    "socialConfirmWord": "삭제",
+    "socialConfirmPlaceholder": "\"삭제\"를 입력해주세요",
+    "socialConfirmMismatch": "\"삭제\"를 정확히 입력해주세요."
   },
   "common": {
     "alert": "알림",

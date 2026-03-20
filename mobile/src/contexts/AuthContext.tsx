@@ -1,7 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import { authApi, tokenStorage, setForceLogoutHandler, clearForceLogoutHandler } from '../api/client';
 import { SignupRequest, LoginRequest, SocialProvider } from '../types';
 import { signOutFromProviders } from '../services/socialAuth';
+
+const AUTH_PROVIDER_KEY = 'auth_provider';
+
+export async function getStoredAuthProvider(): Promise<string | null> {
+  return SecureStore.getItemAsync(AUTH_PROVIDER_KEY);
+}
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -29,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // forceLogout: API client에서 TOKEN_REUSE_DETECTED 등 호출
   const forceLogout = useCallback(() => {
     tokenStorage.clear();
+    SecureStore.deleteItemAsync(AUTH_PROVIDER_KEY);
     setIsAuthenticated(false);
     setIsNewUser(false);
   }, []);
@@ -65,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (data: LoginRequest) => {
     await authApi.login(data);
+    await SecureStore.setItemAsync(AUTH_PROVIDER_KEY, 'EMAIL');
     setIsAuthenticated(true);
   }, []);
 
@@ -78,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const response = await authApi.socialLogin({ provider, token });
     if (!response.isNewUser && response.accessToken) {
       // 기존 사용자 → 바로 로그인
+      await SecureStore.setItemAsync(AUTH_PROVIDER_KEY, provider);
       setIsAuthenticated(true);
       return { isNewUser: false };
     }
@@ -88,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const completeSocialSignup = useCallback(async (provider: SocialProvider, token: string, nickname: string) => {
     const response = await authApi.socialLogin({ provider, token, nickname });
     if (response.accessToken) {
+      await SecureStore.setItemAsync(AUTH_PROVIDER_KEY, provider);
       setIsNewUser(true);
       setIsAuthenticated(true);
     }
@@ -101,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     // 소셜 SDK 로그아웃
     await signOutFromProviders();
+    await SecureStore.deleteItemAsync(AUTH_PROVIDER_KEY);
     setIsAuthenticated(false);
     setIsNewUser(false);
   }, []);

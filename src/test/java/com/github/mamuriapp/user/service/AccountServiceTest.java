@@ -18,6 +18,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.github.mamuriapp.user.entity.AuthProvider;
+
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -135,6 +137,48 @@ class AccountServiceTest {
                 .isInstanceOf(CustomException.class)
                 .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.USER_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("소셜 유저 계정 삭제 성공 - 비밀번호 없이")
+    void deleteAccount_socialUser_success() {
+        // given
+        User socialUser = User.builder()
+                .email("social@example.com")
+                .nickname("소셜유저")
+                .build();
+        ReflectionTestUtils.setField(socialUser, "id", 2L);
+        ReflectionTestUtils.setField(socialUser, "authProvider", AuthProvider.GOOGLE);
+
+        DeleteAccountRequest request = new DeleteAccountRequest(
+                null, "사용 빈도가 낮아서", null);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(socialUser));
+
+        // when
+        accountService.deleteAccount(2L, request);
+
+        // then
+        verify(passwordEncoder, never()).matches(any(), any());
+        verify(accountDeletionLogRepository).save(any(AccountDeletionLog.class));
+        verify(userRepository).delete(socialUser);
+    }
+
+    @Test
+    @DisplayName("이메일 유저 null 비밀번호 전송 시 PASSWORD_MISMATCH")
+    void deleteAccount_emailUser_nullPassword() {
+        // given
+        DeleteAccountRequest request = new DeleteAccountRequest(
+                null, "사용 빈도가 낮아서", null);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        // when & then
+        assertThatThrownBy(() -> accountService.deleteAccount(1L, request))
+                .isInstanceOf(CustomException.class)
+                .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.PASSWORD_MISMATCH));
+
+        verify(accountDeletionLogRepository, never()).save(any());
+        verify(userRepository, never()).delete(any());
     }
 
     @Test

@@ -272,7 +272,12 @@
     "passwordRequired": "パスワードを入力してください。",
     "deleteFailed": "アカウント削除中にエラーが発生しました。",
     "deleteButton": "アカウント削除",
-    "previous": "前へ"
+    "previous": "前へ",
+    "socialConfirmTitle": "アカウント削除の確認",
+    "socialConfirmSubtitle": "アカウントを削除するには、下に「削除」と入力してください。",
+    "socialConfirmWord": "削除",
+    "socialConfirmPlaceholder": "「削除」と入力してください",
+    "socialConfirmMismatch": "「削除」を正確に入力してください。"
   },
   "common": {
     "alert": "お知らせ",
