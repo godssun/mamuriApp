@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class DeleteAccountRequest {
 
-    @NotBlank(message = "비밀번호를 입력해주세요.")
     private String password;
 
     @NotBlank(message = "삭제 사유를 선택해주세요.")

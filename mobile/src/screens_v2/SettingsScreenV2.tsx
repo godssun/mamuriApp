@@ -23,7 +23,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n/i18n';
 import { changeLanguage, SupportedLanguage } from '../i18n/i18n';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, getStoredAuthProvider } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useThemeV2 } from '../design-system-v2';
@@ -67,15 +67,18 @@ export function SettingsScreenV2() {
   const [newAiName, setNewAiName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isSocialUser, setIsSocialUser] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
-      const [companionData, companionSettingsData] = await Promise.all([
+      const [companionData, companionSettingsData, authProvider] = await Promise.all([
         companionApi.getProfile(),
         companionApi.getSettings(),
+        getStoredAuthProvider(),
       ]);
       setCompanion(companionData);
       setCompanionSettings(companionSettingsData);
+      setIsSocialUser(authProvider !== null && authProvider !== 'EMAIL');
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -495,6 +498,7 @@ export function SettingsScreenV2() {
         onClose={() => setShowDeleteModal(false)}
         onDeleted={forceLogout}
         isPremium={isPremium}
+        isSocialUser={isSocialUser}
       />
     </ScreenContainer>
   );

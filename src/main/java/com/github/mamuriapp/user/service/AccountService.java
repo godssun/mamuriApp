@@ -37,9 +37,14 @@ public class AccountService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 비밀번호 검증
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new CustomException(ErrorCode.PASSWORD_MISMATCH);
+        // 본인 확인: EMAIL 유저는 비밀번호 검증, SOCIAL 유저는 JWT 인증으로 충분
+        if (!user.isSocialUser()) {
+            if (request.getPassword() == null || request.getPassword().isBlank()) {
+                throw new CustomException(ErrorCode.PASSWORD_MISMATCH);
+            }
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                throw new CustomException(ErrorCode.PASSWORD_MISMATCH);
+            }
         }
 
         // 삭제 로그 저장 (유저 삭제 전에)

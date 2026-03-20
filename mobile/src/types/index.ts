@@ -170,7 +170,7 @@ export interface SocialLoginResponse {
 
 // 계정 삭제
 export interface DeleteAccountRequest {
-  password: string;
+  password?: string;
   reason: string;
   reasonDetail?: string;
 }

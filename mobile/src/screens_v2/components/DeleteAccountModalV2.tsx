@@ -36,15 +36,17 @@ interface Props {
   onClose: () => void;
   onDeleted: () => void;
   isPremium: boolean;
+  isSocialUser: boolean;
 }
 
-export function DeleteAccountModalV2({ visible, onClose, onDeleted, isPremium }: Props) {
+export function DeleteAccountModalV2({ visible, onClose, onDeleted, isPremium, isSocialUser }: Props) {
   const { t } = useTranslation();
   const { theme } = useThemeV2();
   const [step, setStep] = useState(1);
   const [selectedReasonKey, setSelectedReasonKey] = useState<string | null>(null);
   const [reasonDetail, setReasonDetail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmText, setConfirmText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -53,6 +55,7 @@ export function DeleteAccountModalV2({ visible, onClose, onDeleted, isPremium }:
     setSelectedReasonKey(null);
     setReasonDetail('');
     setPassword('');
+    setConfirmText('');
     setError(null);
     setIsDeleting(false);
   };
@@ -77,9 +80,17 @@ export function DeleteAccountModalV2({ visible, onClose, onDeleted, isPremium }:
   };
 
   const handleDelete = async () => {
-    if (!password.trim()) {
-      setError(t('deleteAccount.passwordRequired'));
-      return;
+    if (isSocialUser) {
+      const expectedWord = t('deleteAccount.socialConfirmWord');
+      if (confirmText.trim() !== expectedWord) {
+        setError(t('deleteAccount.socialConfirmMismatch'));
+        return;
+      }
+    } else {
+      if (!password.trim()) {
+        setError(t('deleteAccount.passwordRequired'));
+        return;
+      }
     }
 
     setIsDeleting(true);
@@ -89,7 +100,7 @@ export function DeleteAccountModalV2({ visible, onClose, onDeleted, isPremium }:
       const selectedReason = DELETION_REASONS.find(r => r.key === selectedReasonKey);
       const reasonText = selectedReason ? t(selectedReason.i18nKey) : t('deleteAccount.reasonOther');
       await accountApi.deleteAccount({
-        password: password.trim(),
+        password: isSocialUser ? undefined : password.trim(),
         reason: reasonText,
         reasonDetail: selectedReasonKey === 'other' ? reasonDetail.trim() || undefined : undefined,
       });
@@ -223,28 +234,42 @@ export function DeleteAccountModalV2({ visible, onClose, onDeleted, isPremium }:
             </ScrollView>
           )}
 
-          {/* Step 3: 비밀번호 확인 */}
+          {/* Step 3: 본인 확인 (이메일: 비밀번호, 소셜: 텍스트 입력) */}
           {step === 3 && (
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={[theme.typography.headlineSmall, { color: theme.colors.textPrimary, textAlign: 'center', marginBottom: theme.spacing.xs }]}>
-                {t('deleteAccount.passwordTitle')}
+                {isSocialUser ? t('deleteAccount.socialConfirmTitle') : t('deleteAccount.passwordTitle')}
               </Text>
               <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary, textAlign: 'center', marginBottom: theme.spacing.xl }]}>
-                {t('deleteAccount.passwordSubtitle')}
+                {isSocialUser ? t('deleteAccount.socialConfirmSubtitle') : t('deleteAccount.passwordSubtitle')}
               </Text>
 
-              <Input
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  setError(null);
-                }}
-                placeholder={t('auth.password')}
-                secureTextEntry
-                autoFocus
-                error={error ?? undefined}
-                containerStyle={{ marginBottom: theme.spacing.lg }}
-              />
+              {isSocialUser ? (
+                <Input
+                  value={confirmText}
+                  onChangeText={(text) => {
+                    setConfirmText(text);
+                    setError(null);
+                  }}
+                  placeholder={t('deleteAccount.socialConfirmPlaceholder')}
+                  autoFocus
+                  error={error ?? undefined}
+                  containerStyle={{ marginBottom: theme.spacing.lg }}
+                />
+              ) : (
+                <Input
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    setError(null);
+                  }}
+                  placeholder={t('auth.password')}
+                  secureTextEntry
+                  autoFocus
+                  error={error ?? undefined}
+                  containerStyle={{ marginBottom: theme.spacing.lg }}
+                />
+              )}
 
               <View style={styles.buttonRow}>
                 <View style={styles.buttonFlex}>

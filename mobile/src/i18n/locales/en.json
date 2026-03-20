@@ -272,7 +272,12 @@
     "passwordRequired": "Please enter your password.",
     "deleteFailed": "An error occurred while deleting the account.",
     "deleteButton": "Delete account",
-    "previous": "Previous"
+    "previous": "Previous",
+    "socialConfirmTitle": "Confirm account deletion",
+    "socialConfirmSubtitle": "Type \"DELETE\" below to confirm account deletion.",
+    "socialConfirmWord": "DELETE",
+    "socialConfirmPlaceholder": "Type \"DELETE\" to confirm",
+    "socialConfirmMismatch": "Please type \"DELETE\" exactly."
   },
   "common": {
     "alert": "Alert",
