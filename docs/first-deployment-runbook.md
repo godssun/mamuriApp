@@ -24,8 +24,10 @@
 ssh juns@YOUR_STATIC_IP
 
 # 저장소 clone
-git clone https://github.com/sunjunkim/mamuriApp.git
-cd ~/mamuriApp
+cd /opt
+sudo git clone https://github.com/godssun/mamuriApp.git mamuri
+sudo chown -R juns:juns /opt/mamuri
+cd /opt/mamuri
 ```
 
 ### 환경변수 설정
@@ -59,16 +61,16 @@ grep "CHANGE_ME" .env.production
 ### Firebase 설정 (소셜 로그인)
 
 ```bash
-mkdir -p ~/mamuriApp/secrets
+mkdir -p /opt/mamuri/secrets
 
 # 로컬에서 서버로 파일 전송 (로컬 PC에서 실행)
-scp firebase-service-account.json juns@YOUR_STATIC_IP:~/mamuriApp/secrets/
+scp firebase-service-account.json juns@YOUR_STATIC_IP:/opt/mamuri/secrets/
 ```
 
 ### SSL 디렉토리 준비
 
 ```bash
-mkdir -p ~/mamuriApp/deploy/nginx/ssl
+mkdir -p /opt/mamuri/deploy/nginx/ssl
 ```
 
 ---
@@ -76,7 +78,7 @@ mkdir -p ~/mamuriApp/deploy/nginx/ssl
 ## Step 2: Docker 이미지 빌드
 
 ```bash
-cd ~/mamuriApp
+cd /opt/mamuri
 docker build -t mamuri-backend:latest .
 ```
 
@@ -94,7 +96,7 @@ docker images | grep mamuri-backend
 ## Step 3: 서비스 시작 (순서 중요!)
 
 ```bash
-cd ~/mamuriApp/deploy
+cd /opt/mamuri/deploy
 ```
 
 ### 3-1. PostgreSQL
@@ -171,7 +173,7 @@ sudo apt update && sudo apt install -y certbot
 ### 5-2. Nginx 중지 + 인증서 발급
 
 ```bash
-cd ~/mamuriApp/deploy
+cd /opt/mamuri/deploy
 docker-compose -f docker-compose.prod.yml stop nginx
 
 sudo certbot certonly --standalone -d api.mamuri.app
@@ -180,9 +182,9 @@ sudo certbot certonly --standalone -d api.mamuri.app
 ### 5-3. 인증서 복사
 
 ```bash
-sudo cp /etc/letsencrypt/live/api.mamuri.app/fullchain.pem ~/mamuriApp/deploy/nginx/ssl/
-sudo cp /etc/letsencrypt/live/api.mamuri.app/privkey.pem ~/mamuriApp/deploy/nginx/ssl/
-sudo chown juns:juns ~/mamuriApp/deploy/nginx/ssl/*.pem
+sudo cp /etc/letsencrypt/live/api.mamuri.app/fullchain.pem /opt/mamuri/deploy/nginx/ssl/
+sudo cp /etc/letsencrypt/live/api.mamuri.app/privkey.pem /opt/mamuri/deploy/nginx/ssl/
+sudo chown juns:juns /opt/mamuri/deploy/nginx/ssl/*.pem
 ```
 
 ### 5-4. nginx.conf HTTPS 활성화
@@ -214,7 +216,7 @@ sudo crontab -e
 
 추가:
 ```
-0 3 1 * * certbot renew --quiet && cp /etc/letsencrypt/live/api.mamuri.app/fullchain.pem /home/juns/mamuriApp/deploy/nginx/ssl/ && cp /etc/letsencrypt/live/api.mamuri.app/privkey.pem /home/juns/mamuriApp/deploy/nginx/ssl/ && docker exec mamuri-nginx nginx -s reload
+0 3 1 * * certbot renew --quiet && cp /etc/letsencrypt/live/api.mamuri.app/fullchain.pem /opt/mamuri/deploy/nginx/ssl/ && cp /etc/letsencrypt/live/api.mamuri.app/privkey.pem /opt/mamuri/deploy/nginx/ssl/ && docker exec mamuri-nginx nginx -s reload
 ```
 
 ---
@@ -223,7 +225,7 @@ sudo crontab -e
 
 ```bash
 # 수동 백업 테스트
-cd ~/mamuriApp
+cd /opt/mamuri
 ./deploy/scripts/backup.sh
 
 # 자동 백업 (매일 새벽 3시)
@@ -232,7 +234,7 @@ crontab -e
 
 추가:
 ```
-0 3 * * * /home/juns/mamuriApp/deploy/scripts/backup.sh >> /home/juns/mamuriApp/backups/cron.log 2>&1
+0 3 * * * /opt/mamuri/deploy/scripts/backup.sh >> /opt/mamuri/backups/cron.log 2>&1
 ```
 
 ---
@@ -249,7 +251,7 @@ crontab -e
 
 ```bash
 ssh juns@YOUR_STATIC_IP
-cd ~/mamuriApp
+cd /opt/mamuri
 git pull origin main
 
 ./deploy/scripts/deploy.sh
