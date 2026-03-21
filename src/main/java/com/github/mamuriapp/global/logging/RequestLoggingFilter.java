@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -22,6 +23,16 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 
     private static final String TRACE_ID = "traceId";
     private static final String USER_ID = "userId";
+
+    private static final Set<String> EXCLUDED_PATHS = Set.of(
+            "/actuator/health",
+            "/nginx-health"
+    );
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return EXCLUDED_PATHS.contains(request.getRequestURI());
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,

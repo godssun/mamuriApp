@@ -1,4 +1,13 @@
 import './src/i18n/i18n';
+import { applyMockOverrides } from './src/screenshot/mockOverrides';
+
+// ── Screenshot Mode: mock all APIs before anything loads ──
+const SCREENSHOT_MODE = false;
+if (SCREENSHOT_MODE) {
+  applyMockOverrides();
+}
+// ──────────────────────────────────────────────────────────
+
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { NanumMyeongjo_400Regular, NanumMyeongjo_700Bold } from '@expo-google-fonts/nanum-myeongjo';
