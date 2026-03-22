@@ -36,6 +36,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     web: {
       favicon: './assets/favicon.png',
     },
+    extra: {
+      eas: {
+        projectId: '03e26af8-0c27-4ab6-b351-37fcc1bc2337',
+      },
+    },
     plugins: [
       'expo-secure-store',
       'expo-font',
