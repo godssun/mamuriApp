@@ -170,6 +170,9 @@ const MOCK_SUBSCRIPTION: SubscriptionInfo = {
 // ─── Apply Overrides ─────────────────────────────────────
 
 export function applyMockOverrides() {
+  // Force Korean language for screenshots
+  import('../i18n/i18n').then((mod) => mod.default.changeLanguage('ko'));
+
   // Token storage - no-op on web
   tokenStorage.get = async () => ({
     accessToken: 'mock-access-token',
