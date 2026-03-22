@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "908613731863",
+    "project_id": "mamuri-app",
+    "storage_bucket": "mamuri-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:908613731863:android:d7bd35b5e872cc8d4abe52",
+        "android_client_info": {
+          "package_name": "com.mamuri.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "908613731863-b2veqq82h9830328ttmfbo9v0g3srl0r.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mamuri.app",
+            "certificate_hash": "7a43cad8295300c46d05c4831154de33ba92488b"
+          }
+        },
+        {
+          "client_id": "908613731863-qfgpuffbveivnde0n8p6gs83qr07hgf5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAN8HIs8g0qZTg56IMNqRrIjRdJNKJA_xI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "908613731863-qfgpuffbveivnde0n8p6gs83qr07hgf5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

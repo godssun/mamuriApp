@@ -35,8 +35,7 @@ yarn-error.*
 .env.*
 .env*.local
 
-# Firebase config files (Android)
-google-services.json
+# Firebase config files are tracked for EAS Build
 
 # typescript
 *.tsbuildinfo
