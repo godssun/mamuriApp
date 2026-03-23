@@ -29,9 +29,14 @@ import {
 // Android 에뮬레이터에서는 10.0.2.2가 호스트 머신의 localhost
 const DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 
-const BASE_URL = __DEV__
-  ? `http://${DEV_HOST}:8080/api`
-  : 'https://api.mamuri.app/api';
+// EXPO_PUBLIC_API_OVERRIDE: 로컬 개발 중 프로덕션 서버 테스트용 임시 오버라이드
+const API_OVERRIDE = process.env.EXPO_PUBLIC_API_OVERRIDE;
+
+const BASE_URL = API_OVERRIDE
+  ? API_OVERRIDE
+  : __DEV__
+    ? `http://${DEV_HOST}:8080/api`
+    : 'https://api.mamuri.app/api';
 
 const TOKEN_KEY = 'auth_tokens';
 const AI_CONSENT_KEY = 'ai_data_consent';

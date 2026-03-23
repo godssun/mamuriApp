@@ -35,9 +35,7 @@ yarn-error.*
 .env.*
 .env*.local
 
-# Firebase config files
-google-services.json
-GoogleService-Info.plist
+# Firebase config files are tracked for EAS Build
 
 # typescript
 *.tsbuildinfo

@@ -124,6 +124,7 @@ public class SocialAuthService {
 
     private SocialUserInfo verifyFirebaseToken(String idToken) {
         if (FirebaseApp.getApps().isEmpty()) {
+            log.error("Firebase Admin SDK is not initialized. Check FIREBASE_CREDENTIALS_PATH and secrets volume mount.");
             throw new CustomException(ErrorCode.SOCIAL_AUTH_FAILED);
         }
         try {

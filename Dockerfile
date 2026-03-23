@@ -25,7 +25,8 @@ WORKDIR /app
 
 COPY --from=builder /app/build/libs/*.jar app.jar
 
-RUN chown -R app:app /app
+# Create uploads directory with correct ownership before switching to unprivileged user
+RUN mkdir -p /app/uploads/avatars && chown -R app:app /app
 USER app
 
 EXPOSE 8080
