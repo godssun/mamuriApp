@@ -19,6 +19,8 @@ import {
   Animated,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -151,7 +153,11 @@ export function AICommentScreenV2({ navigation, route }: Props) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
+    >
       {/* Header */}
       <Animated.View style={[
         styles.header,
@@ -314,7 +320,7 @@ export function AICommentScreenV2({ navigation, route }: Props) {
         messageId={reportMessageId ?? 0}
         diaryId={diaryId}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

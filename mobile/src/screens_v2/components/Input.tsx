@@ -108,6 +108,7 @@ export function Input({
             styles.input,
             {
               color: theme.colors.textPrimary,
+              textAlignVertical: textInputProps.multiline ? 'top' : 'center',
               paddingTop: textInputProps.multiline ? theme.spacing.md : 0,
             },
           ]}
@@ -144,7 +145,6 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    textAlignVertical: 'top',
   },
   leftIcon: {
     marginRight: 12,
