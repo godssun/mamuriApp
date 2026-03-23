@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -58,9 +59,14 @@ public class DiaryService {
 
         int oldLevel = user.getMaxLevel();
 
+        LocalDate todayKst = LocalDate.now(ZoneId.of("Asia/Seoul"));
         LocalDate diaryDate = request.getDiaryDate() != null
                 ? request.getDiaryDate()
-                : LocalDate.now();
+                : todayKst;
+
+        if (diaryDate.isAfter(todayKst)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
 
         Diary diary = Diary.builder()
                 .user(user)

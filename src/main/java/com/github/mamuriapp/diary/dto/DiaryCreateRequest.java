@@ -1,7 +1,6 @@
 package com.github.mamuriapp.diary.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 
@@ -22,9 +21,8 @@ public class DiaryCreateRequest {
     private String content;
 
     /**
-     * 일기 날짜. 미입력 시 오늘 날짜로 설정됨.
-     * 미래 날짜는 허용되지 않음.
+     * 일기 날짜. 미입력 시 오늘(KST) 날짜로 설정됨.
+     * 미래 날짜 검증은 DiaryService에서 KST 기준으로 수행.
      */
-    @PastOrPresent(message = "일기 날짜는 오늘 이전이어야 합니다.")
     private LocalDate diaryDate;
 }
