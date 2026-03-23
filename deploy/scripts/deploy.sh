@@ -22,16 +22,9 @@ DEPLOY_DIR="$(dirname "$SCRIPT_DIR")"
 PROJECT_DIR="$(dirname "$DEPLOY_DIR")"
 COMPOSE_FILE="$DEPLOY_DIR/docker-compose.prod.yml"
 UPSTREAM_FILE="$DEPLOY_DIR/nginx/upstream.conf"
-
-# docker-compose v1 or docker compose v2 — auto-detect
-if command -v docker-compose &>/dev/null; then
-    DC="docker-compose"
-elif docker compose version &>/dev/null 2>&1; then
-    DC="docker compose"
-else
-    echo "[deploy] ERROR: Neither docker-compose nor docker compose found."
-    exit 1
-fi
+ENV_FILE="$PROJECT_DIR/.env.production"
+NETWORK_NAME="deploy_mamuri-net"
+FIREBASE_SECRET="$PROJECT_DIR/secrets/firebase-service-account.json"
 
 SKIP_BUILD=false
 KEEP_OLD=false
@@ -67,7 +60,6 @@ INACTIVE_CONTAINER="mamuri-$INACTIVE"
 echo "============================================"
 echo "  Mamuri Blue-Green Deployment"
 echo "============================================"
-echo "  Using:     $DC"
 echo "  Active:    $ACTIVE ($ACTIVE_CONTAINER)"
 echo "  Deploying: $INACTIVE ($INACTIVE_CONTAINER)"
 echo "============================================"
@@ -86,18 +78,55 @@ fi
 # ---- Step 3: Start inactive container ----
 echo ""
 echo "[deploy] Starting $INACTIVE_CONTAINER..."
-$DC -f "$COMPOSE_FILE" up -d "backend-$INACTIVE"
+
+# Remove old container if exists
+docker rm -f "$INACTIVE_CONTAINER" 2>/dev/null || true
+
+# Read POSTGRES_DB from env file for DATABASE_URL
+POSTGRES_DB=$(grep '^POSTGRES_DB=' "$ENV_FILE" | cut -d'=' -f2)
+
+# Build volume args
+VOLUME_ARGS="-v uploads:/app/uploads"
+if [ -f "$FIREBASE_SECRET" ]; then
+    VOLUME_ARGS="$VOLUME_ARGS -v $FIREBASE_SECRET:/app/secrets/firebase-service-account.json:ro"
+fi
+
+docker run -d \
+    --name "$INACTIVE_CONTAINER" \
+    --network "$NETWORK_NAME" \
+    --env-file "$ENV_FILE" \
+    -e SPRING_PROFILES_ACTIVE=prod \
+    -e "DATABASE_URL=jdbc:postgresql://mamuri-postgres:5432/${POSTGRES_DB}" \
+    $VOLUME_ARGS \
+    --memory=768m \
+    --restart unless-stopped \
+    mamuri-backend:latest
+
+echo "[deploy] $INACTIVE_CONTAINER started."
 
 # ---- Step 4: Health check ----
 echo ""
-if ! "$SCRIPT_DIR/health-check.sh" "$INACTIVE_CONTAINER" 20; then
-    echo ""
-    echo "[deploy] FAILED: $INACTIVE_CONTAINER is not healthy. Aborting deployment."
-    echo "[deploy] Stopping failed container..."
-    $DC -f "$COMPOSE_FILE" stop "backend-$INACTIVE"
-    echo "[deploy] Deployment aborted. $ACTIVE_CONTAINER is still active."
-    exit 1
-fi
+echo "[deploy] Waiting for $INACTIVE_CONTAINER to be healthy..."
+
+MAX_RETRIES=20
+RETRY_INTERVAL=3
+for i in $(seq 1 $MAX_RETRIES); do
+    if docker exec "$INACTIVE_CONTAINER" wget -qO- http://localhost:8080/actuator/health 2>/dev/null | grep -q '"status":"UP"'; then
+        echo "[deploy] $INACTIVE_CONTAINER is healthy! (attempt $i/$MAX_RETRIES)"
+        break
+    fi
+    if [ "$i" -eq "$MAX_RETRIES" ]; then
+        echo "[deploy] FAILED: $INACTIVE_CONTAINER is not healthy after $MAX_RETRIES attempts."
+        echo "[deploy] Logs:"
+        docker logs "$INACTIVE_CONTAINER" --tail 20
+        echo "[deploy] Stopping failed container..."
+        docker rm -f "$INACTIVE_CONTAINER"
+        echo "[deploy] Deployment aborted. $ACTIVE_CONTAINER is still active."
+        exit 1
+    fi
+    echo "[deploy] Waiting... ($i/$MAX_RETRIES)"
+    sleep $RETRY_INTERVAL
+done
 
 # ---- Step 5: Switch nginx upstream ----
 echo ""
@@ -121,7 +150,7 @@ echo "[deploy] Traffic now routed to $INACTIVE_CONTAINER"
 if [ "$KEEP_OLD" = false ]; then
     echo ""
     echo "[deploy] Stopping old container $ACTIVE_CONTAINER..."
-    $DC -f "$COMPOSE_FILE" stop "backend-$ACTIVE"
+    docker rm -f "$ACTIVE_CONTAINER" 2>/dev/null || true
     echo "[deploy] $ACTIVE_CONTAINER stopped."
 else
     echo ""
