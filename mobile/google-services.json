@@ -30,6 +30,14 @@
           }
         },
         {
+          "client_id": "908613731863-ts0njb5r8hpenfltiv5b9o9s655925ok.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mamuri.app",
+            "certificate_hash": "2dbe9a8fe704011433297bae6ea5b95f22bd3457"
+          }
+        },
+        {
           "client_id": "908613731863-qfgpuffbveivnde0n8p6gs83qr07hgf5.apps.googleusercontent.com",
           "client_type": 3
         }
