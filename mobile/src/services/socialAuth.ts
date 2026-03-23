@@ -7,6 +7,7 @@
  */
 
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 // --- 네이티브 모듈 lazy loading ---
 // Expo Go에서는 네이티브 모듈이 없으므로 require()를 try-catch로 감싸서
@@ -25,10 +26,10 @@ try {
   AppleAuthentication = require('expo-apple-authentication');
   Crypto = require('expo-crypto');
 
-  // Google Sign-In 설정
-  GoogleSignin.configure({
-    webClientId: process.env.GOOGLE_WEB_CLIENT_ID || '',
-  });
+  // Google Sign-In 설정 — app.config.ts의 extra에서 webClientId를 가져옴
+  // process.env는 EAS 릴리스 빌드에서 사용할 수 없으므로 Constants.expoConfig.extra 사용
+  const webClientId = Constants.expoConfig?.extra?.googleWebClientId || '';
+  GoogleSignin.configure({ webClientId });
 
   _nativeModulesAvailable = true;
 } catch {

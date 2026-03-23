@@ -40,6 +40,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       eas: {
         projectId: '03e26af8-0c27-4ab6-b351-37fcc1bc2337',
       },
+      googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID || '908613731863-qfgpuffbveivnde0n8p6gs83qr07hgf5.apps.googleusercontent.com',
     },
     plugins: [
       'expo-secure-store',
