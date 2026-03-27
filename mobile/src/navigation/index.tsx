@@ -15,6 +15,7 @@ import {
 } from '../types';
 
 // V2 Screens
+import { WelcomeScreen } from '../screens_v2/WelcomeScreen';
 import { LoginScreenV2 } from '../screens_v2/LoginScreenV2';
 import { SignupScreenV2 } from '../screens_v2/SignupScreenV2';
 import { SocialNicknameScreenV2 } from '../screens_v2/SocialNicknameScreenV2';
@@ -47,6 +48,7 @@ const DiaryStack = createNativeStackNavigator<DiaryStackParamList>();
 function AuthNavigator() {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
       <AuthStack.Screen name="Login" component={LoginScreenV2} />
       <AuthStack.Screen name="Signup" component={SignupScreenV2} />
       <AuthStack.Screen name="SocialNickname" component={SocialNicknameScreenV2} />

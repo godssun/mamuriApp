@@ -197,6 +197,7 @@ export type RootStackParamList = {
 };
 
 export type AuthStackParamList = {
+  Welcome: undefined;
   Login: undefined;
   Signup: undefined;
   SocialNickname: { provider: SocialProvider; token: string };

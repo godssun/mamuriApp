@@ -12,6 +12,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   StyleSheet,
   Animated,
@@ -176,13 +177,11 @@ export function LoginScreenV2({ navigation }: Props) {
           }],
         },
       ]}>
-        {/* App icon / companion avatar */}
-        <View style={[styles.logoCircle, {
-          backgroundColor: theme.colors.primarySubtle,
-          borderColor: theme.colors.primaryLight,
-        }]}>
-          <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#6356D9' }} />
-        </View>
+        {/* App icon */}
+        <Image
+          source={require('../../assets/splash-icon.png')}
+          style={{ width: 80, height: 80, resizeMode: 'contain' }}
+        />
 
         <Text style={[
           theme.typography.displayMedium,
@@ -378,17 +377,6 @@ const styles = StyleSheet.create({
   logoSection: {
     alignItems: 'center',
     paddingTop: 60,
-  },
-  logoCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-  },
-  logoEmoji: {
-    fontSize: 40,
   },
   formSection: {
     width: '100%',

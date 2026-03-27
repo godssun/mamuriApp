@@ -23,8 +23,9 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import type { DiaryStackParamListV3, EmotionKey } from '../types';
 import {
   EMOTION_COLORS, EMOTION_LABELS,
-  DIARY_THEMES, EMOTION_STICKER_IMAGES,
+  DIARY_THEMES,
 } from '../constants/stickers';
+import { EmotionStickerView } from './components/EmotionStickerView';
 
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'WriteDiary'>;
 
@@ -151,7 +152,7 @@ export default function DiaryExpressiveEditorV3({ navigation, route }: Props) {
           {/* MoodBanner */}
           {selectedEmotion && (
             <View style={[s.moodBanner, { backgroundColor: EMOTION_COLORS[selectedEmotion] + '15' }]}>
-              <Image source={EMOTION_STICKER_IMAGES[selectedEmotion]} style={{ width: 28, height: 28, resizeMode: 'contain' }} />
+              <EmotionStickerView emotionKey={selectedEmotion} size="small" />
               <Text style={[s.moodLabel, { color: EMOTION_COLORS[selectedEmotion] }]}>
                 {EMOTION_LABELS[selectedEmotion]}
               </Text>
@@ -234,10 +235,10 @@ export default function DiaryExpressiveEditorV3({ navigation, route }: Props) {
           {selectedEmotion && (
             <>
               <View style={s.decoTopLeft}>
-                <Image source={EMOTION_STICKER_IMAGES[selectedEmotion]} style={{ width: 40, height: 40, resizeMode: 'contain' }} />
+                <EmotionStickerView emotionKey={selectedEmotion} size="medium" />
               </View>
               <View style={s.decoTopRight}>
-                <Image source={EMOTION_STICKER_IMAGES[selectedEmotion]} style={{ width: 40, height: 40, resizeMode: 'contain', opacity: 0.4 }} />
+                <EmotionStickerView emotionKey={selectedEmotion} size="medium" style={{ opacity: 0.4 }} />
               </View>
             </>
           )}
@@ -251,15 +252,33 @@ export default function DiaryExpressiveEditorV3({ navigation, route }: Props) {
         paddingBottom: insets.bottom + 8,
       }]}>
         <TouchableOpacity style={s.toolBtn} onPress={handlePickPhoto}>
-          <Text style={s.toolIcon}>📷</Text>
+          <View style={s.toolIconView}>
+            <View style={{ width: 18, height: 14, borderRadius: 3, borderWidth: 1.5, borderColor: theme.colors.textTertiary, alignItems: 'center', justifyContent: 'flex-end' }}>
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: theme.colors.textTertiary, position: 'absolute', top: 1.5, right: 2.5 }} />
+              <View style={{ width: 0, height: 0, borderLeftWidth: 4, borderRightWidth: 4, borderBottomWidth: 5, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: theme.colors.textTertiary, marginBottom: 1 }} />
+            </View>
+          </View>
           <Text style={[s.toolLabel, { color: theme.colors.textTertiary }]}>사진</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.toolBtn} onPress={() => setShowThemeSheet(true)}>
-          <Text style={s.toolIcon}>🎨</Text>
+          <View style={s.toolIconView}>
+            <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: theme.colors.textTertiary }}>
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#FFD166', position: 'absolute', top: 1.5, left: 4 }} />
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#83C9A8', position: 'absolute', bottom: 1.5, left: 1.5 }} />
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#7BA7D9', position: 'absolute', bottom: 1.5, right: 1.5 }} />
+            </View>
+          </View>
           <Text style={[s.toolLabel, { color: theme.colors.textTertiary }]}>테마</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.toolBtn} disabled>
-          <Text style={s.toolIcon}>✨</Text>
+          <View style={s.toolIconView}>
+            <View style={{ width: 16, height: 16, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ position: 'absolute', width: 14, height: 2, backgroundColor: theme.colors.textTertiary, borderRadius: 1 }} />
+              <View style={{ position: 'absolute', width: 2, height: 14, backgroundColor: theme.colors.textTertiary, borderRadius: 1 }} />
+              <View style={{ position: 'absolute', width: 10, height: 2, backgroundColor: theme.colors.textTertiary, borderRadius: 1, transform: [{ rotate: '45deg' }] }} />
+              <View style={{ position: 'absolute', width: 10, height: 2, backgroundColor: theme.colors.textTertiary, borderRadius: 1, transform: [{ rotate: '-45deg' }] }} />
+            </View>
+          </View>
           <Text style={[s.toolLabel, { color: theme.colors.textTertiary }]}>스티커</Text>
         </TouchableOpacity>
 
@@ -315,7 +334,6 @@ function makeStyles(t: Theme) {
       borderRadius: t.borderRadius.lg, marginTop: t.spacing.xl,
       gap: 8,
     },
-    moodIcon: { fontSize: 24 },
     moodLabel: { fontSize: 15, fontWeight: '700' },
     moodTags: { fontSize: 12, marginLeft: 4 },
 
@@ -356,7 +374,6 @@ function makeStyles(t: Theme) {
     // Deco
     decoTopLeft: { position: 'absolute', top: 8, left: -8, opacity: 0.15 },
     decoTopRight: { position: 'absolute', top: 8, right: -8, opacity: 0.15 },
-    decoEmoji: { fontSize: 40 },
 
     // Toolbar
     toolbar: {
@@ -365,7 +382,7 @@ function makeStyles(t: Theme) {
       borderTopWidth: 1, gap: t.spacing.xl,
     },
     toolBtn: { alignItems: 'center', gap: 2 },
-    toolIcon: { fontSize: 20 },
+    toolIconView: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
     toolLabel: { fontSize: 10 },
     charCount: { ...t.typography.caption, marginLeft: 'auto' },
 

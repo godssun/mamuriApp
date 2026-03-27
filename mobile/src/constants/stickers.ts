@@ -43,6 +43,7 @@ export const SECONDARY_TAGS: Record<EmotionKey, string[]> = {
 
 export const STICKER_SIZES = {
   hero: 80,
+  large: 64,
   medium: 48,
   small: 32,
   mini: 24,

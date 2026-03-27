@@ -17,7 +17,8 @@ import { useThemeV2 } from '../design-system-v2';
 import type { Theme } from '../design-system-v2';
 import { calendarApi, diaryApi } from '../api/client';
 import type { CalendarDayEntry, EmotionKey } from '../types';
-import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS, EMOTION_STICKER_IMAGES } from '../constants/stickers';
+import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS } from '../constants/stickers';
+import { EmotionStickerView } from './components/EmotionStickerView';
 
 const DAY_HEADERS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -148,10 +149,7 @@ export default function EmotionCalendarV3() {
                   isToday && s.calDotToday,
                 ]}>
                   {emotionColor && entry?.primaryEmotionCode ? (
-                    <Image
-                      source={EMOTION_STICKER_IMAGES[entry.primaryEmotionCode]}
-                      style={{ width: 20, height: 20, resizeMode: 'contain' }}
-                    />
+                    <EmotionStickerView emotionKey={entry.primaryEmotionCode} size="tiny" />
                   ) : (
                     <Text style={[
                       s.calDayNum,
@@ -197,7 +195,7 @@ export default function EmotionCalendarV3() {
                 if (count === 0) return null;
                 return (
                   <View key={key} style={s.legendItem}>
-                    <Image source={EMOTION_STICKER_IMAGES[key]} style={{ width: 14, height: 14, resizeMode: 'contain' }} />
+                    <EmotionStickerView emotionKey={key} size="tiny" />
                     <Text style={s.legendText}>{EMOTION_LABELS[key]}</Text>
                     <Text style={s.legendCount}>{count}</Text>
                   </View>

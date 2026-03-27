@@ -24,7 +24,8 @@ import type { DiaryV3, ConversationMessage, ConversationLimits, DiaryStackParamL
 import { formatDiaryDate, formatTime } from '../utils/dateFormat';
 import { ChatBubble } from './components/ChatBubble';
 import { ReportModal } from './components/ReportModal';
-import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_STICKER_IMAGES } from '../constants/stickers';
+import { EMOTION_COLORS, EMOTION_LABELS } from '../constants/stickers';
+import { EmotionStickerView } from './components/EmotionStickerView';
 
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'DiaryDetail'>;
 
@@ -172,7 +173,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
           {/* Emotion Header */}
           {emotionCode && (
             <View style={[s.emotionHeader, { backgroundColor: (emotionColor || theme.colors.primary) + '15' }]}>
-              <Image source={EMOTION_STICKER_IMAGES[emotionCode]} style={{ width: 36, height: 36, resizeMode: 'contain' }} />
+              <EmotionStickerView emotionKey={emotionCode} size="small" />
               <View>
                 <Text style={[s.emotionLabel, { color: emotionColor || theme.colors.primary }]}>
                   {EMOTION_LABELS[emotionCode]}
@@ -214,7 +215,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
           {/* Deco Sticker Overlays (read-only) */}
           {emotionCode && (
             <View style={s.decoOverlay}>
-              <Image source={EMOTION_STICKER_IMAGES[emotionCode]} style={{ width: 60, height: 60, resizeMode: 'contain', opacity: 0.1 }} />
+              <EmotionStickerView emotionKey={emotionCode} size="large" style={{ opacity: 0.1 }} />
             </View>
           )}
         </Animated.View>
@@ -312,7 +313,6 @@ function makeStyles(t: Theme) {
       paddingHorizontal: 16, paddingVertical: 12,
       borderRadius: t.borderRadius.lg, marginTop: t.spacing.xl, gap: 10,
     },
-    emotionIcon: { fontSize: 28 },
     emotionLabel: { fontSize: 16, fontWeight: '700' },
     emotionTags: { fontSize: 12, marginTop: 2 },
 

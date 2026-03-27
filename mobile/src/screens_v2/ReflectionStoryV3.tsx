@@ -16,7 +16,8 @@ import { useThemeV2 } from '../design-system-v2';
 import type { Theme } from '../design-system-v2';
 import { emotionApi, calendarApi, reportApi2 } from '../api/client';
 import type { CalendarDayEntry, EmotionKey } from '../types';
-import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS, EMOTION_STICKER_IMAGES } from '../constants/stickers';
+import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS } from '../constants/stickers';
+import { EmotionStickerView } from './components/EmotionStickerView';
 
 export default function ReflectionStoryV3() {
   const { theme } = useThemeV2();
@@ -105,12 +106,10 @@ export default function ReflectionStoryV3() {
               return (
                 <View key={day} style={s.calCell}>
                   {emotionColor && entry?.primaryEmotionCode ? (
-                    <Image
-                      source={EMOTION_STICKER_IMAGES[entry.primaryEmotionCode]}
-                      style={[
-                        { width: 16, height: 16, resizeMode: 'contain' },
-                        isToday && { borderWidth: 1, borderColor: theme.colors.primary, borderRadius: 8 },
-                      ]}
+                    <EmotionStickerView
+                      emotionKey={entry.primaryEmotionCode}
+                      size="tiny"
+                      style={isToday ? { borderWidth: 1, borderColor: theme.colors.primary, borderRadius: 10 } : undefined}
                     />
                   ) : (
                     <View style={[
@@ -134,10 +133,10 @@ export default function ReflectionStoryV3() {
             <View style={s.emotionStrip}>
               {weeklyCalendar.slice(-7).map((entry: any, i: number) => {
                 return entry.emotion ? (
-                  <Image
+                  <EmotionStickerView
                     key={i}
-                    source={EMOTION_STICKER_IMAGES[entry.emotion as EmotionKey]}
-                    style={{ width: 20, height: 20, resizeMode: 'contain' }}
+                    emotionKey={entry.emotion as EmotionKey}
+                    size="mini"
                   />
                 ) : (
                   <View key={i} style={[s.stripDot, { backgroundColor: theme.colors.border }]} />
@@ -153,10 +152,7 @@ export default function ReflectionStoryV3() {
                   : 0;
                 return (
                   <View key={emo} style={s.distItem}>
-                    <Image
-                      source={EMOTION_STICKER_IMAGES[emo as EmotionKey]}
-                      style={{ width: 20, height: 20, resizeMode: 'contain' }}
-                    />
+                    <EmotionStickerView emotionKey={emo as EmotionKey} size="mini" />
                     <Text style={s.distPct}>{pct}%</Text>
                     <Text style={s.distLabel}>{EMOTION_LABELS[emo as EmotionKey] || emo}</Text>
                   </View>

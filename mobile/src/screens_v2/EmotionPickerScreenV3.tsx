@@ -17,8 +17,9 @@ import type { Theme } from '../design-system-v2';
 import type { EmotionKey } from '../types';
 import {
   EMOTION_COLORS, EMOTION_LABELS,
-  SECONDARY_TAGS, EMOTION_KEYS, EMOTION_STICKER_IMAGES,
+  SECONDARY_TAGS, EMOTION_KEYS,
 } from '../constants/stickers';
+import { EmotionStickerView } from './components/EmotionStickerView';
 
 type Step = 'primary' | 'secondary';
 
@@ -108,9 +109,7 @@ export default function EmotionPickerScreenV3() {
                   onPress={() => handleSelectPrimary(key)}
                   activeOpacity={0.7}
                 >
-                  <View style={[s.emotionImageWrap, { backgroundColor: EMOTION_COLORS[key] + '25' }]}>
-                    <Image source={EMOTION_STICKER_IMAGES[key]} style={s.emotionImage} />
-                  </View>
+                  <EmotionStickerView emotionKey={key} size="large" />
                   <Text style={[s.emotionName, { color: EMOTION_COLORS[key] }]}>
                     {EMOTION_LABELS[key]}
                   </Text>
@@ -122,8 +121,8 @@ export default function EmotionPickerScreenV3() {
                 onPress={() => handleSelectPrimary('COMPLEX')}
                 activeOpacity={0.7}
               >
-                <View style={[s.emotionImageWrap, { backgroundColor: theme.colors.border + '30' }]}>
-                  <Text style={{ fontSize: 32, fontWeight: '300', color: theme.colors.textTertiary }}>?</Text>
+                <View style={{ alignItems: 'center', justifyContent: 'center', width: 48, height: 48 }}>
+                  <Text style={{ fontSize: 28, fontWeight: '300', color: theme.colors.textTertiary }}>?</Text>
                 </View>
                 <Text style={[s.emotionName, { color: theme.colors.textTertiary }]}>
                   모르겠어요
@@ -136,7 +135,7 @@ export default function EmotionPickerScreenV3() {
               {selectedEmotion && (
                 <View style={s.selectedHeader}>
                   <View style={[s.selectedBadge, { backgroundColor: EMOTION_COLORS[selectedEmotion] + '20' }]}>
-                    <Image source={EMOTION_STICKER_IMAGES[selectedEmotion]} style={{ width: 28, height: 28, resizeMode: 'contain' }} />
+                    <EmotionStickerView emotionKey={selectedEmotion} size="small" />
                     <Text style={[s.selectedLabel, { color: EMOTION_COLORS[selectedEmotion] }]}>
                       {EMOTION_LABELS[selectedEmotion]}
                     </Text>
@@ -226,12 +225,6 @@ function makeStyles(t: Theme) {
       borderRadius: t.borderRadius.xl,
       alignItems: 'center', justifyContent: 'center',
       gap: t.spacing.sm,
-    },
-    emotionIcon: { fontSize: 40 },
-    emotionImageWrap: {
-      width: 64, height: 64, borderRadius: 32,
-      alignItems: 'center' as const, justifyContent: 'center' as const,
-      overflow: 'hidden' as const,
     },
     emotionImage: { width: 60, height: 60, resizeMode: 'contain' as const },
     emotionName: { fontSize: 15, fontWeight: '700', letterSpacing: -0.3 },

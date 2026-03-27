@@ -20,8 +20,8 @@ import { diaryApi, emotionApi, companionApi } from '../api/client';
 import type { Diary, CompanionProfile, EmotionKey } from '../types';
 import {
   EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS,
-  EMOTION_STICKER_IMAGES,
 } from '../constants/stickers';
+import { EmotionStickerView } from './components/EmotionStickerView';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const STICKER_SIZE = (SCREEN_W - 48 - 24) / 3; // 3 columns with gaps
@@ -114,9 +114,7 @@ export default function HomeStickerScreenV3() {
               onPress={() => handleStickerTap(key)}
               activeOpacity={0.6}
             >
-              <View style={[s.stickerImageWrap, { backgroundColor: EMOTION_COLORS[key] + '20' }]}>
-                <Image source={EMOTION_STICKER_IMAGES[key]} style={s.stickerImage} />
-              </View>
+              <EmotionStickerView emotionKey={key} size="medium" />
               <Text style={[s.stickerLabel, { color: EMOTION_COLORS[key] }]}>
                 {EMOTION_LABELS[key]}
               </Text>
@@ -128,7 +126,7 @@ export default function HomeStickerScreenV3() {
             onPress={() => nav.navigate('EmotionPicker', {})}
             activeOpacity={0.6}
           >
-            <View style={[s.stickerImageWrap, { backgroundColor: theme.colors.border + '40' }]}>
+            <View style={{ alignItems: 'center', justifyContent: 'center', width: 48, height: 48 }}>
               <Text style={{ fontSize: 28, fontWeight: '300', color: theme.colors.textTertiary }}>?</Text>
             </View>
             <Text style={[s.stickerLabel, { color: theme.colors.textTertiary }]}>모르겠어요</Text>
@@ -142,14 +140,7 @@ export default function HomeStickerScreenV3() {
             {weekStrip.map((entry, i) => (
               <View key={i} style={s.weekCol}>
                 {entry.emotion ? (
-                  <View style={{ width: 28, height: 28, borderRadius: 14, overflow: 'hidden',
-                    backgroundColor: EMOTION_COLORS[entry.emotion as EmotionKey] + '20',
-                    alignItems: 'center', justifyContent: 'center' }}>
-                    <Image
-                      source={EMOTION_STICKER_IMAGES[entry.emotion as EmotionKey]}
-                      style={{ width: 26, height: 26, resizeMode: 'contain' }}
-                    />
-                  </View>
+                  <EmotionStickerView emotionKey={entry.emotion as EmotionKey} size="small" />
                 ) : (
                   <View style={[
                     s.weekDot,
@@ -282,11 +273,6 @@ function makeStyles(t: Theme) {
       gap: 6,
     },
     stickerIcon: { fontSize: 32 },
-    stickerImageWrap: {
-      width: 56, height: 56, borderRadius: 28,
-      alignItems: 'center' as const, justifyContent: 'center' as const,
-      overflow: 'hidden' as const,
-    },
     stickerImage: { width: 52, height: 52, resizeMode: 'contain' as const },
     stickerLabel: { fontSize: 12, fontWeight: '600', letterSpacing: -0.2 },
 
