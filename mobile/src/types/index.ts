@@ -301,11 +301,15 @@ export interface DiaryPhoto {
 
 export interface DiaryDecorationPlacement {
   id: number;
-  assetType: string;
+  assetId?: number;
+  assetType?: string;
+  assetCode?: string;    // 백엔드가 실제로 반환하는 필드
+  imageUrl?: string;
   positionX: number;
   positionY: number;
   scale: number;
   rotation: number;
+  zIndex?: number;
 }
 
 export type DiaryStackParamListV3 = {

@@ -564,6 +564,7 @@ function makeStyles(t: Theme) {
       borderStyle: 'dashed',
       borderRadius: t.borderRadius.lg,
       padding: t.spacing.md,
+      overflow: 'visible' as const,
     },
     stickerCanvasLabel: {
       fontSize: 11,

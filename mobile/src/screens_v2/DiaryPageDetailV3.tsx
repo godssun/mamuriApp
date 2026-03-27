@@ -234,18 +234,19 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
           {/* Decoration Sticker Overlays (read-only, saved positions) */}
           {diary.decorations && diary.decorations.length > 0 ? (
             <View
-              style={s.decoOverlay}
+              style={s.decoStickerArea}
               onLayout={(e) => setDecoCanvasHeight(e.nativeEvent.layout.height)}
             >
               {diary.decorations.map((deco) => {
-                const source = getStickerSource(deco.assetType);
+                const code = deco.assetCode || deco.assetType || '';
+                const source = getStickerSource(code);
                 if (!source) return null;
                 const canvasW = Dimensions.get('window').width - (theme.layout.screenPaddingH * 2);
                 return (
                   <DraggableSticker
                     key={deco.id}
                     id={String(deco.id)}
-                    stickerCode={deco.assetType}
+                    stickerCode={code}
                     stickerSource={source}
                     initialX={deco.positionX * canvasW}
                     initialY={deco.positionY * (decoCanvasHeight || 400)}
@@ -370,6 +371,11 @@ function makeStyles(t: Theme) {
 
     // Deco
     decoOverlay: { position: 'absolute', bottom: 0, right: 0, opacity: 0.08 },
+    decoStickerArea: {
+      minHeight: 120, position: 'relative', marginTop: 16,
+      borderWidth: 1, borderColor: t.colors.borderSubtle, borderStyle: 'dashed',
+      borderRadius: t.borderRadius.lg, padding: 8,
+    },
     decoEmoji: { fontSize: 60 },
 
     // Conversation
