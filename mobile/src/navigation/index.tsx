@@ -33,7 +33,7 @@ import { CustomTabBar } from '../screens_v2/components/CustomTabBar';
 import HomeStickerScreenV3 from '../screens_v2/HomeStickerScreenV3';
 import EmotionPickerScreenV3 from '../screens_v2/EmotionPickerScreenV3';
 import EmotionCalendarV3 from '../screens_v2/EmotionCalendarV3';
-import DiaryExpressiveEditorV3 from '../screens_v2/DiaryExpressiveEditorV3';
+import DiaryCanvasEditorV3 from '../screens_v2/DiaryCanvasEditorV3';
 import DiaryPageDetailV3 from '../screens_v2/DiaryPageDetailV3';
 import CompanionChatV3 from '../screens_v2/CompanionChatV3';
 import ReflectionStoryV3 from '../screens_v2/ReflectionStoryV3';
@@ -61,7 +61,7 @@ function DiaryNavigator() {
   return (
     <DiaryStack.Navigator screenOptions={{ headerShown: false }}>
       <DiaryStack.Screen name="DiaryListHome" component={DiaryListScreenV2} />
-      <DiaryStack.Screen name="WriteDiary" component={DiaryExpressiveEditorV3 as any} />
+      <DiaryStack.Screen name="WriteDiary" component={DiaryCanvasEditorV3 as any} />
       <DiaryStack.Screen name="DiaryDetail" component={DiaryPageDetailV3 as any} />
       <DiaryStack.Screen name="AIComment" component={AICommentScreenV2} />
     </DiaryStack.Navigator>

@@ -28,6 +28,8 @@ public class DiaryResponse {
     private EmotionInfo emotion;
     private LevelUpInfo levelUp;
     private StreakInfo streak;
+    private List<DiaryPhotoResponse> photos;
+    private List<DiaryDecorationResponse> decorations;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -95,6 +97,27 @@ public class DiaryResponse {
                 .diaryType(diary.getDiaryType())
                 .theme(diary.getTheme())
                 .aiComment(aiComment)
+                .createdAt(diary.getCreatedAt())
+                .updatedAt(diary.getUpdatedAt())
+                .build();
+    }
+
+    /**
+     * 엔티티를 DTO로 변환한다 (AI 코멘트 + 사진 + 꾸미기 포함, 상세 조회용).
+     */
+    public static DiaryResponse ofDetail(Diary diary, AiCommentResponse aiComment,
+                                          List<DiaryPhotoResponse> photos,
+                                          List<DiaryDecorationResponse> decorations) {
+        return DiaryResponse.builder()
+                .id(diary.getId())
+                .title(diary.getTitle())
+                .content(diary.getContent())
+                .diaryDate(diary.getDiaryDate())
+                .diaryType(diary.getDiaryType())
+                .theme(diary.getTheme())
+                .aiComment(aiComment)
+                .photos(photos)
+                .decorations(decorations)
                 .createdAt(diary.getCreatedAt())
                 .updatedAt(diary.getUpdatedAt())
                 .build();

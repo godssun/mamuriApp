@@ -48,6 +48,8 @@ public class DiaryService {
     private final DiaryEmotionRepository diaryEmotionRepository;
     private final EmotionStickerRepository emotionStickerRepository;
     private final FeatureFlags featureFlags;
+    private final DiaryPhotoService diaryPhotoService;
+    private final DecorationService decorationService;
 
     /**
      * 새로운 일기를 작성한다.
@@ -239,7 +241,9 @@ public class DiaryService {
         Diary diary = diaryRepository.findByIdAndUserIdWithUser(diaryId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DIARY_NOT_FOUND));
         AiCommentResponse aiComment = aiCommentService.getComment(diaryId);
-        return DiaryResponse.of(diary, aiComment);
+        var photos = diaryPhotoService.getPhotos(diaryId);
+        var decorations = decorationService.getDecorations(diaryId);
+        return DiaryResponse.ofDetail(diary, aiComment, photos, decorations);
     }
 
     /**

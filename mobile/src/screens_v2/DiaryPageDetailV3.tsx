@@ -12,7 +12,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Animated, TextInput, ActivityIndicator, Alert, Image,
+  Animated, TextInput, ActivityIndicator, Alert, Image, Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -26,6 +26,8 @@ import { ChatBubble } from './components/ChatBubble';
 import { ReportModal } from './components/ReportModal';
 import { EMOTION_COLORS, EMOTION_LABELS } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
+import { DraggableSticker } from './components/DraggableSticker';
+import { getStickerSource } from '../constants/stickerSources';
 
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'DiaryDetail'>;
 
@@ -218,12 +220,33 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
           {/* Content */}
           <Text style={[s.content, { color: txtColor }]}>{diary.content}</Text>
 
-          {/* Deco Sticker Overlays (read-only) */}
-          {emotionCode && (
+          {/* Decoration Sticker Overlays (read-only, saved positions) */}
+          {diary.decorations && diary.decorations.length > 0 ? (
+            <View style={s.decoOverlay}>
+              {diary.decorations.map((deco) => {
+                const source = getStickerSource(deco.assetType);
+                if (!source) return null;
+                const canvasW = Dimensions.get('window').width - (theme.layout.screenPaddingH * 2);
+                return (
+                  <DraggableSticker
+                    key={deco.id}
+                    id={String(deco.id)}
+                    stickerCode={deco.assetType}
+                    stickerSource={source}
+                    initialX={deco.positionX * canvasW}
+                    initialY={deco.positionY * 400}
+                    size={60}
+                    editable={false}
+                    onPositionChange={() => {}}
+                  />
+                );
+              })}
+            </View>
+          ) : emotionCode ? (
             <View style={s.decoOverlay}>
               <EmotionStickerView emotionKey={emotionCode} size="large" style={{ opacity: 0.1 }} />
             </View>
-          )}
+          ) : null}
         </Animated.View>
 
         {/* Conversation */}

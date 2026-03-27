@@ -610,6 +610,34 @@ export const diaryApiV3 = {
   },
 };
 
+// 일기 사진 API
+export const diaryPhotoApi = {
+  async upload(diaryId: number, photoUri: string): Promise<any> {
+    const formData = new FormData();
+    const filename = photoUri.split('/').pop() ?? `photo_${Date.now()}.jpg`;
+    const ext = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+
+    formData.append('file', {
+      uri: photoUri,
+      name: filename,
+      type: mimeType,
+    } as unknown as Blob);
+
+    return requestMultipart<any>(`/diaries/${diaryId}/photos`, formData);
+  },
+};
+
+// 일기 데코레이션 API
+export const diaryDecorationApi = {
+  async save(diaryId: number, decorations: { assetType: string; positionX: number; positionY: number; scale: number; rotation: number }[]): Promise<void> {
+    await request<void>(`/diaries/${diaryId}/decorations`, {
+      method: 'PUT',
+      body: JSON.stringify(decorations),
+    });
+  },
+};
+
 // 캘린더 V2 API
 export const calendarApi = {
   async getCalendarV2(year: number, month: number): Promise<DiaryCalendarResponseV2> {
