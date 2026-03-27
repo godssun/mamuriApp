@@ -178,8 +178,8 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       for (const photo of photos) {
         try {
           await diaryPhotoApi.upload(diary.id, photo.uri);
-        } catch {
-          // 사진 업로드 실패해도 일기는 이미 저장됨
+        } catch (uploadErr: any) {
+          console.warn('[DiaryCanvas] Photo upload failed:', uploadErr?.message || uploadErr);
         }
       }
 
@@ -189,18 +189,19 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         const canvasH = canvasLayout.height || 400;
 
         const DEFAULT_STICKER_SIZE = 60;
-        const decorations = placedStickers.map(sticker => ({
+        const decorations = placedStickers.map((sticker, idx) => ({
           assetType: sticker.code,
           positionX: canvasW > 0 ? sticker.x / canvasW : 0,
           positionY: canvasH > 0 ? sticker.y / canvasH : 0,
           scale: sticker.size / DEFAULT_STICKER_SIZE,
           rotation: 0,
+          zIndex: idx,
         }));
 
         try {
           await diaryDecorationApi.save(diary.id, decorations);
-        } catch {
-          // 데코 저장 실패해도 일기는 이미 저장됨
+        } catch (decoErr: any) {
+          console.warn('[DiaryCanvas] Decoration save failed:', decoErr?.message || decoErr);
         }
       }
 
