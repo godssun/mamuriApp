@@ -194,26 +194,6 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
           }]}
           onLayout={(e) => setDecoCanvasHeight(e.nativeEvent.layout.height)}
         >
-          {/* Background pattern (lined / grid) */}
-          {(diaryTheme === 'note' || diaryTheme === 'warm') && (
-            <View style={s.linePattern} pointerEvents="none">
-              {Array.from({ length: 30 }).map((_, i) => (
-                <View key={i} style={[s.lineRow, { borderBottomColor: diaryTheme === 'note' ? '#E8E0D0' : '#F0E8E0' }]} />
-              ))}
-            </View>
-          )}
-          {(diaryTheme === 'grid' || diaryTheme === 'nature') && (
-            <View style={s.gridPattern} pointerEvents="none">
-              {Array.from({ length: 20 }).map((_, row) => (
-                <View key={row} style={s.gridRow}>
-                  {Array.from({ length: 15 }).map((_, col) => (
-                    <View key={col} style={[s.gridCell, { borderColor: diaryTheme === 'grid' ? '#D0D8D0' : '#D8E8D8' }]} />
-                  ))}
-                </View>
-              ))}
-            </View>
-          )}
-
           <Animated.View style={[
             { opacity: contentAnim, transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] },
           ]}>
@@ -256,8 +236,28 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
               {formatTime(diary.createdAt)}
             </Text>
 
-            {/* Content */}
-            <Text style={[s.content, { color: txtColor }]}>{diary.content}</Text>
+            {/* Content with lined background */}
+            <View style={s.contentArea}>
+              {(diaryTheme === 'note' || diaryTheme === 'warm') && (
+                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                  {Array.from({ length: 40 }).map((_, i) => (
+                    <View key={i} style={{ height: 28, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: diaryTheme === 'note' ? '#E8E0D0' : '#F0E8E0' }} />
+                  ))}
+                </View>
+              )}
+              {(diaryTheme === 'grid' || diaryTheme === 'nature') && (
+                <View style={[StyleSheet.absoluteFill, { flexDirection: 'column' }]} pointerEvents="none">
+                  {Array.from({ length: 40 }).map((_, row) => (
+                    <View key={row} style={{ flexDirection: 'row', height: 28 }}>
+                      {Array.from({ length: 12 }).map((_, col) => (
+                        <View key={col} style={{ flex: 1, borderWidth: StyleSheet.hairlineWidth, borderColor: diaryTheme === 'grid' ? '#D0D8D0' : '#D8E8D8' }} />
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              )}
+              <Text style={[s.content, { color: txtColor }]}>{diary.content}</Text>
+            </View>
           </Animated.View>
 
           {/* Sticker overlays — positioned over the entire diary page */}
@@ -274,7 +274,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
                   stickerCode={code}
                   stickerSource={source}
                   initialX={deco.positionX * canvasW}
-                  initialY={deco.positionY * (decoCanvasHeight || 400)}
+                  initialY={deco.positionY * canvasW}
                   size={Math.round(60 * (deco.scale || 1))}
                   editable={false}
                   onPositionChange={() => {}}
@@ -387,7 +387,8 @@ function makeStyles(t: Theme) {
     // Content
     title: { ...t.typography.headlineLarge, marginTop: t.spacing.xl },
     meta: { ...t.typography.caption, marginTop: t.spacing.sm },
-    content: { ...t.typography.bodyLarge, marginTop: t.spacing['2xl'], lineHeight: 28, fontSize: 15 },
+    contentArea: { position: 'relative', marginTop: t.spacing.xl, minHeight: 100 },
+    content: { ...t.typography.bodyLarge, lineHeight: 28, fontSize: 15, paddingTop: 0 },
 
     // Deco
     // Diary page container — stickers overlay the whole area
@@ -396,26 +397,6 @@ function makeStyles(t: Theme) {
       minHeight: 300,
       overflow: 'visible',
       paddingVertical: t.spacing.xl,
-    },
-
-    // Background patterns
-    linePattern: {
-      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-      paddingTop: 80,
-    },
-    lineRow: {
-      height: 28, borderBottomWidth: StyleSheet.hairlineWidth,
-    },
-    gridPattern: {
-      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-      paddingTop: 20, paddingHorizontal: 16,
-    },
-    gridRow: {
-      flexDirection: 'row', height: 24,
-    },
-    gridCell: {
-      flex: 1, borderWidth: StyleSheet.hairlineWidth,
-      borderColor: '#D8E8D8',
     },
 
     decoOverlay: { position: 'absolute', bottom: 0, right: 0, opacity: 0.08 },

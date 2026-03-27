@@ -116,7 +116,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
             code: d.assetCode || d.assetType || '',
             source: getStickerSource(d.assetCode || d.assetType || '') || getStickerSource('e_joy')!,
             x: (d.positionX || 0) * canvasW,
-            y: (d.positionY || 0) * 400,
+            y: (d.positionY || 0) * canvasW,  // 너비 기준 정규화
             size: Math.round(60 * (d.scale || 1)),
           })));
         }
@@ -239,10 +239,11 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         const canvasH = canvasLayout.height || 400;
 
         const DEFAULT_STICKER_SIZE = 60;
+        // 너비 기준으로만 정규화 (X, Y 모두) — 높이는 콘텐츠에 따라 변하므로
         const decorations = placedStickers.map((sticker, idx) => ({
           assetType: sticker.code,
           positionX: canvasW > 0 ? sticker.x / canvasW : 0,
-          positionY: canvasH > 0 ? sticker.y / canvasH : 0,
+          positionY: canvasW > 0 ? sticker.y / canvasW : 0,
           scale: sticker.size / DEFAULT_STICKER_SIZE,
           rotation: 0,
           zIndex: idx,
@@ -316,26 +317,6 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
               setCanvasLayout({ width, height });
             }}
           >
-            {/* Background pattern */}
-            {(selectedTheme === 'note' || selectedTheme === 'warm') && (
-              <View style={s.linePatternBg} pointerEvents="none">
-                {Array.from({ length: 25 }).map((_, i) => (
-                  <View key={i} style={[s.lineRow, { borderBottomColor: selectedTheme === 'note' ? '#E8E0D0' : '#F0E8E0' }]} />
-                ))}
-              </View>
-            )}
-            {(selectedTheme === 'grid' || selectedTheme === 'nature') && (
-              <View style={s.gridPatternBg} pointerEvents="none">
-                {Array.from({ length: 20 }).map((_, row) => (
-                  <View key={row} style={s.gridRow}>
-                    {Array.from({ length: 12 }).map((_, col) => (
-                      <View key={col} style={[s.gridCell, { borderColor: selectedTheme === 'grid' ? '#D0D8D0' : '#D8E8D8' }]} />
-                    ))}
-                  </View>
-                ))}
-              </View>
-            )}
-
             <Animated.View style={{
               opacity: contentAnim,
               transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
@@ -406,18 +387,38 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
               {/* Divider */}
               <View style={[s.divider, { backgroundColor: borderColor }]} />
 
-              {/* Content */}
-              <TextInput
-                ref={textInputRef}
-                style={[s.contentInput, { color: textColor }]}
-                placeholder="오늘 어떤 하루였나요?"
-                placeholderTextColor={subtleColor}
-                value={content}
-                onChangeText={setContent}
-                multiline
-                scrollEnabled={false}
-                autoFocus={!isEditMode}
-              />
+              {/* Content with lined background */}
+              <View style={s.contentArea}>
+                {(selectedTheme === 'note' || selectedTheme === 'warm') && (
+                  <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                    {Array.from({ length: 40 }).map((_, i) => (
+                      <View key={i} style={{ height: 28, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: selectedTheme === 'note' ? '#E8E0D0' : '#F0E8E0' }} />
+                    ))}
+                  </View>
+                )}
+                {(selectedTheme === 'grid' || selectedTheme === 'nature') && (
+                  <View style={[StyleSheet.absoluteFill, { flexDirection: 'column' }]} pointerEvents="none">
+                    {Array.from({ length: 40 }).map((_, row) => (
+                      <View key={row} style={{ flexDirection: 'row', height: 28 }}>
+                        {Array.from({ length: 12 }).map((_, col) => (
+                          <View key={col} style={{ flex: 1, borderWidth: StyleSheet.hairlineWidth, borderColor: selectedTheme === 'grid' ? '#D0D8D0' : '#D8E8D8' }} />
+                        ))}
+                      </View>
+                    ))}
+                  </View>
+                )}
+                <TextInput
+                  ref={textInputRef}
+                  style={[s.contentInput, { color: textColor }]}
+                  placeholder="오늘 어떤 하루였나요?"
+                  placeholderTextColor={subtleColor}
+                  value={content}
+                  onChangeText={setContent}
+                  multiline
+                  scrollEnabled={false}
+                  autoFocus={!isEditMode}
+                />
+              </View>
 
             {/* Sticker Canvas — separate zone below text for free placement */}
             {placedStickers.length > 0 && (
@@ -576,23 +577,6 @@ function makeStyles(t: Theme) {
       paddingHorizontal: t.layout.screenPaddingH,
       position: 'relative',
     },
-    // Background patterns
-    linePatternBg: {
-      position: 'absolute', top: 60, left: 0, right: 0, bottom: 0,
-    },
-    lineRow: {
-      height: 28, borderBottomWidth: StyleSheet.hairlineWidth,
-    },
-    gridPatternBg: {
-      position: 'absolute', top: 60, left: 16, right: 16, bottom: 0,
-    },
-    gridRow: {
-      flexDirection: 'row', height: 24,
-    },
-    gridCell: {
-      flex: 1, borderWidth: StyleSheet.hairlineWidth,
-    },
-
     stickerCanvas: {
       minHeight: 200,
       marginTop: t.spacing.xl,
@@ -639,10 +623,15 @@ function makeStyles(t: Theme) {
       paddingVertical: t.spacing.sm,
     },
     divider: { height: 1, width: '100%', marginVertical: t.spacing.sm },
+    contentArea: {
+      position: 'relative',
+      minHeight: 280,
+    },
     contentInput: {
-      ...t.typography.bodyLarge, minHeight: 200,
-      textAlignVertical: 'top', paddingTop: t.spacing.sm,
-      lineHeight: 28,  // 줄노트 간격에 맞춤
+      ...t.typography.bodyLarge, minHeight: 280,
+      textAlignVertical: 'top',
+      paddingTop: 0, // 줄 패턴 첫 번째 줄에 정확히 맞춤
+      lineHeight: 28,
       fontSize: 15,
     },
 
