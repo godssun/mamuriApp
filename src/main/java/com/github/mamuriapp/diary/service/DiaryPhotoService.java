@@ -91,6 +91,25 @@ public class DiaryPhotoService {
     }
 
     /**
+     * 사진의 캔버스 좌표를 업데이트한다.
+     */
+    @Transactional
+    public DiaryPhotoResponse updatePosition(Long diaryId, Long photoId, Long userId,
+                                              Double positionX, Double positionY,
+                                              Integer displayWidth, Integer displayHeight,
+                                              Integer zIndex) {
+        DiaryPhoto photo = photoRepository.findById(photoId)
+                .orElseThrow(() -> new CustomException(ErrorCode.DIARY_NOT_FOUND));
+
+        if (!photo.getDiary().getId().equals(diaryId) || !photo.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.DIARY_NOT_FOUND);
+        }
+
+        photo.updatePosition(positionX, positionY, displayWidth, displayHeight, zIndex);
+        return DiaryPhotoResponse.from(photo, storageService.getPublicUrl(photo.getStorageKey()));
+    }
+
+    /**
      * 사진을 삭제한다.
      */
     @Transactional

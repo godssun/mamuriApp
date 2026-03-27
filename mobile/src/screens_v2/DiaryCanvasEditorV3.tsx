@@ -1,19 +1,21 @@
 /**
- * DiaryCanvasEditor V3 — Canvas-style diary writing experience
+ * DiaryCanvasEditor V3 — 2-Layer Canvas diary editor
  *
- * - Canvas area with theme background
- * - Emotion sticker banner
- * - Photo zone (tap to add, tap X to remove)
- * - Freely draggable stickers via DraggableSticker
- * - Bottom toolbar (photo/theme/sticker/emotion)
- * - Save: text → photo upload → decoration save
+ * Canvas architecture:
+ *   Background Layer: notebook/grid pattern (absolute, full fill)
+ *   Text Layer: TextInput (flow, line-aligned)
+ *   Object Layer: photos + stickers via CanvasObject (absolute, free placement)
+ *
+ * - Emotion banner (tap to change)
+ * - Bottom toolbar (photo/theme/sticker)
+ * - Save: text -> photo upload -> decoration save (unified coordinates)
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Alert, Animated, Image, Modal, Dimensions,
-  ImageSourcePropType, KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -28,37 +30,65 @@ import {
 } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
 import { StickerPickerSheet } from './components/StickerPickerSheet';
-import { DraggableSticker } from './components/DraggableSticker';
+import { CanvasObject } from './components/CanvasObject';
+import type { CanvasObjectData } from './components/CanvasObject';
 import { getStickerSource } from '../constants/stickerSources';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'WriteDiary'>;
 
-interface PlacedSticker {
-  id: string;
-  code: string;
-  source: ImageSourcePropType;
-  x: number;
-  y: number;
-  size: number;
+let objectIdCounter = 0;
+function nextId(): string {
+  return `obj_${Date.now()}_${++objectIdCounter}`;
 }
 
-interface PhotoItem {
-  uri: string;
-  width: number;
-  height: number;
-}
-
-let stickerIdCounter = 0;
-function nextStickerId(): string {
-  return `sticker_${Date.now()}_${++stickerIdCounter}`;
+/* ── Notebook Background ── */
+function NotebookBackground({ theme, height }: { theme: string; height: number }) {
+  if (theme === 'note' || theme === 'warm') {
+    const lineCount = Math.ceil(height / 28);
+    return (
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        {Array.from({ length: lineCount }).map((_, i) => (
+          <View
+            key={i}
+            style={{
+              height: 28,
+              borderBottomWidth: StyleSheet.hairlineWidth,
+              borderBottomColor: theme === 'note' ? '#E8E0D0' : '#F0E8E0',
+            }}
+          />
+        ))}
+      </View>
+    );
+  }
+  if (theme === 'grid' || theme === 'nature') {
+    const rowCount = Math.ceil(height / 28);
+    return (
+      <View style={[StyleSheet.absoluteFill, { flexDirection: 'column' }]} pointerEvents="none">
+        {Array.from({ length: rowCount }).map((_, row) => (
+          <View key={row} style={{ flexDirection: 'row', height: 28 }}>
+            {Array.from({ length: 12 }).map((_, col) => (
+              <View
+                key={col}
+                style={{
+                  flex: 1,
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: theme === 'grid' ? '#D0D8D0' : '#D8E8D8',
+                }}
+              />
+            ))}
+          </View>
+        ))}
+      </View>
+    );
+  }
+  return null;
 }
 
 export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const { theme } = useThemeV2();
   const insets = useSafeAreaInsets();
-  const { refresh: refreshSubscription } = useSubscription();
   const s = makeStyles(theme);
 
   const initialEmotion = route.params?.selectedEmotion as EmotionKey | undefined;
@@ -66,20 +96,26 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const editDiaryId = route.params?.editDiaryId;
   const isEditMode = !!editDiaryId;
 
-  const [currentEmotion, setCurrentEmotion] = useState<EmotionKey | undefined>(initialEmotion);
-  const [showEmotionPicker, setShowEmotionPicker] = useState(false);
-  const [title, setTitle] = useState('');
+  // ── Core state ──
   const [content, setContent] = useState('');
-  const [photos, setPhotos] = useState<PhotoItem[]>([]);
-  const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
+  const [title, setTitle] = useState('');
+  const [objects, setObjects] = useState<CanvasObjectData[]>([]);
+  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const [selectedTheme, setSelectedTheme] = useState<string>('note');
+  const [currentEmotion, setCurrentEmotion] = useState<EmotionKey | undefined>(initialEmotion);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+
+  // ── UI state ──
   const [saving, setSaving] = useState(false);
+  const [showEmotionPicker, setShowEmotionPicker] = useState(false);
   const [showThemeSheet, setShowThemeSheet] = useState(false);
   const [showStickerSheet, setShowStickerSheet] = useState(false);
-  const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
   const [editLoading, setEditLoading] = useState(isEditMode);
 
-  // 수정 모드: 기존 일기 데이터 로드
+  const contentAnim = useRef(new Animated.Value(0)).current;
+  const textInputRef = useRef<TextInput>(null);
+
+  // ── Edit mode: load existing diary ──
   useEffect(() => {
     if (!editDiaryId) return;
     (async () => {
@@ -87,39 +123,66 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         const diary = await diaryApiV3.getDetailV3(editDiaryId);
         setTitle(diary.title || '');
         setContent(diary.content || '');
-        setSelectedTheme(diary.theme || 'default');
+        setSelectedTheme(diary.theme || 'note');
 
-        // 감정
         const emo = diary.emotion?.primaryEmotion
           || diary.emotion?.primarySticker?.category?.code;
         if (emo) setCurrentEmotion(emo as EmotionKey);
 
-        // 사진 (서버 URL → PhotoItem)
+        const canvasW = Dimensions.get('window').width - 48;
+        const loadedObjects: CanvasObjectData[] = [];
+
+        // Photos
         if (diary.photos && diary.photos.length > 0) {
           const DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
           const SERVER = __DEV__ ? `http://${DEV_HOST}:8080` : 'https://api.mamuri.app';
-          setPhotos(diary.photos.map((p: any) => ({
-            uri: (p.cdnUrl || p.url || '').startsWith('http')
+          diary.photos.forEach((p: any, i: number) => {
+            const uri = (p.cdnUrl || p.url || '').startsWith('http')
               ? (p.cdnUrl || p.url)
-              : `${SERVER}${p.cdnUrl || p.url || ''}`,
-            width: p.widthPx || 0,
-            height: p.heightPx || 0,
-            isRemote: true,
-          })));
+              : `${SERVER}${p.cdnUrl || p.url || ''}`;
+            const photoW = Math.min(p.widthPx || 200, canvasW * 0.8);
+            const photoH = p.heightPx
+              ? photoW * (p.heightPx / (p.widthPx || 1))
+              : photoW * 0.75;
+            loadedObjects.push({
+              id: nextId(),
+              type: 'photo',
+              x: (canvasW - photoW) / 2,
+              y: 20 + i * (photoH + 16),
+              width: photoW,
+              height: photoH,
+              rotation: 0,
+              zIndex: i,
+              photoUri: uri,
+            });
+          });
         }
 
-        // 스티커
+        // Stickers/decorations
         if (diary.decorations && diary.decorations.length > 0) {
-          const canvasW = Dimensions.get('window').width - 48;
-          setPlacedStickers(diary.decorations.map((d: any) => ({
-            id: nextStickerId(),
-            code: d.assetCode || d.assetType || '',
-            source: getStickerSource(d.assetCode || d.assetType || '') || getStickerSource('e_joy')!,
-            x: (d.positionX || 0) * canvasW,
-            y: (d.positionY || 0) * canvasW,  // 너비 기준 정규화
-            size: Math.round(60 * (d.scale || 1)),
-          })));
+          diary.decorations.forEach((d: any) => {
+            const code = d.assetCode || d.assetType || '';
+            // Skip photo-type decorations (they are loaded above)
+            if (code.startsWith('photo_')) return;
+            const source = getStickerSource(code);
+            if (!source) return;
+            const stickerSize = Math.round(60 * (d.scale || 1));
+            loadedObjects.push({
+              id: nextId(),
+              type: 'sticker',
+              x: (d.positionX || 0) * canvasW,
+              y: (d.positionY || 0) * canvasW,
+              width: stickerSize,
+              height: stickerSize,
+              rotation: d.rotation || 0,
+              zIndex: d.zIndex || loadedObjects.length,
+              stickerCode: code,
+              stickerSource: source,
+            });
+          });
         }
+
+        setObjects(loadedObjects);
       } catch (e: any) {
         console.warn('[DiaryCanvas] Edit load failed:', e?.message);
       } finally {
@@ -127,9 +190,6 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       }
     })();
   }, [editDiaryId]);
-
-  const contentAnim = useRef(new Animated.Value(0)).current;
-  const textInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     Animated.spring(contentAnim, {
@@ -139,8 +199,16 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
     }).start();
   }, []);
 
-  const handlePickPhoto = useCallback(async () => {
-    if (photos.length >= 3) {
+  // ── Canvas measurement ──
+  const handleCanvasLayout = useCallback((e: any) => {
+    const { width, height } = e.nativeEvent.layout;
+    setCanvasSize({ width, height });
+  }, []);
+
+  // ── Photo add ──
+  const handleAddPhoto = useCallback(async () => {
+    const photoCount = objects.filter(o => o.type === 'photo').length;
+    if (photoCount >= 3) {
       Alert.alert('알림', '사진은 최대 3장까지 첨부할 수 있어요.');
       return;
     }
@@ -153,57 +221,80 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       });
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        setPhotos(prev => [...prev, {
-          uri: asset.uri,
-          width: asset.width || 0,
-          height: asset.height || 0,
+        const canvasW = canvasSize.width || SCREEN_W - 48;
+        const photoW = Math.min(asset.width || 200, canvasW * 0.8);
+        const photoH = photoW * ((asset.height || 150) / (asset.width || 200));
+
+        setObjects(prev => [...prev, {
+          id: nextId(),
+          type: 'photo' as const,
+          x: (canvasW - photoW) / 2,
+          y: 20,
+          width: photoW,
+          height: photoH,
+          rotation: 0,
+          zIndex: prev.length,
+          photoUri: asset.uri,
         }]);
       }
     } catch {
       Alert.alert('오류', '사진을 불러올 수 없습니다.');
     }
-  }, [photos.length]);
+  }, [objects, canvasSize]);
 
-  const handleRemovePhoto = (index: number) => {
-    setPhotos(prev => prev.filter((_, i) => i !== index));
-  };
-
+  // ── Sticker add ──
   const handleStickerSelect = useCallback((sticker: { code: string; category: string }) => {
     const source = getStickerSource(sticker.code);
     if (!source) return;
 
-    const canvasW = canvasLayout.width || SCREEN_W - 48;
-    const canvasH = canvasLayout.height || 400;
-
-    setPlacedStickers(prev => [...prev, {
-      id: nextStickerId(),
-      code: sticker.code,
-      source,
+    const canvasW = canvasSize.width || SCREEN_W - 48;
+    setObjects(prev => [...prev, {
+      id: nextId(),
+      type: 'sticker' as const,
       x: canvasW / 2 - 30,
-      y: canvasH / 2 - 30,
-      size: 60,
+      y: 100,
+      width: 60,
+      height: 60,
+      rotation: 0,
+      zIndex: prev.length,
+      stickerCode: sticker.code,
+      stickerSource: source,
     }]);
     setShowStickerSheet(false);
-  }, [canvasLayout]);
+  }, [canvasSize]);
 
-  const handleStickerPositionChange = useCallback((id: string, x: number, y: number) => {
-    setPlacedStickers(prev =>
-      prev.map(s => s.id === id ? { ...s, x, y } : s)
-    );
+  // ── Object manipulation ──
+  const handleMove = useCallback((id: string, x: number, y: number) => {
+    setObjects(prev => prev.map(o => o.id === id ? { ...o, x, y } : o));
   }, []);
 
-  const handleStickerDelete = useCallback((id: string) => {
-    setPlacedStickers(prev => prev.filter(s => s.id !== id));
+  const handleResize = useCallback((id: string, w: number, h: number) => {
+    setObjects(prev => prev.map(o => o.id === id ? { ...o, width: w, height: h } : o));
   }, []);
 
-  const handleStickerResize = useCallback((id: string, newSize: number) => {
-    setPlacedStickers(prev => prev.map(s => s.id === id ? { ...s, size: newSize } : s));
+  const handleDelete = useCallback((id: string) => {
+    setObjects(prev => prev.filter(o => o.id !== id));
+    setSelectedObjectId(null);
   }, []);
 
-  const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null);
+  const handleBringToFront = useCallback((id: string) => {
+    setObjects(prev => {
+      const maxZ = Math.max(...prev.map(o => o.zIndex), 0);
+      return prev.map(o => o.id === id ? { ...o, zIndex: maxZ + 1 } : o);
+    });
+  }, []);
 
+  const handleSendToBack = useCallback((id: string) => {
+    setObjects(prev => {
+      const minZ = Math.min(...prev.map(o => o.zIndex), 0);
+      return prev.map(o => o.id === id ? { ...o, zIndex: minZ - 1 } : o);
+    });
+  }, []);
+
+  // ── Save ──
   const handleSave = useCallback(async () => {
-    if (!content.trim() && photos.length === 0 && placedStickers.length === 0) {
+    const hasPhotos = objects.some(o => o.type === 'photo');
+    if (!content.trim() && objects.length === 0) {
       Alert.alert('알림', '텍스트, 사진, 또는 스티커를 추가해주세요.');
       return;
     }
@@ -212,52 +303,50 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       const today = new Date();
       const diaryDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-      // 1. 일기 텍스트 저장
+      // 1. Save diary text
       const diary = await diaryApiV3.createV3({
         title: title.trim() || '무제',
         content: content.trim(),
         diaryDate,
-        diaryType: photos.length > 0 ? 'MIXED' : 'TEXT',
+        diaryType: hasPhotos ? 'MIXED' : 'TEXT',
         primaryEmotion: currentEmotion,
         secondaryEmotions: secondaryTags || [],
         emotionScore: 3,
         theme: selectedTheme !== 'default' ? selectedTheme : undefined,
       });
 
-      // 2. 사진 업로드 (순차적)
-      for (const photo of photos) {
-        try {
-          await diaryPhotoApi.upload(diary.id, photo.uri);
-        } catch (uploadErr: any) {
-          console.warn('[DiaryCanvas] Photo upload failed:', uploadErr?.message || uploadErr);
+      // 2. Upload photos sequentially
+      const photoObjects = objects.filter(o => o.type === 'photo');
+      for (const photo of photoObjects) {
+        if (photo.photoUri) {
+          try {
+            await diaryPhotoApi.upload(diary.id, photo.photoUri);
+          } catch (uploadErr: any) {
+            console.warn('[DiaryCanvas] Photo upload failed:', uploadErr?.message);
+          }
         }
       }
 
-      // 3. 스티커 배치 저장
-      if (placedStickers.length > 0) {
-        const canvasW = canvasLayout.width || SCREEN_W - 48;
-        const canvasH = canvasLayout.height || 400;
-
-        const DEFAULT_STICKER_SIZE = 60;
-        // 너비 기준으로만 정규화 (X, Y 모두) — 높이는 콘텐츠에 따라 변하므로
-        const decorations = placedStickers.map((sticker, idx) => ({
-          assetType: sticker.code,
-          positionX: canvasW > 0 ? sticker.x / canvasW : 0,
-          positionY: canvasW > 0 ? sticker.y / canvasW : 0,
-          scale: sticker.size / DEFAULT_STICKER_SIZE,
-          rotation: 0,
-          zIndex: idx,
+      // 3. Save all object positions (photos + stickers) as decorations
+      if (objects.length > 0) {
+        const canvasW = canvasSize.width || SCREEN_W - 48;
+        const decorations = objects.map((obj, idx) => ({
+          assetType: (obj.type === 'sticker' ? obj.stickerCode : `photo_${idx}`) || '',
+          positionX: canvasW > 0 ? obj.x / canvasW : 0,
+          positionY: canvasW > 0 ? obj.y / canvasW : 0,
+          scale: obj.width / (obj.type === 'sticker' ? 60 : 200),
+          rotation: obj.rotation,
+          zIndex: obj.zIndex,
         }));
 
         try {
           await diaryDecorationApi.save(diary.id, decorations);
         } catch (decoErr: any) {
-          console.warn('[DiaryCanvas] Decoration save failed:', decoErr?.message || decoErr);
+          console.warn('[DiaryCanvas] Decoration save failed:', decoErr?.message);
         }
       }
 
       refreshSubscription();
-      // replace editor with detail — back from detail goes to list
       navigation.replace('DiaryDetail', { diaryId: diary.id });
     } catch (error: any) {
       if (error instanceof ApiError && error.status === 429) {
@@ -268,14 +357,19 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [content, title, photos, placedStickers, currentEmotion, secondaryTags, selectedTheme, canvasLayout, navigation, refreshSubscription]);
+  }, [content, title, objects, currentEmotion, secondaryTags, selectedTheme, canvasSize, navigation]);
 
-  const themeConfig = DIARY_THEMES.find(t => t.key === selectedTheme) || DIARY_THEMES[0];
+  const { refresh: refreshSubscription } = useSubscription();
+
+  // ── Theme colors ──
   const themeColors: Record<string, string> = { night: '#1A1A2E', warm: '#FFF8F0', nature: '#F0F7F0', note: '#FFFDF5', grid: '#F8FBF8' };
   const bgColor = themeColors[selectedTheme] || theme.colors.background;
   const textColor = selectedTheme === 'night' ? '#EDEDF0' : theme.colors.textPrimary;
   const subtleColor = selectedTheme === 'night' ? '#686880' : theme.colors.textDisabled;
   const borderColor = selectedTheme === 'night' ? '#2A2A3A' : theme.colors.borderSubtle;
+
+  const canHaveSomething = content.trim() || objects.length > 0;
+  const canvasH = Math.max(canvasSize.height, 400);
 
   return (
     <View style={[s.root, { backgroundColor: bgColor, paddingTop: insets.top }]}>
@@ -287,9 +381,9 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         <Text style={[s.headerDate, { color: selectedTheme === 'night' ? '#9898AC' : theme.colors.textTertiary }]}>
           {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
         </Text>
-        <TouchableOpacity onPress={handleSave} disabled={saving || (!content.trim() && photos.length === 0 && placedStickers.length === 0)} style={s.headerBtn}>
+        <TouchableOpacity onPress={handleSave} disabled={saving || !canHaveSomething} style={s.headerBtn}>
           <Text style={[s.headerBtnText, {
-            color: (content.trim() || photos.length > 0 || placedStickers.length > 0) ? theme.colors.primary : theme.colors.textDisabled,
+            color: canHaveSomething ? theme.colors.primary : theme.colors.textDisabled,
           }]}>
             {saving ? '저장 중...' : '저장'}
           </Text>
@@ -307,145 +401,98 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Canvas Area */}
+          {/* Emotion Banner */}
+          <Animated.View style={{
+            opacity: contentAnim,
+            transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
+            paddingHorizontal: theme.layout.screenPaddingH,
+          }}>
+            <TouchableOpacity
+              onPress={() => setShowEmotionPicker(true)}
+              style={[
+                s.moodBanner,
+                {
+                  backgroundColor: currentEmotion
+                    ? EMOTION_COLORS[currentEmotion] + '15'
+                    : theme.colors.surfaceSecondary,
+                },
+              ]}
+              activeOpacity={0.7}
+            >
+              {currentEmotion ? (
+                <>
+                  <EmotionStickerView emotionKey={currentEmotion} size="small" />
+                  <Text style={[s.moodLabel, { color: EMOTION_COLORS[currentEmotion] }]}>
+                    {EMOTION_LABELS[currentEmotion]}
+                  </Text>
+                  {secondaryTags && secondaryTags.length > 0 && (
+                    <Text style={[s.moodTags, { color: EMOTION_COLORS[currentEmotion] + 'AA' }]}>
+                      {secondaryTags.join(' · ')}
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <Text style={[s.moodLabel, { color: theme.colors.textTertiary }]}>
+                  오늘 기분을 선택해주세요
+                </Text>
+              )}
+              <Text style={[s.moodChangeHint, { color: theme.colors.textDisabled }]}>
+                {currentEmotion ? '변경' : '선택'}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* ═══ Canvas Container ═══ */}
           <TouchableOpacity
             activeOpacity={1}
-            onPress={() => setSelectedStickerId(null)}
-            style={[s.canvas, { backgroundColor: bgColor }]}
-            onLayout={(e) => {
-              const { width, height } = e.nativeEvent.layout;
-              setCanvasLayout({ width, height });
-            }}
+            onPress={() => setSelectedObjectId(null)}
+            style={[s.canvasContainer, { backgroundColor: bgColor }]}
+            onLayout={handleCanvasLayout}
           >
-            <Animated.View style={{
-              opacity: contentAnim,
-              transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
-            }}>
-              {/* Emotion Banner — tap to change */}
-              <TouchableOpacity
-                onPress={() => setShowEmotionPicker(true)}
-                style={[
-                  s.moodBanner,
-                  {
-                    backgroundColor: currentEmotion
-                      ? EMOTION_COLORS[currentEmotion] + '15'
-                      : theme.colors.surfaceSecondary,
-                  },
-                ]}
-                activeOpacity={0.7}
-              >
-                {currentEmotion ? (
-                  <>
-                    <EmotionStickerView emotionKey={currentEmotion} size="small" />
-                    <Text style={[s.moodLabel, { color: EMOTION_COLORS[currentEmotion] }]}>
-                      {EMOTION_LABELS[currentEmotion]}
-                    </Text>
-                    {secondaryTags && secondaryTags.length > 0 && (
-                      <Text style={[s.moodTags, { color: EMOTION_COLORS[currentEmotion] + 'AA' }]}>
-                        {secondaryTags.join(' · ')}
-                      </Text>
-                    )}
-                  </>
-                ) : (
-                  <Text style={[s.moodLabel, { color: theme.colors.textTertiary }]}>
-                    오늘 기분을 선택해주세요
-                  </Text>
-                )}
-                <Text style={[s.moodChangeHint, { color: theme.colors.textDisabled }]}>
-                  {currentEmotion ? '변경' : '선택'}
-                </Text>
-              </TouchableOpacity>
+            {/* Background Layer */}
+            <NotebookBackground theme={selectedTheme} height={canvasH} />
 
-              {/* Photo Zone */}
-              {photos.length > 0 && (
-                <View style={s.photoSection}>
-                  {photos.map((photo, i) => (
-                    <View key={i} style={s.photoWrapper}>
-                      <Image
-                        source={{ uri: photo.uri }}
-                        style={s.photoImage}
-                        resizeMode="cover"
-                      />
-                      <TouchableOpacity style={s.photoRemove} onPress={() => handleRemovePhoto(i)}>
-                        <Text style={s.photoRemoveText}>×</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
+            {/* Title */}
+            <TextInput
+              style={[s.titleInput, { color: textColor }]}
+              placeholder="제목 (선택)"
+              placeholderTextColor={subtleColor}
+              value={title}
+              onChangeText={setTitle}
+              maxLength={100}
+            />
 
-              {/* Title */}
-              <TextInput
-                style={[s.titleInput, { color: textColor }]}
-                placeholder="제목 (선택)"
-                placeholderTextColor={subtleColor}
-                value={title}
-                onChangeText={setTitle}
-                maxLength={100}
+            {/* Divider */}
+            <View style={[s.divider, { backgroundColor: borderColor }]} />
+
+            {/* Text Layer */}
+            <TextInput
+              ref={textInputRef}
+              style={[s.contentInput, { color: textColor }]}
+              placeholder="오늘 어떤 하루였나요?"
+              placeholderTextColor={subtleColor}
+              value={content}
+              onChangeText={setContent}
+              multiline
+              scrollEnabled={false}
+              autoFocus={!isEditMode}
+            />
+
+            {/* Object Layer — photos + stickers (absolute positioned) */}
+            {objects.map(obj => (
+              <CanvasObject
+                key={obj.id}
+                data={obj}
+                editable
+                selected={selectedObjectId === obj.id}
+                onSelect={setSelectedObjectId}
+                onMove={handleMove}
+                onResize={handleResize}
+                onDelete={handleDelete}
+                onBringToFront={handleBringToFront}
+                onSendToBack={handleSendToBack}
               />
-
-              {/* Divider */}
-              <View style={[s.divider, { backgroundColor: borderColor }]} />
-
-              {/* Content with lined background */}
-              <View style={s.contentArea}>
-                {(selectedTheme === 'note' || selectedTheme === 'warm') && (
-                  <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                    {Array.from({ length: 40 }).map((_, i) => (
-                      <View key={i} style={{ height: 28, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: selectedTheme === 'note' ? '#E8E0D0' : '#F0E8E0' }} />
-                    ))}
-                  </View>
-                )}
-                {(selectedTheme === 'grid' || selectedTheme === 'nature') && (
-                  <View style={[StyleSheet.absoluteFill, { flexDirection: 'column' }]} pointerEvents="none">
-                    {Array.from({ length: 40 }).map((_, row) => (
-                      <View key={row} style={{ flexDirection: 'row', height: 28 }}>
-                        {Array.from({ length: 12 }).map((_, col) => (
-                          <View key={col} style={{ flex: 1, borderWidth: StyleSheet.hairlineWidth, borderColor: selectedTheme === 'grid' ? '#D0D8D0' : '#D8E8D8' }} />
-                        ))}
-                      </View>
-                    ))}
-                  </View>
-                )}
-                <TextInput
-                  ref={textInputRef}
-                  style={[s.contentInput, { color: textColor }]}
-                  placeholder="오늘 어떤 하루였나요?"
-                  placeholderTextColor={subtleColor}
-                  value={content}
-                  onChangeText={setContent}
-                  multiline
-                  scrollEnabled={false}
-                  autoFocus={!isEditMode}
-                />
-              </View>
-
-            {/* Sticker Canvas — separate zone below text for free placement */}
-            {placedStickers.length > 0 && (
-              <View style={s.stickerCanvas}>
-                <Text style={[s.stickerCanvasLabel, { color: theme.colors.textDisabled }]}>
-                  스티커 영역 — 자유롭게 배치하세요
-                </Text>
-                {placedStickers.map((sticker) => (
-                  <DraggableSticker
-                    key={sticker.id}
-                    id={sticker.id}
-                    stickerCode={sticker.code}
-                    stickerSource={sticker.source}
-                    initialX={sticker.x}
-                    initialY={sticker.y}
-                    size={sticker.size}
-                    onPositionChange={handleStickerPositionChange}
-                    onDelete={handleStickerDelete}
-                    onSizeChange={handleStickerResize}
-                    selected={sticker.id === selectedStickerId}
-                    onSelect={setSelectedStickerId}
-                    editable
-                  />
-                ))}
-              </View>
-            )}
-            </Animated.View>
+            ))}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -456,7 +503,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         borderTopColor: borderColor,
         paddingBottom: insets.bottom + 8,
       }]}>
-        <TouchableOpacity style={s.toolBtn} onPress={handlePickPhoto}>
+        <TouchableOpacity style={s.toolBtn} onPress={handleAddPhoto}>
           <View style={s.toolIconView}>
             <View style={{ width: 18, height: 14, borderRadius: 3, borderWidth: 1.5, borderColor: theme.colors.textTertiary, alignItems: 'center', justifyContent: 'flex-end' }}>
               <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: theme.colors.textTertiary, position: 'absolute', top: 1.5, right: 2.5 }} />
@@ -571,27 +618,11 @@ function makeStyles(t: Theme) {
     headerBtnText: { ...t.typography.bodyLarge, fontWeight: '500' },
     headerDate: { ...t.typography.labelMedium },
 
-    // Canvas
-    canvas: {
+    // Canvas container — the single unified canvas area
+    canvasContainer: {
       minHeight: 400,
       paddingHorizontal: t.layout.screenPaddingH,
       position: 'relative',
-    },
-    stickerCanvas: {
-      minHeight: 200,
-      marginTop: t.spacing.xl,
-      position: 'relative',
-      borderWidth: 1,
-      borderColor: t.colors.borderSubtle,
-      borderStyle: 'dashed',
-      borderRadius: t.borderRadius.lg,
-      padding: t.spacing.md,
-      overflow: 'visible' as const,
-    },
-    stickerCanvasLabel: {
-      fontSize: 11,
-      textAlign: 'center',
-      marginBottom: t.spacing.sm,
     },
 
     // MoodBanner
@@ -605,32 +636,16 @@ function makeStyles(t: Theme) {
     moodTags: { fontSize: 12, marginLeft: 4, flex: 1 },
     moodChangeHint: { fontSize: 12, marginLeft: 'auto' },
 
-    // Photos
-    photoSection: { marginTop: t.spacing.xl, gap: t.spacing.md },
-    photoWrapper: { position: 'relative' },
-    photoImage: { width: '100%', height: 200, borderRadius: 12 },
-    photoRemove: {
-      position: 'absolute', top: 8, right: 8,
-      width: 28, height: 28, borderRadius: 14,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      alignItems: 'center', justifyContent: 'center',
-    },
-    photoRemoveText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
-
     // Inputs
     titleInput: {
       ...t.typography.headlineMedium, marginTop: t.spacing.xl,
       paddingVertical: t.spacing.sm,
     },
     divider: { height: 1, width: '100%', marginVertical: t.spacing.sm },
-    contentArea: {
-      position: 'relative',
-      minHeight: 280,
-    },
     contentInput: {
       ...t.typography.bodyLarge, minHeight: 280,
       textAlignVertical: 'top',
-      paddingTop: 0, // 줄 패턴 첫 번째 줄에 정확히 맞춤
+      paddingTop: 0,
       lineHeight: 28,
       fontSize: 15,
     },

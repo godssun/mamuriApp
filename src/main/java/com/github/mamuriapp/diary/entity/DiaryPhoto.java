@@ -48,6 +48,21 @@ public class DiaryPhoto {
     @Column(name = "display_order", nullable = false)
     private int displayOrder;
 
+    @Column(name = "position_x")
+    private Double positionX;
+
+    @Column(name = "position_y")
+    private Double positionY;
+
+    @Column(name = "display_width")
+    private Integer displayWidth;
+
+    @Column(name = "display_height")
+    private Integer displayHeight;
+
+    @Column(name = "z_index")
+    private Integer zIndex = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -63,5 +78,15 @@ public class DiaryPhoto {
         this.contentType = contentType;
         this.fileSize = fileSize;
         this.displayOrder = displayOrder;
+    }
+
+    public void updatePosition(Double positionX, Double positionY,
+                               Integer displayWidth, Integer displayHeight,
+                               Integer zIndex) {
+        this.positionX = positionX;
+        this.positionY = positionY;
+        this.displayWidth = displayWidth;
+        this.displayHeight = displayHeight;
+        this.zIndex = zIndex;
     }
 }

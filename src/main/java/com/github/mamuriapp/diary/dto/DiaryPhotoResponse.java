@@ -21,6 +21,11 @@ public class DiaryPhotoResponse {
     private String originalFilename;
     private long fileSize;
     private int displayOrder;
+    private Double positionX;
+    private Double positionY;
+    private Integer displayWidth;
+    private Integer displayHeight;
+    private Integer zIndex;
     private LocalDateTime createdAt;
 
     public static DiaryPhotoResponse from(DiaryPhoto photo, String publicUrl) {
@@ -31,6 +36,11 @@ public class DiaryPhotoResponse {
                 .originalFilename(photo.getOriginalFilename())
                 .fileSize(photo.getFileSize())
                 .displayOrder(photo.getDisplayOrder())
+                .positionX(photo.getPositionX())
+                .positionY(photo.getPositionY())
+                .displayWidth(photo.getDisplayWidth())
+                .displayHeight(photo.getDisplayHeight())
+                .zIndex(photo.getZIndex())
                 .createdAt(photo.getCreatedAt())
                 .build();
     }

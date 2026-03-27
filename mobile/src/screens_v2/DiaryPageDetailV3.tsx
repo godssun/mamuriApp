@@ -1,12 +1,9 @@
 /**
- * DiaryPageDetail V3 — Immersive diary detail with emotion + photos
+ * DiaryPageDetail V3 — Immersive diary detail with canvas rendering
  *
  * - Emotion sticker header
- * - Photo display (full-width, rounded)
- * - Theme background
- * - Deco sticker overlay (read-only)
- * - AI comment bubble (ChatBubble reuse)
- * - Conversation area (existing logic)
+ * - 2-layer canvas: background pattern + text + objects (CanvasObject read-only)
+ * - AI conversation area
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -26,10 +23,10 @@ import { ChatBubble } from './components/ChatBubble';
 import { ReportModal } from './components/ReportModal';
 import { EMOTION_COLORS, EMOTION_LABELS } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
-import { DraggableSticker } from './components/DraggableSticker';
+import { CanvasObject } from './components/CanvasObject';
+import type { CanvasObjectData } from './components/CanvasObject';
 import { getStickerSource } from '../constants/stickerSources';
 
-// Photo URL resolver: handles relative paths and localhost URLs
 const DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 const SERVER_ORIGIN = __DEV__ ? `http://${DEV_HOST}:8080` : 'https://api.mamuri.app';
 
@@ -40,6 +37,35 @@ function resolvePhotoUrl(photo: { cdnUrl?: string; url?: string }): string {
 }
 
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'DiaryDetail'>;
+
+/* ── Notebook Background (read-only) ── */
+function NotebookBackground({ theme, height }: { theme: string; height: number }) {
+  if (theme === 'note' || theme === 'warm') {
+    const lineCount = Math.ceil(height / 28);
+    return (
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        {Array.from({ length: lineCount }).map((_, i) => (
+          <View key={i} style={{ height: 28, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme === 'note' ? '#E8E0D0' : '#F0E8E0' }} />
+        ))}
+      </View>
+    );
+  }
+  if (theme === 'grid' || theme === 'nature') {
+    const rowCount = Math.ceil(height / 28);
+    return (
+      <View style={[StyleSheet.absoluteFill, { flexDirection: 'column' }]} pointerEvents="none">
+        {Array.from({ length: rowCount }).map((_, row) => (
+          <View key={row} style={{ flexDirection: 'row', height: 28 }}>
+            {Array.from({ length: 12 }).map((_, col) => (
+              <View key={col} style={{ flex: 1, borderWidth: StyleSheet.hairlineWidth, borderColor: theme === 'grid' ? '#D0D8D0' : '#D8E8D8' }} />
+            ))}
+          </View>
+        ))}
+      </View>
+    );
+  }
+  return null;
+}
 
 export default function DiaryPageDetailV3({ navigation, route }: Props) {
   const { diaryId } = route.params;
@@ -54,7 +80,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
   const [inputText, setInputText] = useState('');
   const [isAITyping, setIsAITyping] = useState(false);
   const [reportMessageId, setReportMessageId] = useState<number | null>(null);
-  const [decoCanvasHeight, setDecoCanvasHeight] = useState(0);
+  const [canvasHeight, setCanvasHeight] = useState(400);
 
   const contentAnim = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef<ScrollView>(null);
@@ -152,7 +178,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
 
   if (!diary) return null;
 
-  // 백엔드 응답 구조에 따라 여러 경로로 감정 코드 추출 (fallback chain)
+  // Extract emotion (fallback chain)
   const emotionCode = (
     diary.emotion?.primarySticker?.category?.code
     || diary.emotion?.primarySticker?.code?.replace(/_default$/, '')?.toUpperCase()
@@ -160,10 +186,55 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
     || (diary as any).emotion?.primaryEmotion
   ) as EmotionKey | undefined;
   const emotionColor = emotionCode ? EMOTION_COLORS[emotionCode] : null;
-  const diaryTheme = diary.theme;
+  const diaryTheme = diary.theme || 'note';
   const themeColors: Record<string, string> = { night: '#1A1A2E', warm: '#FFF8F0', nature: '#F0F7F0', note: '#FFFDF5', grid: '#F8FBF8' };
-  const bgColor = themeColors[diaryTheme || ''] || theme.colors.background;
+  const bgColor = themeColors[diaryTheme] || theme.colors.background;
   const txtColor = diaryTheme === 'night' ? '#EDEDF0' : theme.colors.textPrimary;
+  const canvasW = Dimensions.get('window').width - (theme.layout.screenPaddingH * 2);
+
+  // Convert photos + decorations to CanvasObjectData[]
+  const canvasObjects: CanvasObjectData[] = [
+    // Photos
+    ...(diary.photos || []).map((p, i) => {
+      const photoW = Math.min(canvasW * 0.9, 300);
+      const photoH = photoW * 0.75;
+      return {
+        id: `photo_${p.id}`,
+        type: 'photo' as const,
+        x: (canvasW - photoW) / 2,
+        y: 20 + i * (photoH + 16),
+        width: photoW,
+        height: photoH,
+        rotation: 0,
+        zIndex: i,
+        photoUri: resolvePhotoUrl(p),
+      };
+    }),
+    // Sticker decorations
+    ...(diary.decorations || [])
+      .filter(deco => {
+        const code = deco.assetCode || deco.assetType || '';
+        return !code.startsWith('photo_');
+      })
+      .map(deco => {
+        const code = deco.assetCode || deco.assetType || '';
+        const stickerSize = Math.round(60 * (deco.scale || 1));
+        return {
+          id: `deco_${deco.id}`,
+          type: 'sticker' as const,
+          x: (deco.positionX || 0) * canvasW,
+          y: (deco.positionY || 0) * canvasW,
+          width: stickerSize,
+          height: stickerSize,
+          rotation: deco.rotation || 0,
+          zIndex: deco.zIndex || 0,
+          stickerCode: code,
+          stickerSource: getStickerSource(code) || undefined,
+        };
+      }),
+  ];
+
+  const noop = () => {};
 
   return (
     <View style={[s.root, { backgroundColor: bgColor, paddingTop: insets.top }]}>
@@ -186,17 +257,21 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ═══ Diary Page — stickers overlay the entire content area ═══ */}
+        {/* ═══ Diary Page ═══ */}
         <View
           style={[s.diaryPage, {
             backgroundColor: bgColor,
             paddingHorizontal: theme.layout.screenPaddingH,
           }]}
-          onLayout={(e) => setDecoCanvasHeight(e.nativeEvent.layout.height)}
+          onLayout={(e) => setCanvasHeight(e.nativeEvent.layout.height)}
         >
-          <Animated.View style={[
-            { opacity: contentAnim, transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] },
-          ]}>
+          {/* Background pattern */}
+          <NotebookBackground theme={diaryTheme} height={canvasHeight} />
+
+          <Animated.View style={{
+            opacity: contentAnim,
+            transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+          }}>
             {/* Emotion Header */}
             {emotionCode && (
               <View style={[s.emotionHeader, { backgroundColor: (emotionColor || theme.colors.primary) + '15' }]}>
@@ -214,20 +289,6 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
               </View>
             )}
 
-            {/* Photos */}
-            {diary.photos && diary.photos.length > 0 && (
-              <View style={s.photoSection}>
-                {diary.photos.map((photo) => (
-                  <Image
-                    key={photo.id}
-                    source={{ uri: resolvePhotoUrl(photo) }}
-                    style={s.detailPhoto}
-                    resizeMode="cover"
-                  />
-                ))}
-              </View>
-            )}
-
             {/* Title */}
             <Text style={[s.title, { color: txtColor }]}>{diary.title}</Text>
 
@@ -236,52 +297,25 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
               {formatTime(diary.createdAt)}
             </Text>
 
-            {/* Content with lined background */}
+            {/* Content text */}
             <View style={s.contentArea}>
-              {(diaryTheme === 'note' || diaryTheme === 'warm') && (
-                <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                  {Array.from({ length: 40 }).map((_, i) => (
-                    <View key={i} style={{ height: 28, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: diaryTheme === 'note' ? '#E8E0D0' : '#F0E8E0' }} />
-                  ))}
-                </View>
-              )}
-              {(diaryTheme === 'grid' || diaryTheme === 'nature') && (
-                <View style={[StyleSheet.absoluteFill, { flexDirection: 'column' }]} pointerEvents="none">
-                  {Array.from({ length: 40 }).map((_, row) => (
-                    <View key={row} style={{ flexDirection: 'row', height: 28 }}>
-                      {Array.from({ length: 12 }).map((_, col) => (
-                        <View key={col} style={{ flex: 1, borderWidth: StyleSheet.hairlineWidth, borderColor: diaryTheme === 'grid' ? '#D0D8D0' : '#D8E8D8' }} />
-                      ))}
-                    </View>
-                  ))}
-                </View>
-              )}
               <Text style={[s.content, { color: txtColor }]}>{diary.content}</Text>
             </View>
           </Animated.View>
 
-          {/* Sticker overlays — positioned over the entire diary page */}
-          {diary.decorations && diary.decorations.length > 0 && (
-            diary.decorations.map((deco) => {
-              const code = deco.assetCode || deco.assetType || '';
-              const source = getStickerSource(code);
-              if (!source) return null;
-              const canvasW = Dimensions.get('window').width - (theme.layout.screenPaddingH * 2);
-              return (
-                <DraggableSticker
-                  key={deco.id}
-                  id={String(deco.id)}
-                  stickerCode={code}
-                  stickerSource={source}
-                  initialX={deco.positionX * canvasW}
-                  initialY={deco.positionY * canvasW}
-                  size={Math.round(60 * (deco.scale || 1))}
-                  editable={false}
-                  onPositionChange={() => {}}
-                />
-              );
-            })
-          )}
+          {/* Canvas objects — photos + stickers overlay */}
+          {canvasObjects.map(obj => (
+            <CanvasObject
+              key={obj.id}
+              data={obj}
+              editable={false}
+              selected={false}
+              onSelect={noop}
+              onMove={noop}
+              onResize={noop}
+              onDelete={noop}
+            />
+          ))}
         </View>
 
         {/* Conversation */}
@@ -371,6 +405,14 @@ function makeStyles(t: Theme) {
 
     loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
+    // Diary page — canvas container
+    diaryPage: {
+      position: 'relative',
+      minHeight: 300,
+      overflow: 'visible',
+      paddingVertical: t.spacing.xl,
+    },
+
     // Emotion header
     emotionHeader: {
       flexDirection: 'row', alignItems: 'center',
@@ -380,27 +422,11 @@ function makeStyles(t: Theme) {
     emotionLabel: { fontSize: 16, fontWeight: '700' },
     emotionTags: { fontSize: 12, marginTop: 2 },
 
-    // Photos
-    photoSection: { marginTop: t.spacing.xl, gap: t.spacing.md },
-    detailPhoto: { width: '100%', height: 240, borderRadius: 16 },
-
     // Content
     title: { ...t.typography.headlineLarge, marginTop: t.spacing.xl },
     meta: { ...t.typography.caption, marginTop: t.spacing.sm },
     contentArea: { position: 'relative', marginTop: t.spacing.xl, minHeight: 100 },
     content: { ...t.typography.bodyLarge, lineHeight: 28, fontSize: 15, paddingTop: 0 },
-
-    // Deco
-    // Diary page container — stickers overlay the whole area
-    diaryPage: {
-      position: 'relative',
-      minHeight: 300,
-      overflow: 'visible',
-      paddingVertical: t.spacing.xl,
-    },
-
-    decoOverlay: { position: 'absolute', bottom: 0, right: 0, opacity: 0.08 },
-    decoEmoji: { fontSize: 60 },
 
     // Conversation
     conversationSection: { marginTop: t.spacing['3xl'] },
