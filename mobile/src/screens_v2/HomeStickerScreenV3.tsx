@@ -114,7 +114,9 @@ export default function HomeStickerScreenV3() {
               onPress={() => handleStickerTap(key)}
               activeOpacity={0.6}
             >
-              <Image source={EMOTION_STICKER_IMAGES[key]} style={s.stickerImage} />
+              <View style={[s.stickerImageWrap, { backgroundColor: EMOTION_COLORS[key] + '20' }]}>
+                <Image source={EMOTION_STICKER_IMAGES[key]} style={s.stickerImage} />
+              </View>
               <Text style={[s.stickerLabel, { color: EMOTION_COLORS[key] }]}>
                 {EMOTION_LABELS[key]}
               </Text>
@@ -126,7 +128,9 @@ export default function HomeStickerScreenV3() {
             onPress={() => nav.navigate('EmotionPicker', {})}
             activeOpacity={0.6}
           >
-            <Text style={s.stickerIcon}>🤷</Text>
+            <View style={[s.stickerImageWrap, { backgroundColor: theme.colors.border + '40' }]}>
+              <Text style={{ fontSize: 28, fontWeight: '300', color: theme.colors.textTertiary }}>?</Text>
+            </View>
             <Text style={[s.stickerLabel, { color: theme.colors.textTertiary }]}>모르겠어요</Text>
           </TouchableOpacity>
         </View>
@@ -138,10 +142,14 @@ export default function HomeStickerScreenV3() {
             {weekStrip.map((entry, i) => (
               <View key={i} style={s.weekCol}>
                 {entry.emotion ? (
-                  <Image
-                    source={EMOTION_STICKER_IMAGES[entry.emotion as EmotionKey]}
-                    style={{ width: 24, height: 24, resizeMode: 'contain' }}
-                  />
+                  <View style={{ width: 28, height: 28, borderRadius: 14, overflow: 'hidden',
+                    backgroundColor: EMOTION_COLORS[entry.emotion as EmotionKey] + '20',
+                    alignItems: 'center', justifyContent: 'center' }}>
+                    <Image
+                      source={EMOTION_STICKER_IMAGES[entry.emotion as EmotionKey]}
+                      style={{ width: 26, height: 26, resizeMode: 'contain' }}
+                    />
+                  </View>
                 ) : (
                   <View style={[
                     s.weekDot,
@@ -274,7 +282,12 @@ function makeStyles(t: Theme) {
       gap: 6,
     },
     stickerIcon: { fontSize: 32 },
-    stickerImage: { width: 48, height: 48, resizeMode: 'contain' as const },
+    stickerImageWrap: {
+      width: 56, height: 56, borderRadius: 28,
+      alignItems: 'center' as const, justifyContent: 'center' as const,
+      overflow: 'hidden' as const,
+    },
+    stickerImage: { width: 52, height: 52, resizeMode: 'contain' as const },
     stickerLabel: { fontSize: 12, fontWeight: '600', letterSpacing: -0.2 },
 
     // Section

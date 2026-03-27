@@ -108,7 +108,9 @@ export default function EmotionPickerScreenV3() {
                   onPress={() => handleSelectPrimary(key)}
                   activeOpacity={0.7}
                 >
-                  <Image source={EMOTION_STICKER_IMAGES[key]} style={s.emotionImage} />
+                  <View style={[s.emotionImageWrap, { backgroundColor: EMOTION_COLORS[key] + '25' }]}>
+                    <Image source={EMOTION_STICKER_IMAGES[key]} style={s.emotionImage} />
+                  </View>
                   <Text style={[s.emotionName, { color: EMOTION_COLORS[key] }]}>
                     {EMOTION_LABELS[key]}
                   </Text>
@@ -120,7 +122,9 @@ export default function EmotionPickerScreenV3() {
                 onPress={() => handleSelectPrimary('COMPLEX')}
                 activeOpacity={0.7}
               >
-                <Text style={s.emotionIcon}>🤷</Text>
+                <View style={[s.emotionImageWrap, { backgroundColor: theme.colors.border + '30' }]}>
+                  <Text style={{ fontSize: 32, fontWeight: '300', color: theme.colors.textTertiary }}>?</Text>
+                </View>
                 <Text style={[s.emotionName, { color: theme.colors.textTertiary }]}>
                   모르겠어요
                 </Text>
@@ -224,7 +228,12 @@ function makeStyles(t: Theme) {
       gap: t.spacing.sm,
     },
     emotionIcon: { fontSize: 40 },
-    emotionImage: { width: 56, height: 56, resizeMode: 'contain' as const },
+    emotionImageWrap: {
+      width: 64, height: 64, borderRadius: 32,
+      alignItems: 'center' as const, justifyContent: 'center' as const,
+      overflow: 'hidden' as const,
+    },
+    emotionImage: { width: 60, height: 60, resizeMode: 'contain' as const },
     emotionName: { fontSize: 15, fontWeight: '700', letterSpacing: -0.3 },
 
     // Step 2: Selected header
