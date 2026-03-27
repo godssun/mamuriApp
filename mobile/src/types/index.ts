@@ -209,6 +209,8 @@ export type MainStackParamList = {
   DiaryArchive: undefined;
   DiaryDetailFromArchive: { diaryId: number };
   ReportDetail: { reportId: number };
+  EmotionCalendar: undefined;
+  EmotionPicker: { preselectedEmotion?: EmotionKey; returnTo?: string };
 };
 
 export type MainTabParamList = {
