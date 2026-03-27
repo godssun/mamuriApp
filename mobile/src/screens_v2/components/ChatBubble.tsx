@@ -97,7 +97,7 @@ export function ChatBubble({
             marginBottom: theme.spacing.xs,
           },
         ]}>
-          <Text style={styles.avatarEmoji}>🌱</Text>
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#6356D9' }} />
         </View>
       )}
 

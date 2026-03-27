@@ -23,7 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useThemeV2 } from '../design-system-v2';
-import { diaryApi, ApiError } from '../api/client';
+import { diaryApi, emotionApi, ApiError } from '../api/client';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { DiaryStackParamList } from '../types';
 
@@ -47,11 +47,12 @@ export function DiaryWriteScreenV2({ navigation, route }: Props) {
   const { refresh: refreshSubscription } = useSubscription();
 
   const editDiaryId = route.params?.editDiaryId;
+  const preselectedEmotion = (route.params as any)?.preselectedEmotion;
   const isEditMode = !!editDiaryId;
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [selectedMood, setSelectedMood] = useState<string | null>(preselectedEmotion || null);
   const [saving, setSaving] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(isEditMode);
 
@@ -124,7 +125,8 @@ export function DiaryWriteScreenV2({ navigation, route }: Props) {
           title: title.trim() || t('diary.untitled'),
           content: content.trim(),
           diaryDate,
-        });
+          ...(selectedMood ? { primaryEmotion: selectedMood, emotionScore: 3 } : {}),
+        } as any);
         // 쿼터 갱신
         refreshSubscription();
         // 저장 후 DiaryDetail로 이동 (replace로 WriteDiary를 스택에서 제거)

@@ -12,7 +12,9 @@ import com.github.mamuriapp.ai.repository.AiCommentRepository;
 import com.github.mamuriapp.ai.repository.AiUsageLogRepository;
 import com.github.mamuriapp.diary.entity.ConversationMessage;
 import com.github.mamuriapp.diary.entity.Diary;
+import com.github.mamuriapp.diary.entity.DiaryEmotion;
 import com.github.mamuriapp.diary.repository.ConversationMessageRepository;
+import com.github.mamuriapp.diary.repository.DiaryEmotionRepository;
 import com.github.mamuriapp.global.config.FeatureFlags;
 import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
@@ -58,6 +60,7 @@ public class AiCommentService {
     private final LlmProvider llmProvider;
     private final AiProperties aiProperties;
     private final PromptBuilder promptBuilder;
+    private final DiaryEmotionRepository diaryEmotionRepository;
     private final FeatureFlags featureFlags;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -111,6 +114,11 @@ public class AiCommentService {
                 String[] parsed = parseAiResponse(response.content(), diary.getId());
                 comment = parsed[0];
                 followupQuestion = parsed[1];
+
+                // AI 감정 감지 결과 저장 (parsed[2])
+                if (parsed.length > 2 && parsed[2] != null) {
+                    saveAiDetectedEmotion(diary, parsed[2]);
+                }
 
                 // AI 사용량 로깅
                 logAiUsage(user, diary, response);
@@ -275,15 +283,27 @@ public class AiCommentService {
             String followup = jsonNode.has("followupQuestion")
                     ? jsonNode.get("followupQuestion").asText()
                     : getRandomFallbackQuestion();
+            String detectedEmotion = jsonNode.has("detectedEmotion")
+                    ? jsonNode.get("detectedEmotion").asText()
+                    : null;
             // 코멘트에 후속 질문이 포함되어 있지 않으면 마지막 문장으로 합친다
             String content = comment.contains(followup)
                     ? comment
                     : comment + " " + followup;
-            return new String[]{content, followup};
+            return new String[]{content, followup, detectedEmotion};
         } catch (Exception e) {
             log.warn("[AI] JSON 파싱 실패, fallback 사용 (diaryId={}): {}", diaryId, e.getMessage());
             String fallback = getRandomFallbackQuestion();
-            return new String[]{responseContent + " " + fallback, fallback};
+            return new String[]{responseContent + " " + fallback, fallback, null};
+        }
+    }
+
+    private void saveAiDetectedEmotion(Diary diary, String detectedEmotion) {
+        try {
+            diaryEmotionRepository.findByDiaryId(diary.getId())
+                    .ifPresent(emotion -> emotion.updateAiDetectedEmotion(detectedEmotion));
+        } catch (Exception e) {
+            log.debug("AI detected emotion save skipped: {}", e.getMessage());
         }
     }
 

@@ -1,278 +1,144 @@
 /**
- * Design System v2 — Custom Tab Bar
+ * Tab Bar v4 — Premium minimal navigation
  *
- * Premium tab bar inspired by Instagram / Apple Music.
- * Layout: [diary tab] [write button] [companion tab]
- *
- * - Left/Right: clean icon + label, aligned inside bar
- * - Center: elevated circular write button, integrated in bar
- * - Subtle glassmorphism feel with top border
+ * Layout: [Home] [Diary] [+] [Companion] [Reflect]
+ * Pure View-based icons with clear differentiation
+ * Single accent, clean white bar, subtle top line
  */
 
 import React, { useRef } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-  Platform,
+  View, Text, TouchableOpacity, StyleSheet, Animated, Platform,
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useThemeV2 } from '../../design-system-v2';
+
+const ACCENT = '#6356D9';
+const MUTED = '#C4C1B9';
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const { theme, isDark } = useThemeV2();
   const insets = useSafeAreaInsets();
-  const writeScale = useRef(new Animated.Value(1)).current;
+  const scale = useRef(new Animated.Value(1)).current;
 
-  const TAB_BAR_HEIGHT = 56;
-  const WRITE_BUTTON_SIZE = 52;
-
-  const handleWritePress = () => {
-    // Press animation
+  const onWrite = () => {
     Animated.sequence([
-      Animated.spring(writeScale, {
-        toValue: 0.9,
-        ...theme.springs.snappy,
-        useNativeDriver: true,
-      }),
-      Animated.spring(writeScale, {
-        toValue: 1,
-        ...theme.springs.gentle,
-        useNativeDriver: true,
-      }),
+      Animated.spring(scale, { toValue: 0.88, tension: 300, friction: 10, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, tension: 200, friction: 12, useNativeDriver: true }),
     ]).start();
     navigation.navigate('DiaryList', { screen: 'WriteDiary' });
   };
 
   return (
-    <View style={[
-      styles.container,
-      {
-        backgroundColor: isDark
-          ? 'rgba(20, 20, 28, 0.95)'
-          : 'rgba(255, 255, 255, 0.97)',
-        borderTopColor: theme.colors.tabBarBorder,
-        paddingBottom: insets.bottom,
-        height: TAB_BAR_HEIGHT + insets.bottom,
-        ...Platform.select({
-          ios: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: isDark ? 0.2 : 0.06,
-            shadowRadius: 8,
-          },
-          android: { elevation: 8 },
-        }),
-      },
-    ]}>
-      {/* Left tab — Diary */}
-      {renderTab(0)}
+    <View style={[st.bar, {
+      paddingBottom: insets.bottom,
+      height: 58 + insets.bottom,
+      ...Platform.select({
+        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -1 }, shadowOpacity: 0.03, shadowRadius: 4 },
+        android: { elevation: 4 },
+      }),
+    }]}>
+      {state.routes.slice(0, 2).map((r, i) => renderTab(r, i))}
 
-      {/* Center write button */}
-      <View style={styles.centerContainer}>
-        <Animated.View style={{ transform: [{ scale: writeScale }] }}>
-          <TouchableOpacity
-            style={[styles.writeButton, {
-              width: WRITE_BUTTON_SIZE,
-              height: WRITE_BUTTON_SIZE,
-              borderRadius: WRITE_BUTTON_SIZE / 2,
-              backgroundColor: theme.colors.primary,
-              ...theme.primaryShadow,
-            }]}
-            onPress={handleWritePress}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.writeIcon}>+</Text>
+      <View style={st.center}>
+        <Animated.View style={{ transform: [{ scale }] }}>
+          <TouchableOpacity style={st.writeBtn} onPress={onWrite} activeOpacity={0.75}>
+            <View style={st.plusH} />
+            <View style={st.plusV} />
           </TouchableOpacity>
         </Animated.View>
       </View>
 
-      {/* Right tab — Companion */}
-      {renderTab(1)}
+      {state.routes.slice(2).map((r, i) => renderTab(r, i + 2))}
     </View>
   );
 
-  function renderTab(index: number) {
-    const route = state.routes[index];
-    const { options } = descriptors[route.key];
-    const isFocused = state.index === index;
-    const label = options.title ?? route.name;
-
-    const onPress = () => {
-      const event = navigation.emit({
-        type: 'tabPress',
-        target: route.key,
-        canPreventDefault: true,
-      });
-      if (!isFocused && !event.defaultPrevented) {
-        navigation.navigate(route.name);
-      }
-    };
-
-    const onLongPress = () => {
-      navigation.emit({
-        type: 'tabLongPress',
-        target: route.key,
-      });
-    };
-
-    // Render icon based on route name
-    const icon = route.name === 'DiaryList'
-      ? renderBookIcon(isFocused)
-      : renderChatIcon(isFocused);
+  function renderTab(route: typeof state.routes[0], idx: number) {
+    const focused = state.index === idx;
+    const label = descriptors[route.key].options.title ?? route.name;
+    const color = focused ? ACCENT : MUTED;
 
     return (
       <TouchableOpacity
-        key={route.key}
-        accessibilityRole="button"
-        accessibilityState={isFocused ? { selected: true } : {}}
-        accessibilityLabel={label}
-        onPress={onPress}
-        onLongPress={onLongPress}
-        style={styles.tab}
-        activeOpacity={0.7}
+        key={route.key} style={st.tab} activeOpacity={0.5}
+        onPress={() => { if (!focused) navigation.navigate(route.name); }}
       >
-        {icon}
-        <Text style={[
-          styles.tabLabel,
-          {
-            color: isFocused ? theme.colors.tabActive : theme.colors.tabInactive,
-            fontWeight: isFocused ? '600' : '400',
-          },
-        ]}>
-          {label}
-        </Text>
+        <View style={st.iconWrap}>
+          {route.name === 'Home' && <HomeIcon color={color} filled={focused} />}
+          {route.name === 'DiaryList' && <DiaryIcon color={color} filled={focused} />}
+          {route.name === 'Companion' && <CompanionIcon color={color} filled={focused} />}
+          {route.name === 'Reflect' && <ReflectIcon color={color} filled={focused} />}
+        </View>
+        <Text style={[st.label, { color, fontWeight: focused ? '600' : '400' }]}>{label}</Text>
       </TouchableOpacity>
-    );
-  }
-
-  function renderBookIcon(active: boolean) {
-    const color = active ? theme.colors.tabActive : theme.colors.tabInactive;
-    return (
-      <View style={styles.iconContainer}>
-        <View style={[
-          styles.bookIcon,
-          {
-            borderColor: color,
-            borderWidth: active ? 2 : 1.5,
-            borderRadius: 3,
-          },
-        ]}>
-          <View style={[
-            styles.bookSpine,
-            { backgroundColor: color, left: 2 },
-          ]} />
-        </View>
-      </View>
-    );
-  }
-
-  function renderChatIcon(active: boolean) {
-    const color = active ? theme.colors.tabActive : theme.colors.tabInactive;
-    return (
-      <View style={styles.iconContainer}>
-        <View style={[
-          styles.chatBubble,
-          {
-            borderColor: color,
-            borderWidth: active ? 2 : 1.5,
-            borderRadius: 10,
-          },
-        ]}>
-          <View style={[styles.chatDots]}>
-            <View style={[styles.chatDot, { backgroundColor: color }]} />
-            <View style={[styles.chatDot, { backgroundColor: color }]} />
-          </View>
-        </View>
-        {/* Bubble tail */}
-        <View style={[styles.chatTail, {
-          borderLeftColor: color,
-          borderLeftWidth: active ? 2 : 1.5,
-          borderBottomColor: color,
-          borderBottomWidth: active ? 2 : 1.5,
-        }]} />
-      </View>
     );
   }
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
+/* ── Icons: Pure View, no emoji, clear shapes ── */
+
+function HomeIcon({ color, filled }: { color: string; filled: boolean }) {
+  return (
+    <View style={ic.box}>
+      {/* Simple circle = home */}
+      <View style={[ic.circle, { borderColor: color, backgroundColor: filled ? color : 'transparent' }]} />
+    </View>
+  );
+}
+
+function DiaryIcon({ color, filled }: { color: string; filled: boolean }) {
+  return (
+    <View style={ic.box}>
+      {/* Rectangle = book/diary */}
+      <View style={[{ width: 14, height: 16, borderRadius: 2, borderWidth: filled ? 0 : 1.5, borderColor: color, backgroundColor: filled ? color : 'transparent' }]} />
+    </View>
+  );
+}
+
+function CompanionIcon({ color, filled }: { color: string; filled: boolean }) {
+  return (
+    <View style={ic.box}>
+      {/* Rounded square = chat/companion */}
+      <View style={[{ width: 16, height: 14, borderRadius: 7, borderWidth: filled ? 0 : 1.5, borderColor: color, backgroundColor: filled ? color : 'transparent' }]} />
+    </View>
+  );
+}
+
+function ReflectIcon({ color, filled }: { color: string; filled: boolean }) {
+  return (
+    <View style={[ic.box, { flexDirection: 'row', alignItems: 'flex-end', gap: 2 }]}>
+      {/* Bar chart = reflect */}
+      {[8, 14, 11].map((h, i) => (
+        <View key={i} style={[{ width: 4, height: h, borderRadius: 2, backgroundColor: filled ? color : 'transparent', borderWidth: filled ? 0 : 1, borderColor: color }]} />
+      ))}
+    </View>
+  );
+}
+
+const ic = StyleSheet.create({
+  box: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center' },
+  circle: { width: 14, height: 14, borderRadius: 7, borderWidth: 1.5 },
+});
+
+const st = StyleSheet.create({
+  bar: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#F0EEE8',
   },
   tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 6,
-    paddingBottom: 2,
-    gap: 3,
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingTop: 8, gap: 4,
   },
-  tabLabel: {
-    fontSize: 10,
-    letterSpacing: 0.2,
+  iconWrap: { height: 22, justifyContent: 'center', alignItems: 'center' },
+  label: { fontSize: 10, letterSpacing: 0.1 },
+  center: { paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' },
+  writeBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center',
+    ...Platform.select({
+      ios: { shadowColor: ACCENT, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6 },
+      android: { elevation: 6 },
+    }),
   },
-  centerContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  writeButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  writeIcon: {
-    fontSize: 28,
-    fontWeight: '300',
-    color: '#FFFFFF',
-    marginTop: -1,
-  },
-  // Book icon
-  iconContainer: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bookIcon: {
-    width: 18,
-    height: 16,
-    position: 'relative',
-  },
-  bookSpine: {
-    position: 'absolute',
-    width: 1.5,
-    top: 2,
-    bottom: 2,
-  },
-  // Chat icon
-  chatBubble: {
-    width: 20,
-    height: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chatDots: {
-    flexDirection: 'row',
-    gap: 3,
-  },
-  chatDot: {
-    width: 2.5,
-    height: 2.5,
-    borderRadius: 1.25,
-  },
-  chatTail: {
-    position: 'absolute',
-    bottom: 1,
-    right: 4,
-    width: 5,
-    height: 5,
-    transform: [{ rotate: '-45deg' }],
-    backgroundColor: 'transparent',
-  },
+  plusH: { position: 'absolute', width: 16, height: 1.5, backgroundColor: '#FFF', borderRadius: 1 },
+  plusV: { position: 'absolute', width: 1.5, height: 16, backgroundColor: '#FFF', borderRadius: 1 },
 });

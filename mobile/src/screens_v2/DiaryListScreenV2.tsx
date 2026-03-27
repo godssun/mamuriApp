@@ -120,14 +120,11 @@ export function DiaryListScreenV2({ navigation }: Props) {
 
   const handleDateSelect = useCallback((date: Date) => {
     setSelectedDate(date);
-    setLoading(true);
-    // Animation for list change
-    listAnim.setValue(0);
-    Animated.spring(listAnim, {
-      toValue: 1,
-      ...theme.springs.gentle,
-      useNativeDriver: true,
-    }).start();
+    // 기존 카드를 유지한 채 부드럽게 전환 (loading=true 제거로 깜빡임 방지)
+    Animated.sequence([
+      Animated.timing(listAnim, { toValue: 0.3, duration: 100, useNativeDriver: true }),
+      Animated.spring(listAnim, { toValue: 1, ...theme.springs.gentle, useNativeDriver: true }),
+    ]).start();
   }, [listAnim, theme]);
 
   const handleMonthChange = useCallback((year: number, month: number) => {
@@ -189,7 +186,7 @@ export function DiaryListScreenV2({ navigation }: Props) {
           borderRadius: theme.borderRadius['2xl'],
         }]}>
           <Text style={styles.emptyEmoji}>
-            {isToday ? '✍️' : '📖'}
+            {'·'}
           </Text>
         </View>
         <Text style={[
@@ -283,7 +280,7 @@ export function DiaryListScreenV2({ navigation }: Props) {
                 : theme.colors.accentSubtle,
               borderRadius: theme.borderRadius.full,
             }]}>
-              <Text style={styles.streakEmoji}>🔥</Text>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.accent, marginRight: 4 }} />
               <Text style={[
                 theme.typography.labelMedium,
                 { color: theme.colors.accent, fontWeight: '700' },

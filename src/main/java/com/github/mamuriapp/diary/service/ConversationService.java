@@ -70,9 +70,9 @@ public class ConversationService {
     @PostConstruct
     void loadTemplate() {
         try {
-            conversationTemplate = new ClassPathResource("prompts/conversation_v1.txt")
+            conversationTemplate = new ClassPathResource("prompts/conversation_v2.txt")
                     .getContentAsString(StandardCharsets.UTF_8);
-            log.info("대화 프롬프트 템플릿 로드 완료");
+            log.info("대화 프롬프트 템플릿 v2 로드 완료");
         } catch (IOException e) {
             log.warn("대화 프롬프트 템플릿 로드 실패: {}", e.getMessage());
         }

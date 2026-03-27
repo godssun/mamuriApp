@@ -17,6 +17,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { companionApi, ApiError } from '../api/client';
+import { primaryEmotionColors } from '../design-system-v2/colors';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeV2 } from '../design-system-v2';
 import { ScreenContainer } from './components/ScreenContainer';
@@ -43,6 +44,7 @@ export function CompanionSetupScreenV2() {
   const { t } = useTranslation();
   const { theme } = useThemeV2();
   const [step, setStep] = useState(0);
+  const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
   const [aiName, setAiName] = useState('마음이');
   const [aiTone, setAiTone] = useState<ToneValue>('warm');
   const [speechStyle, setSpeechStyle] = useState<SpeechValue>('formal');
@@ -107,8 +109,8 @@ export function CompanionSetupScreenV2() {
 
   const footer = (
     <View style={{ paddingHorizontal: theme.layout.screenPaddingH, paddingBottom: theme.spacing['4xl'], gap: theme.spacing.md }}>
-      {step < 2 ? (
-        <Button label={t('companion.setup.next')} variant="primary" size="lg" fullWidth onPress={() => setStep(step + 1)} />
+      {step < 3 ? (
+        <Button label={step === 0 ? (selectedEmotion ? '다음' : '건너뛰기') : t('companion.setup.next')} variant="primary" size="lg" fullWidth onPress={() => setStep(step + 1)} />
       ) : (
         <Button label={t('companion.setup.startButton')} variant="primary" size="lg" fullWidth onPress={handleComplete} loading={isSaving} />
       )}
@@ -130,7 +132,7 @@ export function CompanionSetupScreenV2() {
 
       {/* 스텝 인디케이터 */}
       <View style={[styles.stepIndicator, { marginBottom: theme.spacing['3xl'] }]}>
-        {[0, 1, 2].map((s) => (
+        {[0, 1, 2, 3].map((s) => (
           <View
             key={s}
             style={[
@@ -146,7 +148,50 @@ export function CompanionSetupScreenV2() {
       </View>
 
       <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+        {/* Step 0: 감정 체크인 체험 */}
         {step === 0 && (
+          <View style={{ alignItems: 'center' }}>
+            <Text style={[theme.typography.titleLarge, { color: theme.colors.textPrimary, marginBottom: theme.spacing.sm, textAlign: 'center' }]}>
+              오늘 기분은 어때요?
+            </Text>
+            <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary, marginBottom: theme.spacing['2xl'], textAlign: 'center' }]}>
+              매일 이렇게 기분을 기록할 수 있어요
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 12 }}>
+              {([
+                { key: 'JOY', emoji: '😊', label: '좋아요' },
+                { key: 'CALM', emoji: '😌', label: '괜찮아요' },
+                { key: 'SAD', emoji: '😢', label: '별로예요' },
+                { key: 'ANXIOUS', emoji: '😰', label: '힘들어요' },
+                { key: 'COMPLEX', emoji: '🤔', label: '복잡해요' },
+              ]).map((e) => (
+                <TouchableOpacity
+                  key={e.key}
+                  onPress={() => setSelectedEmotion(e.key)}
+                  style={{
+                    alignItems: 'center', padding: 16, borderRadius: 16, width: 80,
+                    backgroundColor: selectedEmotion === e.key
+                      ? (primaryEmotionColors[e.key as keyof typeof primaryEmotionColors] || theme.colors.primarySubtle) + '30'
+                      : theme.colors.surfaceSecondary,
+                    borderWidth: selectedEmotion === e.key ? 2 : 0,
+                    borderColor: primaryEmotionColors[e.key as keyof typeof primaryEmotionColors] || theme.colors.primary,
+                  }}
+                >
+                  <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: (primaryEmotionColors[e.key as keyof typeof primaryEmotionColors] || '#6356D9'), marginBottom: 6 }} />
+                  <Text style={{ fontSize: 12, color: theme.colors.textSecondary, fontWeight: '500' }}>{e.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {selectedEmotion && (
+              <Text style={[theme.typography.bodySmall, { color: theme.colors.primary, marginTop: theme.spacing.xl, textAlign: 'center' }]}>
+                좋아요! 이렇게 매일 감정을 기록하면{'\n'}AI 친구가 당신을 더 잘 이해할 수 있어요
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Step 1: 동반자 이름 */}
+        {step === 1 && (
           <View>
             <Text style={[theme.typography.titleLarge, { color: theme.colors.textPrimary, marginBottom: theme.spacing.sm }]}>
               {t('companion.setup.nameStep')}
@@ -164,7 +209,7 @@ export function CompanionSetupScreenV2() {
           </View>
         )}
 
-        {step === 1 && (
+        {step === 2 && (
           <View>
             <Text style={[theme.typography.titleLarge, { color: theme.colors.textPrimary, marginBottom: theme.spacing.xl }]}>
               {t('companion.setup.personalityStep')}
@@ -240,7 +285,7 @@ export function CompanionSetupScreenV2() {
           </View>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <View style={{ alignItems: 'center' }}>
             <Text style={[theme.typography.titleLarge, { color: theme.colors.textPrimary, marginBottom: theme.spacing.sm }]}>
               {t('companion.setup.avatarStep')}

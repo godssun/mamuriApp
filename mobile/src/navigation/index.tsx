@@ -19,16 +19,23 @@ import { LoginScreenV2 } from '../screens_v2/LoginScreenV2';
 import { SignupScreenV2 } from '../screens_v2/SignupScreenV2';
 import { SocialNicknameScreenV2 } from '../screens_v2/SocialNicknameScreenV2';
 import { DiaryListScreenV2 } from '../screens_v2/DiaryListScreenV2';
-import { DiaryWriteScreenV2 } from '../screens_v2/DiaryWriteScreenV2';
-import { DiaryDetailScreenV2 } from '../screens_v2/DiaryDetailScreenV2';
 import { AICommentScreenV2 } from '../screens_v2/AICommentScreenV2';
 
 // V2 Screens (migrated)
-import { CompanionScreenV2 } from '../screens_v2/CompanionScreenV2';
 import { SettingsScreenV2 } from '../screens_v2/SettingsScreenV2';
 import { CompanionSetupScreenV2 } from '../screens_v2/CompanionSetupScreenV2';
 import { DiaryArchiveScreenV2 } from '../screens_v2/DiaryArchiveScreenV2';
+import ReportDetailScreenV2 from '../screens_v2/ReportDetailScreenV2';
 import { CustomTabBar } from '../screens_v2/components/CustomTabBar';
+
+// V3 Screens
+import HomeStickerScreenV3 from '../screens_v2/HomeStickerScreenV3';
+import EmotionPickerScreenV3 from '../screens_v2/EmotionPickerScreenV3';
+import EmotionCalendarV3 from '../screens_v2/EmotionCalendarV3';
+import DiaryExpressiveEditorV3 from '../screens_v2/DiaryExpressiveEditorV3';
+import DiaryPageDetailV3 from '../screens_v2/DiaryPageDetailV3';
+import CompanionChatV3 from '../screens_v2/CompanionChatV3';
+import ReflectionStoryV3 from '../screens_v2/ReflectionStoryV3';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -47,19 +54,19 @@ function AuthNavigator() {
   );
 }
 
-// 일기 스택
+// 일기 스택 (V3 화면 사용)
 function DiaryNavigator() {
   return (
     <DiaryStack.Navigator screenOptions={{ headerShown: false }}>
       <DiaryStack.Screen name="DiaryListHome" component={DiaryListScreenV2} />
-      <DiaryStack.Screen name="WriteDiary" component={DiaryWriteScreenV2} />
-      <DiaryStack.Screen name="DiaryDetail" component={DiaryDetailScreenV2} />
+      <DiaryStack.Screen name="WriteDiary" component={DiaryExpressiveEditorV3 as any} />
+      <DiaryStack.Screen name="DiaryDetail" component={DiaryPageDetailV3 as any} />
       <DiaryStack.Screen name="AIComment" component={AICommentScreenV2} />
     </DiaryStack.Navigator>
   );
 }
 
-// 메인 탭 (일기 + AI 친구)
+// 메인 탭 (V3 화면으로 교체)
 function MainTabsNavigator() {
   const { companionName, setCompanionName } = useAuth();
 
@@ -79,20 +86,30 @@ function MainTabsNavigator() {
       tabBar={(props) => <CustomTabBar {...props} />}
     >
       <MainTab.Screen
+        name="Home"
+        component={HomeStickerScreenV3}
+        options={{ title: '홈' }}
+      />
+      <MainTab.Screen
         name="DiaryList"
         component={DiaryNavigator}
         options={{ title: '일기' }}
       />
       <MainTab.Screen
         name="Companion"
-        component={CompanionScreenV2}
+        component={CompanionChatV3}
         options={{ title: tabLabel }}
+      />
+      <MainTab.Screen
+        name="Reflect"
+        component={ReflectionStoryV3}
+        options={{ title: '돌아보기' }}
       />
     </MainTab.Navigator>
   );
 }
 
-// 메인 스택 (탭 + 설정 + 온보딩)
+// 메인 스택 (V3 화면 포함)
 function MainNavigator() {
   const { isNewUser } = useAuth();
 
@@ -105,7 +122,10 @@ function MainNavigator() {
           <MainStack.Screen name="MainTabs" component={MainTabsNavigator} />
           <MainStack.Screen name="Settings" component={SettingsScreenV2} />
           <MainStack.Screen name="DiaryArchive" component={DiaryArchiveScreenV2} />
-          <MainStack.Screen name="DiaryDetailFromArchive" component={DiaryDetailScreenV2 as any} />
+          <MainStack.Screen name="DiaryDetailFromArchive" component={DiaryPageDetailV3 as any} />
+          <MainStack.Screen name="ReportDetail" component={ReportDetailScreenV2 as any} />
+          <MainStack.Screen name="EmotionCalendar" component={EmotionCalendarV3 as any} />
+          <MainStack.Screen name="EmotionPicker" component={EmotionPickerScreenV3 as any} />
         </>
       )}
     </MainStack.Navigator>

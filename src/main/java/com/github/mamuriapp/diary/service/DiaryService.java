@@ -2,13 +2,15 @@ package com.github.mamuriapp.diary.service;
 
 import com.github.mamuriapp.ai.dto.AiCommentResponse;
 import com.github.mamuriapp.ai.service.AiCommentService;
+import com.github.mamuriapp.ai.service.MemoryExtractionService;
 import com.github.mamuriapp.ai.service.SafetyCheckService;
-import com.github.mamuriapp.diary.dto.DiaryCalendarResponse;
-import com.github.mamuriapp.diary.dto.DiaryCreateRequest;
-import com.github.mamuriapp.diary.dto.DiaryResponse;
-import com.github.mamuriapp.diary.dto.DiaryUpdateRequest;
+import com.github.mamuriapp.diary.dto.*;
 import com.github.mamuriapp.diary.entity.Diary;
+import com.github.mamuriapp.diary.entity.DiaryEmotion;
+import com.github.mamuriapp.diary.entity.EmotionSticker;
+import com.github.mamuriapp.diary.repository.DiaryEmotionRepository;
 import com.github.mamuriapp.diary.repository.DiaryRepository;
+import com.github.mamuriapp.diary.repository.EmotionStickerRepository;
 import com.github.mamuriapp.global.config.FeatureFlags;
 import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
@@ -42,6 +44,9 @@ public class DiaryService {
     private final AiCommentService aiCommentService;
     private final SafetyCheckService safetyCheckService;
     private final CompanionService companionService;
+    private final MemoryExtractionService memoryExtractionService;
+    private final DiaryEmotionRepository diaryEmotionRepository;
+    private final EmotionStickerRepository emotionStickerRepository;
     private final FeatureFlags featureFlags;
 
     /**
@@ -73,6 +78,8 @@ public class DiaryService {
                 .title(request.getTitle())
                 .content(request.getContent())
                 .diaryDate(diaryDate)
+                .diaryType(request.getDiaryType())
+                .theme(request.getTheme())
                 .build();
         diaryRepository.save(diary);
         user.incrementDiaryCount();
@@ -124,6 +131,32 @@ public class DiaryService {
         } catch (Exception e) {
             log.warn("AI 코멘트 생성 실패 (diaryId={}): {}", diary.getId(), e.getMessage());
         }
+
+        // 4. 감정 저장 (감정 텍스트 또는 스티커 ID가 있는 경우)
+        boolean hasEmotion = (request.getPrimaryEmotion() != null && !request.getPrimaryEmotion().isBlank());
+        boolean hasSticker = (request.getPrimaryStickerId() != null);
+        if (hasEmotion || hasSticker) {
+            try {
+                DiaryEmotion emotion = DiaryEmotion.builder()
+                        .diary(diary)
+                        .user(user)
+                        .primaryEmotion(request.getPrimaryEmotion())
+                        .secondaryEmotions(request.getSecondaryEmotions())
+                        .emotionScore(request.getEmotionScore() != null ? request.getEmotionScore() : 3)
+                        .primaryStickerId(request.getPrimaryStickerId())
+                        .secondaryStickerIds(request.getSecondaryStickerIds())
+                        .build();
+                diaryEmotionRepository.save(emotion);
+            } catch (Exception e) {
+                log.warn("Emotion save failed for diary {}: {}", diary.getId(), e.getMessage());
+            }
+        }
+
+        // 5. 기억 추출 (비동기)
+        memoryExtractionService.extractMemories(diary, user);
+
+        // 6. 마지막 활동 시간 업데이트
+        user.updateLastActive();
 
         DiaryResponse.StreakInfo streakInfo = new DiaryResponse.StreakInfo(
                 user.getCurrentStreak(), user.getLongestStreak(),
@@ -270,6 +303,31 @@ public class DiaryService {
         }
 
         user.setStreakData(streak, recentDiaries.get(0).getDiaryDate());
+    }
+
+    /**
+     * 캘린더 v2: 스티커 정보를 포함한 캘린더 데이터를 조회한다.
+     */
+    public List<CalendarDayEntry> getCalendarV2(Long userId, int year, int month) {
+        YearMonth yearMonth = YearMonth.of(year, month);
+        LocalDate startDate = yearMonth.atDay(1);
+        LocalDate endDate = yearMonth.atEndOfMonth();
+
+        List<Object[]> raw = diaryEmotionRepository.findCalendarDataWithSticker(
+                userId, startDate.toString(), endDate.toString());
+
+        return raw.stream()
+                .map(r -> CalendarDayEntry.builder()
+                        .date(LocalDate.parse(r[0].toString()))
+                        .diaryId(r[1] != null ? ((Number) r[1]).longValue() : null)
+                        .primaryEmotion(r[2] != null ? (String) r[2] : null)
+                        .emotionScore(r[3] != null ? ((Number) r[3]).intValue() : 0)
+                        .primaryStickerId(r[4] != null ? ((Number) r[4]).longValue() : null)
+                        .stickerCode(r[5] != null ? (String) r[5] : null)
+                        .stickerImageUrl(r[6] != null ? (String) r[6] : null)
+                        .categoryColorHex(r[7] != null ? (String) r[7] : null)
+                        .build())
+                .toList();
     }
 
     private Diary findUserDiary(Long userId, Long diaryId) {

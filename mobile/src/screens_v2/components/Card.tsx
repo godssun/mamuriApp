@@ -153,7 +153,7 @@ export function DiaryCard({
                 <Animated.Text style={[
                   styles.aiBadgeIcon,
                 ]}>
-                  💬
+                  AI
                 </Animated.Text>
                 <Animated.Text style={[
                   theme.typography.labelSmall,

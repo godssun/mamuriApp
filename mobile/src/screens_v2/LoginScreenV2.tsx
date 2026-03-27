@@ -181,7 +181,7 @@ export function LoginScreenV2({ navigation }: Props) {
           backgroundColor: theme.colors.primarySubtle,
           borderColor: theme.colors.primaryLight,
         }]}>
-          <Text style={styles.logoEmoji}>🌿</Text>
+          <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#6356D9' }} />
         </View>
 
         <Text style={[

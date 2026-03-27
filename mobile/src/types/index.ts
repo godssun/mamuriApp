@@ -208,11 +208,14 @@ export type MainStackParamList = {
   Settings: undefined;
   DiaryArchive: undefined;
   DiaryDetailFromArchive: { diaryId: number };
+  ReportDetail: { reportId: number };
 };
 
 export type MainTabParamList = {
+  Home: undefined;
   DiaryList: undefined;
   Companion: undefined;
+  Reflect: undefined;
 };
 
 export type DiaryStackParamList = {
@@ -220,4 +223,92 @@ export type DiaryStackParamList = {
   WriteDiary: { editDiaryId: number } | undefined;
   DiaryDetail: { diaryId: number };
   AIComment: { diaryId: number };
+};
+
+// ── V3: 감정 스티커 시스템 ──
+
+export type EmotionKey = 'JOY' | 'CALM' | 'SAD' | 'ANXIOUS' | 'COMPLEX';
+
+export interface EmotionCategory {
+  id: number;
+  code: EmotionKey;
+  nameKo: string;
+  displayOrder: number;
+  colorHex: string;
+}
+
+export interface EmotionSticker {
+  id: number;
+  code: string;
+  nameKo: string;
+  imageUrl: string;
+  isDefault: boolean;
+  isPremium: boolean;
+  category: EmotionCategory;
+}
+
+export interface EmotionInfo {
+  primarySticker: EmotionSticker | null;
+  emotionScore: number;
+  secondaryTags: string[];
+}
+
+export interface CalendarDayEntry {
+  date: string;
+  diaryCount: number;
+  primaryEmotionCode: EmotionKey | null;
+  emotionScore: number | null;
+}
+
+export interface DiaryCalendarResponseV2 {
+  year: number;
+  month: number;
+  days: CalendarDayEntry[];
+}
+
+export interface DiaryCreateRequestV3 {
+  title?: string;
+  content?: string;
+  diaryDate?: string;
+  diaryType?: 'TEXT' | 'VISUAL' | 'MIXED';
+  primaryStickerId?: number;
+  primaryEmotion?: EmotionKey;
+  secondaryEmotions?: string[];
+  emotionScore?: number;
+  theme?: string;
+}
+
+export interface DiaryV3 extends Diary {
+  diaryType?: string;
+  theme?: string;
+  emotion?: EmotionInfo | null;
+  photos?: DiaryPhoto[];
+  decorations?: DiaryDecorationPlacement[];
+}
+
+export interface DiaryPhoto {
+  id: number;
+  cdnUrl: string;
+  displayOrder: number;
+}
+
+export interface DiaryDecorationPlacement {
+  id: number;
+  assetType: string;
+  positionX: number;
+  positionY: number;
+  scale: number;
+  rotation: number;
+}
+
+export type DiaryStackParamListV3 = {
+  DiaryListHome: undefined;
+  EmotionPicker: { preselectedEmotion?: EmotionKey; returnTo?: string };
+  WriteDiary: { editDiaryId?: number; selectedEmotion?: EmotionKey; selectedStickerId?: number; secondaryTags?: string[] };
+  DiaryDetail: { diaryId: number };
+  AIComment: { diaryId: number };
+};
+
+export type MainStackParamListV3 = MainStackParamList & {
+  EmotionCalendar: undefined;
 };

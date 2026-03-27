@@ -118,7 +118,7 @@ export function DiaryArchiveScreenV2() {
       {diaries.length === 0 ? (
         /* Empty state */
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>📝</Text>
+          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#ECEAE4' }} />
           <Text style={[theme.typography.titleMedium, { color: theme.colors.textPrimary, marginTop: theme.spacing.lg }]}>
             {t('diary.archiveEmpty')}
           </Text>

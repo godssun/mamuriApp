@@ -12,6 +12,9 @@ import {
   DiaryCreateRequest,
   DiaryUpdateRequest,
   DiaryCalendarResponse,
+  DiaryCalendarResponseV2,
+  DiaryCreateRequestV3,
+  DiaryV3,
   AiComment,
   UserSettings,
   CompanionProfile,
@@ -24,6 +27,8 @@ import {
   ConversationReplyResponse,
   DeleteAccountRequest,
   ReportRequest,
+  EmotionCategory,
+  EmotionSticker,
 } from '../types';
 
 // Android 에뮬레이터에서는 10.0.2.2가 호스트 머신의 localhost
@@ -456,6 +461,18 @@ export const companionApi = {
       method: 'DELETE',
     });
   },
+
+  async getStatus(): Promise<any> {
+    return request<any>('/companion/status');
+  },
+
+  async getMessage(): Promise<{ type: string; message: string; subMessage: string | null; mood: string }> {
+    return request<any>('/companion/message');
+  },
+
+  async getReturnStatus(): Promise<{ isReturning: boolean; daysAbsent: number }> {
+    return request<any>('/companion/return-status');
+  },
 };
 
 // 대화 API
@@ -510,5 +527,107 @@ export const settingsApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  },
+};
+
+// 감정 API
+export const emotionApi = {
+  async record(diaryId: number, data: { primaryEmotion: string; secondaryEmotions?: string[]; emotionScore?: number }): Promise<any> {
+    return request<any>(`/diaries/${diaryId}/emotion`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async get(diaryId: number): Promise<any> {
+    return request<any>(`/diaries/${diaryId}/emotion`);
+  },
+
+  async getWeeklySummary(): Promise<any> {
+    return request<any>('/emotions/weekly');
+  },
+
+  async getMonthlySummary(): Promise<any> {
+    return request<any>('/emotions/monthly');
+  },
+
+  async getCalendar(year: number, month: number): Promise<any> {
+    return request<any>(`/emotions/calendar?year=${year}&month=${month}`);
+  },
+};
+
+// 기억 API
+export const memoryApi = {
+  async getAll(): Promise<any[]> {
+    return request<any[]>('/memories');
+  },
+
+  async remove(memoryId: number): Promise<void> {
+    await request<void>(`/memories/${memoryId}`, { method: 'DELETE' });
+  },
+};
+
+// 푸시 알림 API
+export const pushApi = {
+  async register(token: string, platform: string = 'EXPO'): Promise<void> {
+    await request<void>('/push/register', {
+      method: 'POST',
+      body: JSON.stringify({ token, platform }),
+    });
+  },
+
+  async unregister(token: string): Promise<void> {
+    await request<void>('/push/unregister', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  },
+};
+
+// 스티커 API
+export const stickerApi = {
+  async getCategories(): Promise<EmotionCategory[]> {
+    return request<EmotionCategory[]>('/stickers/categories');
+  },
+
+  async getStickers(categoryCode?: string): Promise<EmotionSticker[]> {
+    const query = categoryCode ? `?category=${categoryCode}` : '';
+    return request<EmotionSticker[]>(`/stickers${query}`);
+  },
+};
+
+// 일기 V3 API (확장)
+export const diaryApiV3 = {
+  async createV3(data: DiaryCreateRequestV3): Promise<DiaryV3> {
+    return request<DiaryV3>('/diaries', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getDetailV3(id: number): Promise<DiaryV3> {
+    return request<DiaryV3>(`/diaries/${id}`);
+  },
+};
+
+// 캘린더 V2 API
+export const calendarApi = {
+  async getCalendarV2(year: number, month: number): Promise<DiaryCalendarResponseV2> {
+    return request<DiaryCalendarResponseV2>(`/emotions/calendar?year=${year}&month=${month}`);
+  },
+};
+
+// 리포트 API
+export const reportApi2 = {
+  async getAll(): Promise<any[]> {
+    return request<any[]>('/reports');
+  },
+
+  async getDetail(reportId: number): Promise<any> {
+    return request<any>(`/reports/${reportId}`);
+  },
+
+  async generateWeekly(): Promise<any> {
+    return request<any>('/reports/generate', { method: 'POST' });
   },
 };

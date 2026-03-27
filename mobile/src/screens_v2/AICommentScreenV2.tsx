@@ -184,7 +184,7 @@ export function AICommentScreenV2({ navigation, route }: Props) {
             backgroundColor: theme.colors.primarySubtle,
             borderColor: theme.colors.primaryLight,
           }]}>
-            <Text style={{ fontSize: 20 }}>🌿</Text>
+            <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#6356D9' }} />
           </View>
           <View style={styles.companionText}>
             <Text style={[theme.typography.titleSmall, { color: theme.colors.textPrimary }]}>

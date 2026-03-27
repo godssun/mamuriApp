@@ -7,6 +7,11 @@ import com.github.mamuriapp.user.dto.CompanionSettingsResponse;
 import com.github.mamuriapp.user.dto.CompanionSettingsUpdateRequest;
 import com.github.mamuriapp.user.dto.CompanionUpdateRequest;
 import com.github.mamuriapp.user.dto.StreakResponse;
+import com.github.mamuriapp.ai.repository.UserMemoryRepository;
+import com.github.mamuriapp.user.dto.CompanionStatusResponse;
+import com.github.mamuriapp.user.entity.User;
+import com.github.mamuriapp.user.repository.UserRepository;
+import com.github.mamuriapp.user.service.CompanionMessageService;
 import com.github.mamuriapp.user.service.CompanionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +30,10 @@ import org.springframework.web.multipart.MultipartFile;
 public class CompanionController {
 
     private final CompanionService companionService;
+    private final CompanionMessageService companionMessageService;
     private final FileStorageService fileStorageService;
+    private final UserRepository userRepository;
+    private final UserMemoryRepository userMemoryRepository;
 
     /**
      * AI 친구 프로필을 조회한다.
@@ -141,5 +149,51 @@ public class CompanionController {
         }
         CompanionSettingsResponse response = companionService.getCompanionSettings(userId);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * 동반자 종합 상태를 조회한다 (관계 단계, 기억 수, 감정 등).
+     */
+    @GetMapping("/status")
+    public ResponseEntity<ApiResponse<CompanionStatusResponse>> getStatus(Authentication auth) {
+        Long userId = (Long) auth.getPrincipal();
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) return ResponseEntity.ok(ApiResponse.fail("User not found"));
+
+        String[] stageDescs = {"", "첫 만남", "알아가는 중", "친해진 사이", "깊은 신뢰", "소울메이트"};
+        int stage = Math.max(1, Math.min(5, user.getRelationshipStage()));
+        long memoryCount = userMemoryRepository.countByUserIdAndStatus(userId, "ACTIVE");
+
+        CompanionMessageService.CompanionMessage msg = companionMessageService.getMessage(userId);
+
+        return ResponseEntity.ok(ApiResponse.success(CompanionStatusResponse.builder()
+                .aiName(user.getAiName() != null ? user.getAiName() : "마음이")
+                .relationshipStage(stage)
+                .stageDescription(stageDescs[stage])
+                .diaryCount(user.getDiaryCount())
+                .currentStreak(user.getCurrentStreak())
+                .companionMood(msg.mood())
+                .memoryCount((int) memoryCount)
+                .build()));
+    }
+
+    /**
+     * 동반자의 오늘 메시지를 조회한다.
+     */
+    @GetMapping("/message")
+    public ResponseEntity<ApiResponse<CompanionMessageService.CompanionMessage>> getMessage(
+            Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        return ResponseEntity.ok(ApiResponse.success(companionMessageService.getMessage(userId)));
+    }
+
+    /**
+     * 복귀 상태를 조회한다.
+     */
+    @GetMapping("/return-status")
+    public ResponseEntity<ApiResponse<CompanionMessageService.ReturnStatus>> getReturnStatus(
+            Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        return ResponseEntity.ok(ApiResponse.success(companionMessageService.getReturnStatus(userId)));
     }
 }

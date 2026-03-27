@@ -177,7 +177,7 @@ export function CompanionScreenV2() {
         onPress={() => mainNavigation.navigate('Settings')}
         style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 18, backgroundColor: theme.colors.surfaceSecondary }}
       >
-        <Text style={{ fontSize: 16, color: theme.colors.textSecondary }}>⚙</Text>
+        <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: theme.colors.textSecondary }} />
       </TouchableOpacity>
     </View>
   );

@@ -1,9 +1,6 @@
 package com.github.mamuriapp.diary.controller;
 
-import com.github.mamuriapp.diary.dto.DiaryCalendarResponse;
-import com.github.mamuriapp.diary.dto.DiaryCreateRequest;
-import com.github.mamuriapp.diary.dto.DiaryResponse;
-import com.github.mamuriapp.diary.dto.DiaryUpdateRequest;
+import com.github.mamuriapp.diary.dto.*;
 import com.github.mamuriapp.diary.service.DiaryService;
 import com.github.mamuriapp.global.dto.ApiResponse;
 import jakarta.validation.Valid;
@@ -86,11 +83,16 @@ public class DiaryController {
      * @return 일기가 있는 날짜 목록
      */
     @GetMapping("/calendar")
-    public ResponseEntity<ApiResponse<DiaryCalendarResponse>> getCalendar(
+    public ResponseEntity<?> getCalendar(
             Authentication authentication,
             @RequestParam int year,
-            @RequestParam int month) {
+            @RequestParam int month,
+            @RequestParam(defaultValue = "1") int v) {
         Long userId = (Long) authentication.getPrincipal();
+        if (v >= 2) {
+            List<CalendarDayEntry> entries = diaryService.getCalendarV2(userId, year, month);
+            return ResponseEntity.ok(ApiResponse.success(entries));
+        }
         return ResponseEntity.ok(
                 ApiResponse.success(diaryService.getCalendar(userId, year, month)));
     }

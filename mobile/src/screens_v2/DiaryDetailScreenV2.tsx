@@ -307,7 +307,7 @@ export function DiaryDetailScreenV2({ navigation, route }: Props) {
                 backgroundColor: theme.colors.primarySubtle,
                 borderRadius: theme.borderRadius.full,
               }]}>
-                <Text style={styles.aiLabelEmoji}>🌿</Text>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.primary, marginRight: 6 }} />
                 <Text style={[
                   theme.typography.labelSmall,
                   { color: theme.colors.primary },

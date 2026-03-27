@@ -114,6 +114,14 @@ public class User {
     @Column(name = "last_diary_date")
     private LocalDate lastDiaryDate;
 
+    // -- 관계 단계 --
+
+    @Column(name = "relationship_stage", nullable = false)
+    private int relationshipStage = 1;
+
+    @Column(name = "last_active_at")
+    private LocalDateTime lastActiveAt;
+
     @Version
     @Column(name = "version", nullable = false)
     private Long version = 0L;
@@ -309,5 +317,27 @@ public class User {
         this.currentStreak = currentStreak;
         this.lastDiaryDate = lastDiaryDate;
         // longestStreak은 줄이지 않음
+    }
+
+    // -- 관계 단계 메서드 --
+
+    public int getRelationshipStage() {
+        return relationshipStage;
+    }
+
+    public void advanceRelationshipStage(int stage) {
+        if (stage > this.relationshipStage && stage <= 7) {
+            this.relationshipStage = stage;
+        }
+    }
+
+    public void regressRelationshipStage(int stage) {
+        if (stage >= 1 && stage < this.relationshipStage) {
+            this.relationshipStage = stage;
+        }
+    }
+
+    public void updateLastActive() {
+        this.lastActiveAt = LocalDateTime.now();
     }
 }
