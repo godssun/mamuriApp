@@ -30,7 +30,7 @@ import {
 } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
 import { StickerPickerSheet } from './components/StickerPickerSheet';
-import { CanvasObject } from './components/CanvasObject';
+import { DiaryPageRenderer, CANVAS_PADDING_H } from './components/DiaryPageRenderer';
 import type { CanvasObjectData } from './components/CanvasObject';
 import { getStickerSource } from '../constants/stickerSources';
 
@@ -43,48 +43,6 @@ function nextId(): string {
   return `obj_${Date.now()}_${++objectIdCounter}`;
 }
 
-/* ── Notebook Background ── */
-function NotebookBackground({ theme, height }: { theme: string; height: number }) {
-  if (theme === 'note' || theme === 'warm') {
-    const lineCount = Math.ceil(height / 28);
-    return (
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        {Array.from({ length: lineCount }).map((_, i) => (
-          <View
-            key={i}
-            style={{
-              height: 28,
-              borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: theme === 'note' ? '#E8E0D0' : '#F0E8E0',
-            }}
-          />
-        ))}
-      </View>
-    );
-  }
-  if (theme === 'grid' || theme === 'nature') {
-    const rowCount = Math.ceil(height / 28);
-    return (
-      <View style={[StyleSheet.absoluteFill, { flexDirection: 'column' }]} pointerEvents="none">
-        {Array.from({ length: rowCount }).map((_, row) => (
-          <View key={row} style={{ flexDirection: 'row', height: 28 }}>
-            {Array.from({ length: 12 }).map((_, col) => (
-              <View
-                key={col}
-                style={{
-                  flex: 1,
-                  borderWidth: StyleSheet.hairlineWidth,
-                  borderColor: theme === 'grid' ? '#D0D8D0' : '#D8E8D8',
-                }}
-              />
-            ))}
-          </View>
-        ))}
-      </View>
-    );
-  }
-  return null;
-}
 
 export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const { theme } = useThemeV2();
@@ -129,7 +87,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
           || diary.emotion?.primarySticker?.category?.code;
         if (emo) setCurrentEmotion(emo as EmotionKey);
 
-        const canvasW = Dimensions.get('window').width - 48;
+        const canvasW = Dimensions.get('window').width - (CANVAS_PADDING_H * 2);
         const loadedObjects: CanvasObjectData[] = [];
 
         // Photos — use photo API coordinates
@@ -219,7 +177,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       });
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        const canvasW = canvasSize.width || SCREEN_W - 48;
+        const canvasW = canvasSize.width || SCREEN_W - (CANVAS_PADDING_H * 2);
         const photoW = Math.min(asset.width || 200, canvasW * 0.8);
         const photoH = photoW * ((asset.height || 150) / (asset.width || 200));
 
@@ -245,7 +203,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
     const source = getStickerSource(sticker.code);
     if (!source) return;
 
-    const canvasW = canvasSize.width || SCREEN_W - 48;
+    const canvasW = canvasSize.width || SCREEN_W - (CANVAS_PADDING_H * 2);
     setObjects(prev => [...prev, {
       id: nextId(),
       type: 'sticker' as const,
@@ -314,7 +272,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       });
 
       // 2. Upload photos + save positions (photo API)
-      const canvasW = canvasSize.width || SCREEN_W - 48;
+      const canvasW = canvasSize.width || SCREEN_W - (CANVAS_PADDING_H * 2);
       const photoObjects = objects.filter(o => o.type === 'photo');
       for (const photo of photoObjects) {
         if (photo.photoUri) {
@@ -382,7 +340,6 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const borderColor = selectedTheme === 'night' ? '#2A2A3A' : theme.colors.borderSubtle;
 
   const canHaveSomething = content.trim() || objects.length > 0;
-  const canvasH = Math.max(canvasSize.height, 400);
 
   return (
     <View style={[s.root, { backgroundColor: bgColor, paddingTop: insets.top }]}>
@@ -455,57 +412,34 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
             </TouchableOpacity>
           </Animated.View>
 
-          {/* ═══ Canvas Container ═══ */}
+          {/* ═══ Canvas (shared renderer) ═══ */}
           <TouchableOpacity
             activeOpacity={1}
             onPress={() => setSelectedObjectId(null)}
-            style={[s.canvasContainer, { backgroundColor: bgColor }]}
-            onLayout={handleCanvasLayout}
           >
-            {/* Background Layer */}
-            <NotebookBackground theme={selectedTheme} height={canvasH} />
-
-            {/* Title */}
-            <TextInput
-              style={[s.titleInput, { color: textColor }]}
-              placeholder="제목 (선택)"
-              placeholderTextColor={subtleColor}
-              value={title}
-              onChangeText={setTitle}
-              maxLength={100}
-            />
-
-            {/* Divider */}
-            <View style={[s.divider, { backgroundColor: borderColor }]} />
-
-            {/* Text Layer */}
-            <TextInput
-              ref={textInputRef}
-              style={[s.contentInput, { color: textColor }]}
-              placeholder="오늘 어떤 하루였나요?"
-              placeholderTextColor={subtleColor}
-              value={content}
-              onChangeText={setContent}
-              multiline
-              scrollEnabled={false}
+            <DiaryPageRenderer
+              title={title}
+              content={content}
+              theme={selectedTheme}
+              objects={objects}
+              editable={true}
+              onTitleChange={setTitle}
+              onContentChange={setContent}
+              onObjectMove={handleMove}
+              onObjectResize={handleResize}
+              onObjectDelete={handleDelete}
+              onObjectBringToFront={handleBringToFront}
+              onObjectSendToBack={handleSendToBack}
+              onObjectSelect={setSelectedObjectId}
+              selectedObjectId={selectedObjectId}
+              onCanvasMeasure={(w, h) => setCanvasSize({ width: w, height: h })}
+              textColor={textColor}
+              subtleColor={subtleColor}
+              borderColor={borderColor}
+              bgColor={bgColor}
               autoFocus={!isEditMode}
+              textInputRef={textInputRef}
             />
-
-            {/* Object Layer — photos + stickers (absolute positioned) */}
-            {objects.map(obj => (
-              <CanvasObject
-                key={obj.id}
-                data={obj}
-                editable
-                selected={selectedObjectId === obj.id}
-                onSelect={setSelectedObjectId}
-                onMove={handleMove}
-                onResize={handleResize}
-                onDelete={handleDelete}
-                onBringToFront={handleBringToFront}
-                onSendToBack={handleSendToBack}
-              />
-            ))}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -631,13 +565,6 @@ function makeStyles(t: Theme) {
     headerBtnText: { ...t.typography.bodyLarge, fontWeight: '500' },
     headerDate: { ...t.typography.labelMedium },
 
-    // Canvas container — the single unified canvas area
-    canvasContainer: {
-      minHeight: 400,
-      paddingHorizontal: t.layout.screenPaddingH,
-      position: 'relative',
-    },
-
     // MoodBanner
     moodBanner: {
       flexDirection: 'row', alignItems: 'center',
@@ -648,20 +575,6 @@ function makeStyles(t: Theme) {
     moodLabel: { fontSize: 15, fontWeight: '700' },
     moodTags: { fontSize: 12, marginLeft: 4, flex: 1 },
     moodChangeHint: { fontSize: 12, marginLeft: 'auto' },
-
-    // Inputs
-    titleInput: {
-      ...t.typography.headlineMedium, marginTop: t.spacing.xl,
-      paddingVertical: t.spacing.sm,
-    },
-    divider: { height: 1, width: '100%', marginVertical: t.spacing.sm },
-    contentInput: {
-      ...t.typography.bodyLarge, minHeight: 280,
-      textAlignVertical: 'top',
-      paddingTop: 0,
-      lineHeight: 28,
-      fontSize: 15,
-    },
 
     // Toolbar
     toolbar: {
