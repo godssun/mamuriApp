@@ -613,7 +613,17 @@ export const diaryApiV3 = {
 // 캘린더 V2 API
 export const calendarApi = {
   async getCalendarV2(year: number, month: number): Promise<DiaryCalendarResponseV2> {
-    return request<DiaryCalendarResponseV2>(`/emotions/calendar?year=${year}&month=${month}`);
+    // 백엔드 EmotionSummaryResponse 형식으로 받아서 CalendarDayEntry로 변환
+    const raw = await request<any>(`/emotions/calendar?year=${year}&month=${month}`);
+
+    const days = (raw.calendar || []).map((entry: any) => ({
+      date: entry.date,
+      diaryCount: 1,
+      primaryEmotionCode: entry.emotion || null,
+      emotionScore: entry.score || null,
+    }));
+
+    return { year, month, days };
   },
 };
 

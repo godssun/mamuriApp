@@ -26,6 +26,7 @@ import {
   DIARY_THEMES,
 } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
+import { StickerPickerSheet } from './components/StickerPickerSheet';
 
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'WriteDiary'>;
 
@@ -46,6 +47,8 @@ export default function DiaryExpressiveEditorV3({ navigation, route }: Props) {
   const [selectedTheme, setSelectedTheme] = useState<string>('default');
   const [saving, setSaving] = useState(false);
   const [showThemeSheet, setShowThemeSheet] = useState(false);
+  const [showStickerSheet, setShowStickerSheet] = useState(false);
+  const [decoStickers, setDecoStickers] = useState<{ code: string; category: string }[]>([]);
 
   const contentAnim = useRef(new Animated.Value(0)).current;
   const textInputRef = useRef<TextInput>(null);
@@ -270,7 +273,7 @@ export default function DiaryExpressiveEditorV3({ navigation, route }: Props) {
           </View>
           <Text style={[s.toolLabel, { color: theme.colors.textTertiary }]}>테마</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={s.toolBtn} disabled>
+        <TouchableOpacity style={s.toolBtn} onPress={() => setShowStickerSheet(true)}>
           <View style={s.toolIconView}>
             <View style={{ width: 16, height: 16, alignItems: 'center', justifyContent: 'center' }}>
               <View style={{ position: 'absolute', width: 14, height: 2, backgroundColor: theme.colors.textTertiary, borderRadius: 1 }} />
@@ -288,6 +291,16 @@ export default function DiaryExpressiveEditorV3({ navigation, route }: Props) {
           </Text>
         )}
       </View>
+
+      {/* Sticker Picker Sheet */}
+      <StickerPickerSheet
+        visible={showStickerSheet}
+        onClose={() => setShowStickerSheet(false)}
+        onSelect={(sticker) => {
+          setDecoStickers(prev => [...prev.slice(-2), { code: sticker.code, category: sticker.category }]);
+          setShowStickerSheet(false);
+        }}
+      />
 
       {/* Theme Sheet Modal */}
       <Modal visible={showThemeSheet} transparent animationType="slide">

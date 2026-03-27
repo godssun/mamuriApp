@@ -242,7 +242,7 @@ function makeStyles(t: Theme) {
 
     calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
     calCell: { width: '14.28%' as any, height: 28, alignItems: 'center', justifyContent: 'center' },
-    calDot: { width: 16, height: 16, borderRadius: 8 },
+    calDot: { width: 20, height: 20, borderRadius: 10 },
 
     // Section
     sectionLabel: {

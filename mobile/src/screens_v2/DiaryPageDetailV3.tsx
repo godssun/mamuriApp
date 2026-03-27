@@ -139,7 +139,13 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
 
   if (!diary) return null;
 
-  const emotionCode = diary.emotion?.primarySticker?.category?.code as EmotionKey | undefined;
+  // 백엔드 응답 구조에 따라 여러 경로로 감정 코드 추출 (fallback chain)
+  const emotionCode = (
+    diary.emotion?.primarySticker?.category?.code
+    || diary.emotion?.primarySticker?.code?.replace(/_default$/, '')?.toUpperCase()
+    || (diary as any).primaryEmotion
+    || (diary as any).emotion?.primaryEmotion
+  ) as EmotionKey | undefined;
   const emotionColor = emotionCode ? EMOTION_COLORS[emotionCode] : null;
   const diaryTheme = diary.theme;
   const bgColor = diaryTheme === 'night' ? '#1A1A2E' : diaryTheme === 'warm' ? '#FFF8F0' : diaryTheme === 'nature' ? '#F0F7F0' : theme.colors.background;

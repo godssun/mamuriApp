@@ -149,7 +149,7 @@ export default function EmotionCalendarV3() {
                   isToday && s.calDotToday,
                 ]}>
                   {emotionColor && entry?.primaryEmotionCode ? (
-                    <EmotionStickerView emotionKey={entry.primaryEmotionCode} size="tiny" />
+                    <EmotionStickerView emotionKey={entry.primaryEmotionCode} size="small" />
                   ) : (
                     <Text style={[
                       s.calDayNum,
@@ -160,6 +160,13 @@ export default function EmotionCalendarV3() {
                     </Text>
                   )}
                 </View>
+                <Text style={[
+                  s.calDayNumBelow,
+                  { color: emotionColor ? theme.colors.textSecondary : theme.colors.textTertiary },
+                  isToday && { color: theme.colors.primary, fontWeight: '700' as const },
+                ]}>
+                  {day}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -240,7 +247,7 @@ function makeStyles(t: Theme) {
 
     // Calendar grid
     calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-    calCell: { width: '14.28%' as any, height: 52, alignItems: 'center', justifyContent: 'center' },
+    calCell: { width: '14.28%' as any, height: 58, alignItems: 'center', justifyContent: 'center', paddingTop: 2 },
     calDot: {
       width: 36, height: 36, borderRadius: 18,
       alignItems: 'center', justifyContent: 'center',
@@ -249,6 +256,7 @@ function makeStyles(t: Theme) {
       borderWidth: 2, borderColor: t.colors.primary,
     },
     calDayNum: { fontSize: 12, fontWeight: '500' },
+    calDayNumBelow: { fontSize: 9, marginTop: 1, fontWeight: '400' },
 
     // Distribution
     distSection: { marginTop: t.spacing['3xl'] },
