@@ -270,7 +270,8 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   }, [content, title, photos, placedStickers, currentEmotion, secondaryTags, selectedTheme, canvasLayout, navigation, refreshSubscription]);
 
   const themeConfig = DIARY_THEMES.find(t => t.key === selectedTheme) || DIARY_THEMES[0];
-  const bgColor = selectedTheme === 'night' ? '#1A1A2E' : selectedTheme === 'warm' ? '#FFF8F0' : selectedTheme === 'nature' ? '#F0F7F0' : theme.colors.background;
+  const themeColors: Record<string, string> = { night: '#1A1A2E', warm: '#FFF8F0', nature: '#F0F7F0', note: '#FFFDF5', grid: '#F8FBF8' };
+  const bgColor = themeColors[selectedTheme] || theme.colors.background;
   const textColor = selectedTheme === 'night' ? '#EDEDF0' : theme.colors.textPrimary;
   const subtleColor = selectedTheme === 'night' ? '#686880' : theme.colors.textDisabled;
   const borderColor = selectedTheme === 'night' ? '#2A2A3A' : theme.colors.borderSubtle;
@@ -315,6 +316,26 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
               setCanvasLayout({ width, height });
             }}
           >
+            {/* Background pattern */}
+            {(selectedTheme === 'note' || selectedTheme === 'warm') && (
+              <View style={s.linePatternBg} pointerEvents="none">
+                {Array.from({ length: 25 }).map((_, i) => (
+                  <View key={i} style={[s.lineRow, { borderBottomColor: selectedTheme === 'note' ? '#E8E0D0' : '#F0E8E0' }]} />
+                ))}
+              </View>
+            )}
+            {(selectedTheme === 'grid' || selectedTheme === 'nature') && (
+              <View style={s.gridPatternBg} pointerEvents="none">
+                {Array.from({ length: 20 }).map((_, row) => (
+                  <View key={row} style={s.gridRow}>
+                    {Array.from({ length: 12 }).map((_, col) => (
+                      <View key={col} style={[s.gridCell, { borderColor: selectedTheme === 'grid' ? '#D0D8D0' : '#D8E8D8' }]} />
+                    ))}
+                  </View>
+                ))}
+              </View>
+            )}
+
             <Animated.View style={{
               opacity: contentAnim,
               transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
@@ -555,6 +576,23 @@ function makeStyles(t: Theme) {
       paddingHorizontal: t.layout.screenPaddingH,
       position: 'relative',
     },
+    // Background patterns
+    linePatternBg: {
+      position: 'absolute', top: 60, left: 0, right: 0, bottom: 0,
+    },
+    lineRow: {
+      height: 28, borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    gridPatternBg: {
+      position: 'absolute', top: 60, left: 16, right: 16, bottom: 0,
+    },
+    gridRow: {
+      flexDirection: 'row', height: 24,
+    },
+    gridCell: {
+      flex: 1, borderWidth: StyleSheet.hairlineWidth,
+    },
+
     stickerCanvas: {
       minHeight: 200,
       marginTop: t.spacing.xl,

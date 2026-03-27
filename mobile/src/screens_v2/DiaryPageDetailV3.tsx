@@ -161,7 +161,8 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
   ) as EmotionKey | undefined;
   const emotionColor = emotionCode ? EMOTION_COLORS[emotionCode] : null;
   const diaryTheme = diary.theme;
-  const bgColor = diaryTheme === 'night' ? '#1A1A2E' : diaryTheme === 'warm' ? '#FFF8F0' : diaryTheme === 'nature' ? '#F0F7F0' : theme.colors.background;
+  const themeColors: Record<string, string> = { night: '#1A1A2E', warm: '#FFF8F0', nature: '#F0F7F0', note: '#FFFDF5', grid: '#F8FBF8' };
+  const bgColor = themeColors[diaryTheme || ''] || theme.colors.background;
   const txtColor = diaryTheme === 'night' ? '#EDEDF0' : theme.colors.textPrimary;
 
   return (
@@ -185,84 +186,103 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={[
-          { paddingHorizontal: theme.layout.screenPaddingH },
-          { opacity: contentAnim, transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] },
-        ]}>
-          {/* Emotion Header */}
-          {emotionCode && (
-            <View style={[s.emotionHeader, { backgroundColor: (emotionColor || theme.colors.primary) + '15' }]}>
-              <EmotionStickerView emotionKey={emotionCode} size="small" />
-              <View>
-                <Text style={[s.emotionLabel, { color: emotionColor || theme.colors.primary }]}>
-                  {EMOTION_LABELS[emotionCode]}
-                </Text>
-                {diary.emotion?.secondaryTags && diary.emotion.secondaryTags.length > 0 && (
-                  <Text style={[s.emotionTags, { color: (emotionColor || theme.colors.primary) + 'AA' }]}>
-                    {diary.emotion.secondaryTags.join(' · ')}
-                  </Text>
-                )}
-              </View>
+        {/* ═══ Diary Page — stickers overlay the entire content area ═══ */}
+        <View
+          style={[s.diaryPage, {
+            backgroundColor: bgColor,
+            paddingHorizontal: theme.layout.screenPaddingH,
+          }]}
+          onLayout={(e) => setDecoCanvasHeight(e.nativeEvent.layout.height)}
+        >
+          {/* Background pattern (lined / grid) */}
+          {(diaryTheme === 'note' || diaryTheme === 'warm') && (
+            <View style={s.linePattern} pointerEvents="none">
+              {Array.from({ length: 30 }).map((_, i) => (
+                <View key={i} style={[s.lineRow, { borderBottomColor: diaryTheme === 'note' ? '#E8E0D0' : '#F0E8E0' }]} />
+              ))}
             </View>
           )}
-
-          {/* Photos */}
-          {diary.photos && diary.photos.length > 0 && (
-            <View style={s.photoSection}>
-              {diary.photos.map((photo) => (
-                <Image
-                  key={photo.id}
-                  source={{ uri: resolvePhotoUrl(photo) }}
-                  style={s.detailPhoto}
-                  resizeMode="cover"
-                />
+          {(diaryTheme === 'grid' || diaryTheme === 'nature') && (
+            <View style={s.gridPattern} pointerEvents="none">
+              {Array.from({ length: 20 }).map((_, row) => (
+                <View key={row} style={s.gridRow}>
+                  {Array.from({ length: 15 }).map((_, col) => (
+                    <View key={col} style={[s.gridCell, { borderColor: diaryTheme === 'grid' ? '#D0D8D0' : '#D8E8D8' }]} />
+                  ))}
+                </View>
               ))}
             </View>
           )}
 
-          {/* Title */}
-          <Text style={[s.title, { color: txtColor }]}>{diary.title}</Text>
+          <Animated.View style={[
+            { opacity: contentAnim, transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] },
+          ]}>
+            {/* Emotion Header */}
+            {emotionCode && (
+              <View style={[s.emotionHeader, { backgroundColor: (emotionColor || theme.colors.primary) + '15' }]}>
+                <EmotionStickerView emotionKey={emotionCode} size="small" />
+                <View>
+                  <Text style={[s.emotionLabel, { color: emotionColor || theme.colors.primary }]}>
+                    {EMOTION_LABELS[emotionCode]}
+                  </Text>
+                  {diary.emotion?.secondaryTags && diary.emotion.secondaryTags.length > 0 && (
+                    <Text style={[s.emotionTags, { color: (emotionColor || theme.colors.primary) + 'AA' }]}>
+                      {diary.emotion.secondaryTags.join(' · ')}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
 
-          {/* Meta */}
-          <Text style={[s.meta, { color: diaryTheme === 'night' ? '#686880' : theme.colors.textTertiary }]}>
-            {formatTime(diary.createdAt)}
-          </Text>
-
-          {/* Content */}
-          <Text style={[s.content, { color: txtColor }]}>{diary.content}</Text>
-
-          {/* Decoration Sticker Overlays (read-only, saved positions) */}
-          {diary.decorations && diary.decorations.length > 0 ? (
-            <View
-              style={s.decoStickerArea}
-              onLayout={(e) => setDecoCanvasHeight(e.nativeEvent.layout.height)}
-            >
-              {diary.decorations.map((deco) => {
-                const code = deco.assetCode || deco.assetType || '';
-                const source = getStickerSource(code);
-                if (!source) return null;
-                const canvasW = Dimensions.get('window').width - (theme.layout.screenPaddingH * 2);
-                return (
-                  <DraggableSticker
-                    key={deco.id}
-                    id={String(deco.id)}
-                    stickerCode={code}
-                    stickerSource={source}
-                    initialX={deco.positionX * canvasW}
-                    initialY={deco.positionY * (decoCanvasHeight || 400)}
-                    size={Math.round(60 * (deco.scale || 1))}
-                    editable={false}
-                    onPositionChange={() => {}}
+            {/* Photos */}
+            {diary.photos && diary.photos.length > 0 && (
+              <View style={s.photoSection}>
+                {diary.photos.map((photo) => (
+                  <Image
+                    key={photo.id}
+                    source={{ uri: resolvePhotoUrl(photo) }}
+                    style={s.detailPhoto}
+                    resizeMode="cover"
                   />
-                );
-              })}
-            </View>
-          ) : emotionCode ? (
-            <View style={s.decoOverlay}>
-              <EmotionStickerView emotionKey={emotionCode} size="large" style={{ opacity: 0.1 }} />
-            </View>
-          ) : null}
-        </Animated.View>
+                ))}
+              </View>
+            )}
+
+            {/* Title */}
+            <Text style={[s.title, { color: txtColor }]}>{diary.title}</Text>
+
+            {/* Meta */}
+            <Text style={[s.meta, { color: diaryTheme === 'night' ? '#686880' : theme.colors.textTertiary }]}>
+              {formatTime(diary.createdAt)}
+            </Text>
+
+            {/* Content */}
+            <Text style={[s.content, { color: txtColor }]}>{diary.content}</Text>
+          </Animated.View>
+
+          {/* Sticker overlays — positioned over the entire diary page */}
+          {diary.decorations && diary.decorations.length > 0 && (
+            diary.decorations.map((deco) => {
+              const code = deco.assetCode || deco.assetType || '';
+              const source = getStickerSource(code);
+              if (!source) return null;
+              const canvasW = Dimensions.get('window').width - (theme.layout.screenPaddingH * 2);
+              return (
+                <DraggableSticker
+                  key={deco.id}
+                  id={String(deco.id)}
+                  stickerCode={code}
+                  stickerSource={source}
+                  initialX={deco.positionX * canvasW}
+                  initialY={deco.positionY * (decoCanvasHeight || 500)}
+                  size={Math.round(60 * (deco.scale || 1))}
+                  editable={false}
+                  onPositionChange={() => {}}
+                />
+              );
+            })
+          )}
+        </View>
 
         {/* Conversation */}
         {messages.length > 0 && (
@@ -370,12 +390,35 @@ function makeStyles(t: Theme) {
     content: { ...t.typography.bodyLarge, marginTop: t.spacing['2xl'], lineHeight: 28 },
 
     // Deco
-    decoOverlay: { position: 'absolute', bottom: 0, right: 0, opacity: 0.08 },
-    decoStickerArea: {
-      minHeight: 120, position: 'relative', marginTop: 16,
-      borderWidth: 1, borderColor: t.colors.borderSubtle, borderStyle: 'dashed',
-      borderRadius: t.borderRadius.lg, padding: 8,
+    // Diary page container — stickers overlay the whole area
+    diaryPage: {
+      position: 'relative',
+      minHeight: 300,
+      overflow: 'visible',
+      paddingVertical: t.spacing.xl,
     },
+
+    // Background patterns
+    linePattern: {
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      paddingTop: 80,
+    },
+    lineRow: {
+      height: 28, borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    gridPattern: {
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      paddingTop: 20, paddingHorizontal: 16,
+    },
+    gridRow: {
+      flexDirection: 'row', height: 24,
+    },
+    gridCell: {
+      flex: 1, borderWidth: StyleSheet.hairlineWidth,
+      borderColor: '#D8E8D8',
+    },
+
+    decoOverlay: { position: 'absolute', bottom: 0, right: 0, opacity: 0.08 },
     decoEmoji: { fontSize: 60 },
 
     // Conversation

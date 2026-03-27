@@ -53,8 +53,10 @@ export const STICKER_SIZES = {
 export const EMOTION_KEYS: EmotionKey[] = ['JOY', 'CALM', 'SAD', 'ANXIOUS', 'COMPLEX'];
 
 export const DIARY_THEMES = [
-  { key: 'default', label: '기본', color: '#FAFAF8' },
-  { key: 'warm', label: '따뜻한', color: '#FFF8F0' },
-  { key: 'night', label: '밤하늘', color: '#1A1A2E' },
-  { key: 'nature', label: '자연', color: '#F0F7F0' },
+  { key: 'default', label: '기본', color: '#FAFAF8', pattern: 'none' },
+  { key: 'note', label: '줄노트', color: '#FFFDF5', pattern: 'lined' },
+  { key: 'grid', label: '모눈종이', color: '#F8FBF8', pattern: 'grid' },
+  { key: 'warm', label: '따뜻한', color: '#FFF8F0', pattern: 'lined' },
+  { key: 'night', label: '밤하늘', color: '#1A1A2E', pattern: 'none' },
+  { key: 'nature', label: '자연', color: '#F0F7F0', pattern: 'grid' },
 ] as const;
