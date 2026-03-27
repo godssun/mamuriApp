@@ -72,7 +72,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const [content, setContent] = useState('');
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
-  const [selectedTheme, setSelectedTheme] = useState<string>('default');
+  const [selectedTheme, setSelectedTheme] = useState<string>('note');
   const [saving, setSaving] = useState(false);
   const [showThemeSheet, setShowThemeSheet] = useState(false);
   const [showStickerSheet, setShowStickerSheet] = useState(false);
@@ -642,6 +642,8 @@ function makeStyles(t: Theme) {
     contentInput: {
       ...t.typography.bodyLarge, minHeight: 200,
       textAlignVertical: 'top', paddingTop: t.spacing.sm,
+      lineHeight: 28,  // 줄노트 간격에 맞춤
+      fontSize: 15,
     },
 
     // Toolbar

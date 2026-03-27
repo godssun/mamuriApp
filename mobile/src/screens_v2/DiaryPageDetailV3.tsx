@@ -274,7 +274,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
                   stickerCode={code}
                   stickerSource={source}
                   initialX={deco.positionX * canvasW}
-                  initialY={deco.positionY * (decoCanvasHeight || 500)}
+                  initialY={deco.positionY * (decoCanvasHeight || 400)}
                   size={Math.round(60 * (deco.scale || 1))}
                   editable={false}
                   onPositionChange={() => {}}
@@ -387,7 +387,7 @@ function makeStyles(t: Theme) {
     // Content
     title: { ...t.typography.headlineLarge, marginTop: t.spacing.xl },
     meta: { ...t.typography.caption, marginTop: t.spacing.sm },
-    content: { ...t.typography.bodyLarge, marginTop: t.spacing['2xl'], lineHeight: 28 },
+    content: { ...t.typography.bodyLarge, marginTop: t.spacing['2xl'], lineHeight: 28, fontSize: 15 },
 
     // Deco
     // Diary page container — stickers overlay the whole area
