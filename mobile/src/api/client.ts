@@ -608,6 +608,14 @@ export const diaryApiV3 = {
   async getDetailV3(id: number): Promise<DiaryV3> {
     return request<DiaryV3>(`/diaries/${id}`);
   },
+
+  async getListV3(): Promise<DiaryV3[]> {
+    return request<DiaryV3[]>('/diaries');
+  },
+
+  async getListByDateV3(date: string): Promise<DiaryV3[]> {
+    return request<DiaryV3[]>(`/diaries?date=${date}`);
+  },
 };
 
 // 일기 사진 API

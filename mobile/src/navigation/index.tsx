@@ -11,7 +11,7 @@ import {
   AuthStackParamList,
   MainStackParamList,
   MainTabParamList,
-  DiaryStackParamList,
+  DiaryStackParamListV3,
 } from '../types';
 
 // V2 Screens
@@ -42,7 +42,7 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainStack = createNativeStackNavigator<MainStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
-const DiaryStack = createNativeStackNavigator<DiaryStackParamList>();
+const DiaryStack = createNativeStackNavigator<DiaryStackParamListV3>();
 
 // 인증 스택
 function AuthNavigator() {
@@ -60,10 +60,10 @@ function AuthNavigator() {
 function DiaryNavigator() {
   return (
     <DiaryStack.Navigator screenOptions={{ headerShown: false }}>
-      <DiaryStack.Screen name="DiaryListHome" component={DiaryListScreenV2} />
-      <DiaryStack.Screen name="WriteDiary" component={DiaryCanvasEditorV3 as any} />
-      <DiaryStack.Screen name="DiaryDetail" component={DiaryPageDetailV3 as any} />
-      <DiaryStack.Screen name="AIComment" component={AICommentScreenV2} />
+      <DiaryStack.Screen name="DiaryListHome" component={DiaryListScreenV2 as any} />
+      <DiaryStack.Screen name="WriteDiary" component={DiaryCanvasEditorV3} />
+      <DiaryStack.Screen name="DiaryDetail" component={DiaryPageDetailV3} />
+      <DiaryStack.Screen name="AIComment" component={AICommentScreenV2 as any} />
     </DiaryStack.Navigator>
   );
 }

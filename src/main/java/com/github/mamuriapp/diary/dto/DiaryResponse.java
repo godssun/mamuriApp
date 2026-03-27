@@ -86,6 +86,24 @@ public class DiaryResponse {
     }
 
     /**
+     * 목록용 DTO 변환 (썸네일 사진 + 감정 정보 포함).
+     */
+    public static DiaryResponse forList(Diary diary, DiaryPhotoResponse thumbnail, EmotionInfo emotion) {
+        return DiaryResponse.builder()
+                .id(diary.getId())
+                .title(diary.getTitle())
+                .content(diary.getContent())
+                .diaryDate(diary.getDiaryDate())
+                .diaryType(diary.getDiaryType())
+                .theme(diary.getTheme())
+                .photos(thumbnail != null ? List.of(thumbnail) : null)
+                .emotion(emotion)
+                .createdAt(diary.getCreatedAt())
+                .updatedAt(diary.getUpdatedAt())
+                .build();
+    }
+
+    /**
      * 엔티티를 DTO로 변환한다 (AI 코멘트 포함).
      */
     public static DiaryResponse of(Diary diary, AiCommentResponse aiComment) {

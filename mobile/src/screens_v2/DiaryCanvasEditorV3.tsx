@@ -23,7 +23,7 @@ import { diaryApiV3, diaryPhotoApi, diaryDecorationApi, emotionApi, ApiError } f
 import { useSubscription } from '../contexts/SubscriptionContext';
 import type { DiaryStackParamListV3, EmotionKey } from '../types';
 import {
-  EMOTION_COLORS, EMOTION_LABELS,
+  EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS,
   DIARY_THEMES,
 } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
@@ -61,11 +61,13 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const { refresh: refreshSubscription } = useSubscription();
   const s = makeStyles(theme);
 
-  const selectedEmotion = route.params?.selectedEmotion as EmotionKey | undefined;
+  const initialEmotion = route.params?.selectedEmotion as EmotionKey | undefined;
   const secondaryTags = route.params?.secondaryTags as string[] | undefined;
   const editDiaryId = route.params?.editDiaryId;
   const isEditMode = !!editDiaryId;
 
+  const [currentEmotion, setCurrentEmotion] = useState<EmotionKey | undefined>(initialEmotion);
+  const [showEmotionPicker, setShowEmotionPicker] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
@@ -166,7 +168,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         content: content.trim(),
         diaryDate,
         diaryType: photos.length > 0 ? 'MIXED' : 'TEXT',
-        primaryEmotion: selectedEmotion,
+        primaryEmotion: currentEmotion,
         secondaryEmotions: secondaryTags || [],
         emotionScore: 3,
         theme: selectedTheme !== 'default' ? selectedTheme : undefined,
@@ -213,7 +215,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [content, title, photos, placedStickers, selectedEmotion, secondaryTags, selectedTheme, canvasLayout, navigation, refreshSubscription]);
+  }, [content, title, photos, placedStickers, currentEmotion, secondaryTags, selectedTheme, canvasLayout, navigation, refreshSubscription]);
 
   const themeConfig = DIARY_THEMES.find(t => t.key === selectedTheme) || DIARY_THEMES[0];
   const bgColor = selectedTheme === 'night' ? '#1A1A2E' : selectedTheme === 'warm' ? '#FFF8F0' : selectedTheme === 'nature' ? '#F0F7F0' : theme.colors.background;
@@ -265,20 +267,40 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
               opacity: contentAnim,
               transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
             }}>
-              {/* Emotion Banner */}
-              {selectedEmotion && (
-                <View style={[s.moodBanner, { backgroundColor: EMOTION_COLORS[selectedEmotion] + '15' }]}>
-                  <EmotionStickerView emotionKey={selectedEmotion} size="small" />
-                  <Text style={[s.moodLabel, { color: EMOTION_COLORS[selectedEmotion] }]}>
-                    {EMOTION_LABELS[selectedEmotion]}
-                  </Text>
-                  {secondaryTags && secondaryTags.length > 0 && (
-                    <Text style={[s.moodTags, { color: EMOTION_COLORS[selectedEmotion] + 'AA' }]}>
-                      {secondaryTags.join(' · ')}
+              {/* Emotion Banner — tap to change */}
+              <TouchableOpacity
+                onPress={() => setShowEmotionPicker(true)}
+                style={[
+                  s.moodBanner,
+                  {
+                    backgroundColor: currentEmotion
+                      ? EMOTION_COLORS[currentEmotion] + '15'
+                      : theme.colors.surfaceSecondary,
+                  },
+                ]}
+                activeOpacity={0.7}
+              >
+                {currentEmotion ? (
+                  <>
+                    <EmotionStickerView emotionKey={currentEmotion} size="small" />
+                    <Text style={[s.moodLabel, { color: EMOTION_COLORS[currentEmotion] }]}>
+                      {EMOTION_LABELS[currentEmotion]}
                     </Text>
-                  )}
-                </View>
-              )}
+                    {secondaryTags && secondaryTags.length > 0 && (
+                      <Text style={[s.moodTags, { color: EMOTION_COLORS[currentEmotion] + 'AA' }]}>
+                        {secondaryTags.join(' · ')}
+                      </Text>
+                    )}
+                  </>
+                ) : (
+                  <Text style={[s.moodLabel, { color: theme.colors.textTertiary }]}>
+                    오늘 기분을 선택해주세요
+                  </Text>
+                )}
+                <Text style={[s.moodChangeHint, { color: theme.colors.textDisabled }]}>
+                  {currentEmotion ? '변경' : '선택'}
+                </Text>
+              </TouchableOpacity>
 
               {/* Photo Zone */}
               {photos.length > 0 && (
@@ -418,6 +440,38 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Emotion Picker Modal */}
+      <Modal visible={showEmotionPicker} transparent animationType="slide">
+        <TouchableOpacity style={s.sheetOverlay} activeOpacity={1} onPress={() => setShowEmotionPicker(false)}>
+          <View style={[s.sheetContent, { backgroundColor: theme.colors.surface, paddingBottom: insets.bottom + 16 }]}>
+            <Text style={[s.sheetTitle, { color: theme.colors.textPrimary }]}>오늘의 기분</Text>
+            <View style={s.emotionGrid}>
+              {EMOTION_KEYS.map((key) => {
+                const isSelected = currentEmotion === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[
+                      s.emotionGridItem,
+                      {
+                        borderColor: isSelected ? EMOTION_COLORS[key] : theme.colors.border,
+                        backgroundColor: isSelected ? EMOTION_COLORS[key] + '15' : 'transparent',
+                      },
+                    ]}
+                    onPress={() => { setCurrentEmotion(key); setShowEmotionPicker(false); }}
+                  >
+                    <EmotionStickerView emotionKey={key} size="small" />
+                    <Text style={[s.emotionGridLabel, { color: isSelected ? EMOTION_COLORS[key] : theme.colors.textSecondary }]}>
+                      {EMOTION_LABELS[key]}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -451,7 +505,8 @@ function makeStyles(t: Theme) {
       gap: 8,
     },
     moodLabel: { fontSize: 15, fontWeight: '700' },
-    moodTags: { fontSize: 12, marginLeft: 4 },
+    moodTags: { fontSize: 12, marginLeft: 4, flex: 1 },
+    moodChangeHint: { fontSize: 12, marginLeft: 'auto' },
 
     // Photos
     photoSection: { marginTop: t.spacing.xl, gap: t.spacing.md },
@@ -508,5 +563,18 @@ function makeStyles(t: Theme) {
     },
     sheetDot: { width: 20, height: 20, borderRadius: 10 },
     sheetOptionText: { fontSize: 15, fontWeight: '500' },
+
+    // Emotion picker grid
+    emotionGrid: {
+      flexDirection: 'row', flexWrap: 'wrap',
+      justifyContent: 'center', gap: 12,
+    },
+    emotionGridItem: {
+      alignItems: 'center', justifyContent: 'center',
+      width: 72, paddingVertical: 12,
+      borderRadius: t.borderRadius.lg, borderWidth: 1.5,
+      gap: 6,
+    },
+    emotionGridLabel: { fontSize: 12, fontWeight: '600' },
   });
 }

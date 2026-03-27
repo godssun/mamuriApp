@@ -70,11 +70,19 @@ public class DecorationService {
         // 기존 꾸미기 삭제
         decorationRepository.deleteByDiaryId(diaryId);
 
-        // 새 꾸미기 저장
+        // 새 꾸미기 저장 (assetId 또는 assetType 코드로 에셋 조회)
         List<DiaryDecoration> decorations = request.getDecorations().stream()
                 .map(item -> {
-                    DecorationAsset asset = assetRepository.findById(item.getAssetId())
-                            .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INPUT));
+                    DecorationAsset asset;
+                    if (item.getAssetId() != null) {
+                        asset = assetRepository.findById(item.getAssetId())
+                                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INPUT));
+                    } else if (item.getAssetType() != null && !item.getAssetType().isBlank()) {
+                        asset = assetRepository.findByCode(item.getAssetType())
+                                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INPUT));
+                    } else {
+                        throw new CustomException(ErrorCode.INVALID_INPUT);
+                    }
                     return DiaryDecoration.builder()
                             .diary(diary)
                             .asset(asset)

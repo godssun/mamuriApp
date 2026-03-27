@@ -17,6 +17,7 @@ public class DiaryPhotoResponse {
 
     private Long id;
     private String url;
+    private String cdnUrl;
     private String originalFilename;
     private long fileSize;
     private int displayOrder;
@@ -26,6 +27,7 @@ public class DiaryPhotoResponse {
         return DiaryPhotoResponse.builder()
                 .id(photo.getId())
                 .url(publicUrl)
+                .cdnUrl(publicUrl)
                 .originalFilename(photo.getOriginalFilename())
                 .fileSize(photo.getFileSize())
                 .displayOrder(photo.getDisplayOrder())

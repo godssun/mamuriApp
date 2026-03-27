@@ -7,8 +7,10 @@ import com.github.mamuriapp.ai.service.SafetyCheckService;
 import com.github.mamuriapp.diary.dto.*;
 import com.github.mamuriapp.diary.entity.Diary;
 import com.github.mamuriapp.diary.entity.DiaryEmotion;
+import com.github.mamuriapp.diary.entity.DiaryPhoto;
 import com.github.mamuriapp.diary.entity.EmotionSticker;
 import com.github.mamuriapp.diary.repository.DiaryEmotionRepository;
+import com.github.mamuriapp.diary.repository.DiaryPhotoRepository;
 import com.github.mamuriapp.diary.repository.DiaryRepository;
 import com.github.mamuriapp.diary.repository.EmotionStickerRepository;
 import com.github.mamuriapp.global.config.FeatureFlags;
@@ -25,7 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 일기 서비스.
@@ -50,6 +55,8 @@ public class DiaryService {
     private final FeatureFlags featureFlags;
     private final DiaryPhotoService diaryPhotoService;
     private final DecorationService decorationService;
+    private final DiaryPhotoRepository diaryPhotoRepository;
+    private final StorageService storageService;
 
     /**
      * 새로운 일기를 작성한다.
@@ -174,9 +181,8 @@ public class DiaryService {
      * @return 일기 응답 목록
      */
     public List<DiaryResponse> getList(Long userId) {
-        return diaryRepository.findByUserIdOrderByDiaryDateDescCreatedAtDesc(userId).stream()
-                .map(DiaryResponse::from)
-                .toList();
+        List<Diary> diaries = diaryRepository.findByUserIdOrderByDiaryDateDescCreatedAtDesc(userId);
+        return enrichDiariesForList(diaries);
     }
 
     /**
@@ -192,9 +198,8 @@ public class DiaryService {
         LocalDate startDate = yearMonth.atDay(1);
         LocalDate endDate = yearMonth.atEndOfMonth();
 
-        return diaryRepository.findByUserIdAndDiaryDateBetween(userId, startDate, endDate).stream()
-                .map(DiaryResponse::from)
-                .toList();
+        List<Diary> diaries = diaryRepository.findByUserIdAndDiaryDateBetween(userId, startDate, endDate);
+        return enrichDiariesForList(diaries);
     }
 
     /**
@@ -224,9 +229,8 @@ public class DiaryService {
      * @return 일기 응답 목록
      */
     public List<DiaryResponse> getListByDate(Long userId, LocalDate date) {
-        return diaryRepository.findByUserIdAndDiaryDate(userId, date).stream()
-                .map(DiaryResponse::from)
-                .toList();
+        List<Diary> diaries = diaryRepository.findByUserIdAndDiaryDate(userId, date);
+        return enrichDiariesForList(diaries);
     }
 
     /**
@@ -332,6 +336,48 @@ public class DiaryService {
                         .categoryColorHex(r[7] != null ? (String) r[7] : null)
                         .build())
                 .toList();
+    }
+
+    /**
+     * 일기 목록에 썸네일 사진 + 감정 정보를 배치 조회하여 포함한다 (N+1 방지).
+     */
+    private List<DiaryResponse> enrichDiariesForList(List<Diary> diaries) {
+        if (diaries.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> diaryIds = diaries.stream().map(Diary::getId).toList();
+
+        // 배치로 첫 번째 사진 조회
+        Map<Long, DiaryPhoto> thumbnailMap = diaryPhotoRepository
+                .findFirstPhotosByDiaryIds(diaryIds).stream()
+                .collect(Collectors.toMap(p -> p.getDiary().getId(), p -> p, (a, b) -> a));
+
+        // 배치로 감정 조회
+        Map<Long, DiaryEmotion> emotionMap = diaryEmotionRepository
+                .findByDiaryIds(diaryIds).stream()
+                .collect(Collectors.toMap(e -> e.getDiary().getId(), e -> e, (a, b) -> a));
+
+        return diaries.stream().map(diary -> {
+            DiaryPhotoResponse thumbnail = null;
+            DiaryPhoto photo = thumbnailMap.get(diary.getId());
+            if (photo != null) {
+                thumbnail = DiaryPhotoResponse.from(photo, storageService.getPublicUrl(photo.getStorageKey()));
+            }
+
+            DiaryResponse.EmotionInfo emotionInfo = null;
+            DiaryEmotion emotion = emotionMap.get(diary.getId());
+            if (emotion != null) {
+                emotionInfo = DiaryResponse.EmotionInfo.builder()
+                        .primaryEmotion(emotion.getPrimaryEmotion())
+                        .emotionScore(emotion.getEmotionScore())
+                        .primaryStickerId(emotion.getPrimaryStickerId())
+                        .secondaryStickerIds(emotion.getSecondaryStickerIds())
+                        .build();
+            }
+
+            return DiaryResponse.forList(diary, thumbnail, emotionInfo);
+        }).toList();
     }
 
     private Diary findUserDiary(Long userId, Long diaryId) {

@@ -20,4 +20,10 @@ public interface DiaryPhotoRepository extends JpaRepository<DiaryPhoto, Long> {
     long sumFileSizeByUserId(@Param("userId") Long userId);
 
     void deleteByDiaryId(Long diaryId);
+
+    /**
+     * 여러 일기의 첫 번째 사진만 조회 (목록 썸네일용).
+     */
+    @Query("SELECT p FROM DiaryPhoto p WHERE p.diary.id IN :diaryIds AND p.displayOrder = 0")
+    List<DiaryPhoto> findFirstPhotosByDiaryIds(@Param("diaryIds") List<Long> diaryIds);
 }

@@ -18,6 +18,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
+  Image,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -25,13 +27,15 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useThemeV2 } from '../design-system-v2';
 import i18n from '../i18n/i18n';
-import { diaryApi, companionApi } from '../api/client';
-import { Diary, StreakResponse, DiaryStackParamList } from '../types';
+import { diaryApi, diaryApiV3, companionApi } from '../api/client';
+import { DiaryV3, StreakResponse, DiaryStackParamListV3, EmotionKey } from '../types';
 import { formatDiaryDate } from '../utils/dateFormat';
-import { DiaryCard } from './components/Card';
+import { Card } from './components/Card';
 import { DateStrip } from './components/DateStrip';
+import { EmotionStickerView } from './components/EmotionStickerView';
+import { EMOTION_COLORS, EMOTION_LABELS } from '../constants/stickers';
 
-type Props = NativeStackScreenProps<DiaryStackParamList, 'DiaryListHome'>;
+type Props = NativeStackScreenProps<DiaryStackParamListV3, 'DiaryListHome'>;
 
 function formatDateKey(date: Date): string {
   const y = date.getFullYear();
@@ -56,7 +60,7 @@ export function DiaryListScreenV2({ navigation }: Props) {
   const listAnim = useRef(new Animated.Value(0)).current;
 
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [diaries, setDiaries] = useState<Diary[]>([]);
+  const [diaries, setDiaries] = useState<DiaryV3[]>([]);
   const [datesWithDiaries, setDatesWithDiaries] = useState<Set<string>>(new Set());
   const [streak, setStreak] = useState<StreakResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,12 +91,12 @@ export function DiaryListScreenV2({ navigation }: Props) {
     }
   }, []);
 
-  // Fetch diaries for selected date
+  // Fetch diaries for selected date (V3: includes emotion/photo data)
   const fetchDiaries = useCallback(async () => {
     try {
       const dateKey = formatDateKey(selectedDate);
       const [diaryData, streakData] = await Promise.all([
-        diaryApi.getListByDate(dateKey),
+        diaryApiV3.getListByDateV3(dateKey),
         companionApi.getStreak(),
       ]);
       setDiaries(diaryData);
@@ -131,7 +135,23 @@ export function DiaryListScreenV2({ navigation }: Props) {
     fetchCalendar(year, month);
   }, [fetchCalendar]);
 
-  const renderDiaryItem = ({ item, index }: { item: Diary; index: number }) => {
+  const renderDiaryItem = ({ item, index }: { item: DiaryV3; index: number }) => {
+    // Extract emotion code from V3 response
+    const emotionCode = (
+      item.emotion?.primarySticker?.category?.code
+      || item.emotion?.primarySticker?.code?.replace(/_default$/, '')?.toUpperCase()
+      || (item as any).primaryEmotion
+    ) as EmotionKey | undefined;
+    const emotionColor = emotionCode ? EMOTION_COLORS[emotionCode] : null;
+
+    // First photo thumbnail
+    const firstPhoto = item.photos && item.photos.length > 0 ? item.photos[0] : null;
+    const photoUrl = firstPhoto
+      ? (firstPhoto.cdnUrl || (firstPhoto as any).url || '').startsWith('http')
+        ? (firstPhoto.cdnUrl || (firstPhoto as any).url || '')
+        : `${__DEV__ ? `http://${Platform.OS === 'android' ? '10.0.2.2' : 'localhost'}:8080` : 'https://api.mamuri.app'}${firstPhoto.cdnUrl || (firstPhoto as any).url || ''}`
+      : null;
+
     return (
       <Animated.View style={{
         opacity: listAnim,
@@ -141,16 +161,97 @@ export function DiaryListScreenV2({ navigation }: Props) {
             outputRange: [16 + index * 8, 0],
           }),
         }],
+        marginBottom: theme.spacing.md,
       }}>
-        <DiaryCard
-          date={formatDiaryDate(item.diaryDate)}
-          title={item.title}
-          preview={item.content.substring(0, 100)}
-          moodColor={theme.colors.primary}
-          hasAIComment={item.aiComment !== null}
+        <Card
           onPress={() => navigation.navigate('DiaryDetail', { diaryId: item.id })}
-          style={{ marginBottom: theme.spacing.md }}
-        />
+          elevation="sm"
+          padding="none"
+          style={{
+            backgroundColor: emotionColor
+              ? emotionColor + '08'
+              : theme.colors.surface,
+            borderRadius: theme.borderRadius.xl,
+            overflow: 'hidden',
+          }}
+        >
+          <View style={styles.boardCard}>
+            {/* Photo thumbnail (right side) */}
+            {photoUrl && (
+              <Image
+                source={{ uri: photoUrl }}
+                style={styles.cardThumbnail}
+                resizeMode="cover"
+              />
+            )}
+
+            {/* Content area */}
+            <View style={[styles.cardContent, { padding: theme.layout.cardPadding }]}>
+              {/* Top: Emotion sticker + Date */}
+              <View style={styles.cardTopRow}>
+                {emotionCode && (
+                  <View style={[
+                    styles.cardEmotionChip,
+                    { backgroundColor: (emotionColor || theme.colors.primary) + '15' },
+                  ]}>
+                    <EmotionStickerView emotionKey={emotionCode} size="mini" />
+                    <Text style={[styles.cardEmotionLabel, { color: emotionColor || theme.colors.primary }]}>
+                      {EMOTION_LABELS[emotionCode]}
+                    </Text>
+                  </View>
+                )}
+                <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>
+                  {formatDiaryDate(item.diaryDate)}
+                </Text>
+              </View>
+
+              {/* Title */}
+              <Text
+                numberOfLines={1}
+                style={[
+                  theme.typography.titleMedium,
+                  { color: theme.colors.textPrimary, marginTop: theme.spacing.sm },
+                ]}
+              >
+                {item.title}
+              </Text>
+
+              {/* Preview */}
+              <Text
+                numberOfLines={2}
+                style={[
+                  theme.typography.bodySmall,
+                  {
+                    color: theme.colors.textSecondary,
+                    lineHeight: 19,
+                    marginTop: theme.spacing.xs,
+                  },
+                ]}
+              >
+                {item.content.substring(0, 100)}
+              </Text>
+
+              {/* Bottom: AI badge */}
+              {item.aiComment !== null && (
+                <View style={[
+                  styles.cardAiBadge,
+                  {
+                    backgroundColor: isDark
+                      ? 'rgba(148, 136, 255, 0.12)'
+                      : theme.colors.primarySubtle,
+                    borderRadius: theme.borderRadius.full,
+                    marginTop: theme.spacing.sm,
+                  },
+                ]}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.primary }} />
+                  <Text style={[theme.typography.labelSmall, { color: theme.colors.primary, fontSize: 10 }]}>
+                    AI
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </Card>
       </Animated.View>
     );
   };
@@ -217,7 +318,7 @@ export function DiaryListScreenV2({ navigation }: Props) {
               borderRadius: theme.borderRadius.full,
               marginTop: theme.spacing.lg,
             }]}
-            onPress={() => navigation.navigate('WriteDiary')}
+            onPress={() => navigation.navigate('WriteDiary', {})}
             activeOpacity={0.85}
           >
             <Text style={[
@@ -367,5 +468,42 @@ const styles = StyleSheet.create({
   writeActionButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
+  },
+  // Board-style diary card
+  boardCard: {
+    flexDirection: 'row',
+  },
+  cardThumbnail: {
+    width: 80,
+    height: '100%',
+    minHeight: 100,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cardEmotionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    gap: 4,
+  },
+  cardEmotionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  cardAiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    gap: 4,
   },
 });

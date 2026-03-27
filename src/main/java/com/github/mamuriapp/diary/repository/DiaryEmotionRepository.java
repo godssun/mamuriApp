@@ -18,6 +18,12 @@ public interface DiaryEmotionRepository extends JpaRepository<DiaryEmotion, Long
     Optional<DiaryEmotion> findByDiaryId(Long diaryId);
 
     /**
+     * 여러 일기의 감정을 배치 조회한다.
+     */
+    @Query("SELECT de FROM DiaryEmotion de WHERE de.diary.id IN :diaryIds")
+    List<DiaryEmotion> findByDiaryIds(@Param("diaryIds") List<Long> diaryIds);
+
+    /**
      * 사용자의 특정 기간 감정 목록을 조회한다.
      */
     @Query("SELECT de FROM DiaryEmotion de WHERE de.user.id = :userId " +

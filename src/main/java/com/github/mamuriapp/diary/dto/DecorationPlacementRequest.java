@@ -18,8 +18,8 @@ public class DecorationPlacementRequest {
 
     @Getter
     public static class DecorationItem {
-        @NotNull
         private Long assetId;
+        private String assetType;
         private double positionX;
         private double positionY;
         private double scale = 1.0;
