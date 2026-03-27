@@ -256,9 +256,8 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       }
 
       refreshSubscription();
-      // push (not replace) so back from detail goes to list, not home
-      navigation.pop(); // remove editor from stack
-      navigation.navigate('DiaryDetail', { diaryId: diary.id });
+      // replace editor with detail — back from detail goes to list
+      navigation.replace('DiaryDetail', { diaryId: diary.id });
     } catch (error: any) {
       if (error instanceof ApiError && error.status === 429) {
         Alert.alert('알림', error.message || '잠시 후 다시 시도해주세요.');
