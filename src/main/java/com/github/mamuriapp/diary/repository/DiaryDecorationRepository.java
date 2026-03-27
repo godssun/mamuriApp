@@ -2,6 +2,8 @@ package com.github.mamuriapp.diary.repository;
 
 import com.github.mamuriapp.diary.entity.DiaryDecoration;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -10,7 +12,8 @@ import java.util.List;
  */
 public interface DiaryDecorationRepository extends JpaRepository<DiaryDecoration, Long> {
 
-    List<DiaryDecoration> findByDiaryIdOrderByZIndexAsc(Long diaryId);
+    @Query("SELECT d FROM DiaryDecoration d WHERE d.diary.id = :diaryId ORDER BY d.zIndex ASC")
+    List<DiaryDecoration> findByDiaryIdOrderByZIndexAsc(@Param("diaryId") Long diaryId);
 
     void deleteByDiaryId(Long diaryId);
 }
