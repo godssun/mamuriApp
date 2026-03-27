@@ -9,7 +9,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
+  View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -17,7 +17,7 @@ import { useThemeV2 } from '../design-system-v2';
 import type { Theme } from '../design-system-v2';
 import { calendarApi, diaryApi } from '../api/client';
 import type { CalendarDayEntry, EmotionKey } from '../types';
-import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS } from '../constants/stickers';
+import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS, EMOTION_STICKER_IMAGES } from '../constants/stickers';
 
 const DAY_HEADERS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -144,18 +144,23 @@ export default function EmotionCalendarV3() {
               >
                 <View style={[
                   s.calDot,
-                  emotionColor
-                    ? { backgroundColor: emotionColor }
-                    : { backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.colors.border },
+                  !emotionColor && { backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.colors.border },
                   isToday && s.calDotToday,
                 ]}>
-                  <Text style={[
-                    s.calDayNum,
-                    { color: emotionColor ? '#FFFFFF' : theme.colors.textTertiary },
-                    isToday && !emotionColor && { color: theme.colors.primary },
-                  ]}>
-                    {day}
-                  </Text>
+                  {emotionColor && entry?.primaryEmotionCode ? (
+                    <Image
+                      source={EMOTION_STICKER_IMAGES[entry.primaryEmotionCode]}
+                      style={{ width: 20, height: 20, resizeMode: 'contain' }}
+                    />
+                  ) : (
+                    <Text style={[
+                      s.calDayNum,
+                      { color: theme.colors.textTertiary },
+                      isToday && { color: theme.colors.primary },
+                    ]}>
+                      {day}
+                    </Text>
+                  )}
                 </View>
               </TouchableOpacity>
             );
@@ -192,7 +197,7 @@ export default function EmotionCalendarV3() {
                 if (count === 0) return null;
                 return (
                   <View key={key} style={s.legendItem}>
-                    <View style={[s.legendDot, { backgroundColor: EMOTION_COLORS[key] }]} />
+                    <Image source={EMOTION_STICKER_IMAGES[key]} style={{ width: 14, height: 14, resizeMode: 'contain' }} />
                     <Text style={s.legendText}>{EMOTION_LABELS[key]}</Text>
                     <Text style={s.legendCount}>{count}</Text>
                   </View>

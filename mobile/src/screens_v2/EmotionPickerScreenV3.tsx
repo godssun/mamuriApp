@@ -16,7 +16,7 @@ import { useThemeV2 } from '../design-system-v2';
 import type { Theme } from '../design-system-v2';
 import type { EmotionKey } from '../types';
 import {
-  EMOTION_COLORS, EMOTION_LABELS, EMOTION_ICONS,
+  EMOTION_COLORS, EMOTION_LABELS,
   SECONDARY_TAGS, EMOTION_KEYS, EMOTION_STICKER_IMAGES,
 } from '../constants/stickers';
 

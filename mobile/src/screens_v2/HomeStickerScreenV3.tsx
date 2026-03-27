@@ -19,7 +19,7 @@ import type { Theme } from '../design-system-v2';
 import { diaryApi, emotionApi, companionApi } from '../api/client';
 import type { Diary, CompanionProfile, EmotionKey } from '../types';
 import {
-  EMOTION_COLORS, EMOTION_LABELS, EMOTION_ICONS, EMOTION_KEYS,
+  EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS,
   EMOTION_STICKER_IMAGES,
 } from '../constants/stickers';
 
@@ -137,12 +137,17 @@ export default function HomeStickerScreenV3() {
           <View style={s.weekRow}>
             {weekStrip.map((entry, i) => (
               <View key={i} style={s.weekCol}>
-                <View style={[
-                  s.weekDot,
-                  entry.emotion
-                    ? { backgroundColor: EMOTION_COLORS[entry.emotion as EmotionKey] || theme.colors.border }
-                    : { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: theme.colors.border },
-                ]} />
+                {entry.emotion ? (
+                  <Image
+                    source={EMOTION_STICKER_IMAGES[entry.emotion as EmotionKey]}
+                    style={{ width: 24, height: 24, resizeMode: 'contain' }}
+                  />
+                ) : (
+                  <View style={[
+                    s.weekDot,
+                    { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: theme.colors.border },
+                  ]} />
+                )}
                 <Text style={s.weekDay}>{weekDays[entry.dayOfWeek]}</Text>
               </View>
             ))}

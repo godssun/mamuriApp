@@ -24,7 +24,7 @@ import type { DiaryV3, ConversationMessage, ConversationLimits, DiaryStackParamL
 import { formatDiaryDate, formatTime } from '../utils/dateFormat';
 import { ChatBubble } from './components/ChatBubble';
 import { ReportModal } from './components/ReportModal';
-import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_ICONS, EMOTION_STICKER_IMAGES } from '../constants/stickers';
+import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_STICKER_IMAGES } from '../constants/stickers';
 
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'DiaryDetail'>;
 
@@ -214,7 +214,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
           {/* Deco Sticker Overlays (read-only) */}
           {emotionCode && (
             <View style={s.decoOverlay}>
-              <Text style={[s.decoEmoji, { opacity: 0.1 }]}>{EMOTION_ICONS[emotionCode]}</Text>
+              <Image source={EMOTION_STICKER_IMAGES[emotionCode]} style={{ width: 60, height: 60, resizeMode: 'contain', opacity: 0.1 }} />
             </View>
           )}
         </Animated.View>

@@ -22,7 +22,7 @@ import { diaryApiV3, emotionApi, ApiError } from '../api/client';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import type { DiaryStackParamListV3, EmotionKey } from '../types';
 import {
-  EMOTION_COLORS, EMOTION_LABELS, EMOTION_ICONS,
+  EMOTION_COLORS, EMOTION_LABELS,
   DIARY_THEMES, EMOTION_STICKER_IMAGES,
 } from '../constants/stickers';
 
@@ -234,10 +234,10 @@ export default function DiaryExpressiveEditorV3({ navigation, route }: Props) {
           {selectedEmotion && (
             <>
               <View style={s.decoTopLeft}>
-                <Text style={s.decoEmoji}>{EMOTION_ICONS[selectedEmotion]}</Text>
+                <Image source={EMOTION_STICKER_IMAGES[selectedEmotion]} style={{ width: 40, height: 40, resizeMode: 'contain' }} />
               </View>
               <View style={s.decoTopRight}>
-                <Text style={[s.decoEmoji, { opacity: 0.4 }]}>{EMOTION_ICONS[selectedEmotion]}</Text>
+                <Image source={EMOTION_STICKER_IMAGES[selectedEmotion]} style={{ width: 40, height: 40, resizeMode: 'contain', opacity: 0.4 }} />
               </View>
             </>
           )}

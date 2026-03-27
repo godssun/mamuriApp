@@ -8,7 +8,7 @@
 
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
+  View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -16,7 +16,7 @@ import { useThemeV2 } from '../design-system-v2';
 import type { Theme } from '../design-system-v2';
 import { emotionApi, calendarApi, reportApi2 } from '../api/client';
 import type { CalendarDayEntry, EmotionKey } from '../types';
-import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS } from '../constants/stickers';
+import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS, EMOTION_STICKER_IMAGES } from '../constants/stickers';
 
 export default function ReflectionStoryV3() {
   const { theme } = useThemeV2();
@@ -104,11 +104,21 @@ export default function ReflectionStoryV3() {
 
               return (
                 <View key={day} style={s.calCell}>
-                  <View style={[
-                    s.calDot,
-                    emotionColor ? { backgroundColor: emotionColor } : { backgroundColor: theme.colors.surfaceSecondary },
-                    isToday && { borderWidth: 1.5, borderColor: theme.colors.primary },
-                  ]} />
+                  {emotionColor && entry?.primaryEmotionCode ? (
+                    <Image
+                      source={EMOTION_STICKER_IMAGES[entry.primaryEmotionCode]}
+                      style={[
+                        { width: 16, height: 16, resizeMode: 'contain' },
+                        isToday && { borderWidth: 1, borderColor: theme.colors.primary, borderRadius: 8 },
+                      ]}
+                    />
+                  ) : (
+                    <View style={[
+                      s.calDot,
+                      { backgroundColor: theme.colors.surfaceSecondary },
+                      isToday && { borderWidth: 1.5, borderColor: theme.colors.primary },
+                    ]} />
+                  )}
                 </View>
               );
             })}
@@ -123,11 +133,14 @@ export default function ReflectionStoryV3() {
             {/* Emotion strip */}
             <View style={s.emotionStrip}>
               {weeklyCalendar.slice(-7).map((entry: any, i: number) => {
-                const emotionColor = entry.emotion
-                  ? EMOTION_COLORS[entry.emotion as EmotionKey] || theme.colors.border
-                  : theme.colors.border;
-                return (
-                  <View key={i} style={[s.stripDot, { backgroundColor: emotionColor }]} />
+                return entry.emotion ? (
+                  <Image
+                    key={i}
+                    source={EMOTION_STICKER_IMAGES[entry.emotion as EmotionKey]}
+                    style={{ width: 20, height: 20, resizeMode: 'contain' }}
+                  />
+                ) : (
+                  <View key={i} style={[s.stripDot, { backgroundColor: theme.colors.border }]} />
                 );
               })}
             </View>
@@ -140,9 +153,10 @@ export default function ReflectionStoryV3() {
                   : 0;
                 return (
                   <View key={emo} style={s.distItem}>
-                    <View style={[s.distDot, {
-                      backgroundColor: EMOTION_COLORS[emo as EmotionKey] || theme.colors.primary,
-                    }]} />
+                    <Image
+                      source={EMOTION_STICKER_IMAGES[emo as EmotionKey]}
+                      style={{ width: 20, height: 20, resizeMode: 'contain' }}
+                    />
                     <Text style={s.distPct}>{pct}%</Text>
                     <Text style={s.distLabel}>{EMOTION_LABELS[emo as EmotionKey] || emo}</Text>
                   </View>
