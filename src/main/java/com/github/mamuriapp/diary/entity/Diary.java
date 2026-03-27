@@ -32,11 +32,11 @@ public class Diary {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column
+    @Column(nullable = false)
     private String title;
 
     @Column(columnDefinition = "TEXT")
-    private String content;
+    private String content;  // nullable after V23 migration
 
     @Column(name = "diary_type", nullable = false, length = 20)
     private String diaryType = "TEXT";
