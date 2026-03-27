@@ -251,9 +251,13 @@ export interface EmotionSticker {
 }
 
 export interface EmotionInfo {
+  primaryEmotion?: string;
   primarySticker: EmotionSticker | null;
+  primaryStickerId?: number;
+  stickerCode?: string;
   emotionScore: number;
   secondaryTags: string[];
+  secondaryStickerIds?: number[];
 }
 
 export interface CalendarDayEntry {

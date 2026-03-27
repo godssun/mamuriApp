@@ -77,6 +77,56 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const [showThemeSheet, setShowThemeSheet] = useState(false);
   const [showStickerSheet, setShowStickerSheet] = useState(false);
   const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
+  const [editLoading, setEditLoading] = useState(isEditMode);
+
+  // 수정 모드: 기존 일기 데이터 로드
+  useEffect(() => {
+    if (!editDiaryId) return;
+    (async () => {
+      try {
+        const diary = await diaryApiV3.getDetailV3(editDiaryId);
+        setTitle(diary.title || '');
+        setContent(diary.content || '');
+        setSelectedTheme(diary.theme || 'default');
+
+        // 감정
+        const emo = diary.emotion?.primaryEmotion
+          || diary.emotion?.primarySticker?.category?.code;
+        if (emo) setCurrentEmotion(emo as EmotionKey);
+
+        // 사진 (서버 URL → PhotoItem)
+        if (diary.photos && diary.photos.length > 0) {
+          const DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+          const SERVER = __DEV__ ? `http://${DEV_HOST}:8080` : 'https://api.mamuri.app';
+          setPhotos(diary.photos.map((p: any) => ({
+            uri: (p.cdnUrl || p.url || '').startsWith('http')
+              ? (p.cdnUrl || p.url)
+              : `${SERVER}${p.cdnUrl || p.url || ''}`,
+            width: p.widthPx || 0,
+            height: p.heightPx || 0,
+            isRemote: true,
+          })));
+        }
+
+        // 스티커
+        if (diary.decorations && diary.decorations.length > 0) {
+          const canvasW = Dimensions.get('window').width - 48;
+          setPlacedStickers(diary.decorations.map((d: any) => ({
+            id: nextStickerId(),
+            code: d.assetCode || d.assetType || '',
+            source: getStickerSource(d.assetCode || d.assetType || '') || getStickerSource('e_joy')!,
+            x: (d.positionX || 0) * canvasW,
+            y: (d.positionY || 0) * 400,
+            size: Math.round(60 * (d.scale || 1)),
+          })));
+        }
+      } catch (e: any) {
+        console.warn('[DiaryCanvas] Edit load failed:', e?.message);
+      } finally {
+        setEditLoading(false);
+      }
+    })();
+  }, [editDiaryId]);
 
   const contentAnim = useRef(new Animated.Value(0)).current;
   const textInputRef = useRef<TextInput>(null);
@@ -206,7 +256,9 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       }
 
       refreshSubscription();
-      navigation.replace('DiaryDetail', { diaryId: diary.id });
+      // push (not replace) so back from detail goes to list, not home
+      navigation.pop(); // remove editor from stack
+      navigation.navigate('DiaryDetail', { diaryId: diary.id });
     } catch (error: any) {
       if (error instanceof ApiError && error.status === 429) {
         Alert.alert('알림', error.message || '잠시 후 다시 시도해주세요.');
@@ -346,26 +398,33 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
                 scrollEnabled={false}
                 autoFocus={!isEditMode}
               />
-            </Animated.View>
 
-            {/* Draggable Stickers */}
-            {placedStickers.map((sticker) => (
-              <DraggableSticker
-                key={sticker.id}
-                id={sticker.id}
-                stickerCode={sticker.code}
-                stickerSource={sticker.source}
-                initialX={sticker.x}
-                initialY={sticker.y}
-                size={sticker.size}
-                onPositionChange={handleStickerPositionChange}
-                onDelete={handleStickerDelete}
-                onSizeChange={handleStickerResize}
-                selected={sticker.id === selectedStickerId}
-                onSelect={setSelectedStickerId}
-                editable
-              />
-            ))}
+            {/* Sticker Canvas — separate zone below text for free placement */}
+            {placedStickers.length > 0 && (
+              <View style={s.stickerCanvas}>
+                <Text style={[s.stickerCanvasLabel, { color: theme.colors.textDisabled }]}>
+                  스티커 영역 — 자유롭게 배치하세요
+                </Text>
+                {placedStickers.map((sticker) => (
+                  <DraggableSticker
+                    key={sticker.id}
+                    id={sticker.id}
+                    stickerCode={sticker.code}
+                    stickerSource={sticker.source}
+                    initialX={sticker.x}
+                    initialY={sticker.y}
+                    size={sticker.size}
+                    onPositionChange={handleStickerPositionChange}
+                    onDelete={handleStickerDelete}
+                    onSizeChange={handleStickerResize}
+                    selected={sticker.id === selectedStickerId}
+                    onSelect={setSelectedStickerId}
+                    editable
+                  />
+                ))}
+              </View>
+            )}
+            </Animated.View>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -496,6 +555,21 @@ function makeStyles(t: Theme) {
       minHeight: 400,
       paddingHorizontal: t.layout.screenPaddingH,
       position: 'relative',
+    },
+    stickerCanvas: {
+      minHeight: 200,
+      marginTop: t.spacing.xl,
+      position: 'relative',
+      borderWidth: 1,
+      borderColor: t.colors.borderSubtle,
+      borderStyle: 'dashed',
+      borderRadius: t.borderRadius.lg,
+      padding: t.spacing.md,
+    },
+    stickerCanvasLabel: {
+      fontSize: 11,
+      textAlign: 'center',
+      marginBottom: t.spacing.sm,
     },
 
     // MoodBanner
