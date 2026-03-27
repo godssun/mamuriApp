@@ -132,7 +132,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         const canvasW = Dimensions.get('window').width - 48;
         const loadedObjects: CanvasObjectData[] = [];
 
-        // Photos
+        // Photos — use photo API coordinates
         if (diary.photos && diary.photos.length > 0) {
           const DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
           const SERVER = __DEV__ ? `http://${DEV_HOST}:8080` : 'https://api.mamuri.app';
@@ -140,30 +140,28 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
             const uri = (p.cdnUrl || p.url || '').startsWith('http')
               ? (p.cdnUrl || p.url)
               : `${SERVER}${p.cdnUrl || p.url || ''}`;
-            const photoW = Math.min(p.widthPx || 200, canvasW * 0.8);
-            const photoH = p.heightPx
+            const photoW = p.displayWidth || Math.min(p.widthPx || 200, canvasW * 0.8);
+            const photoH = p.displayHeight || (p.heightPx
               ? photoW * (p.heightPx / (p.widthPx || 1))
-              : photoW * 0.75;
+              : photoW * 0.75);
             loadedObjects.push({
               id: nextId(),
               type: 'photo',
-              x: (canvasW - photoW) / 2,
-              y: 20 + i * (photoH + 16),
+              x: p.positionX != null ? p.positionX * canvasW : (canvasW - photoW) / 2,
+              y: p.positionY != null ? p.positionY * canvasW : 20 + i * (photoH + 16),
               width: photoW,
               height: photoH,
               rotation: 0,
-              zIndex: i,
+              zIndex: p.zIndex ?? i,
               photoUri: uri,
             });
           });
         }
 
-        // Stickers/decorations
+        // Stickers only from decorations
         if (diary.decorations && diary.decorations.length > 0) {
           diary.decorations.forEach((d: any) => {
             const code = d.assetCode || d.assetType || '';
-            // Skip photo-type decorations (they are loaded above)
-            if (code.startsWith('photo_')) return;
             const source = getStickerSource(code);
             if (!source) return;
             const stickerSize = Math.round(60 * (d.scale || 1));
@@ -215,7 +213,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
     try {
       const ImagePicker = require('expo-image-picker');
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.8,
       });
@@ -315,36 +313,51 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         theme: selectedTheme !== 'default' ? selectedTheme : undefined,
       });
 
-      // 2. Upload photos sequentially
+      // 2. Upload photos + save positions (photo API)
+      const canvasW = canvasSize.width || SCREEN_W - 48;
       const photoObjects = objects.filter(o => o.type === 'photo');
       for (const photo of photoObjects) {
         if (photo.photoUri) {
           try {
-            await diaryPhotoApi.upload(diary.id, photo.photoUri);
-          } catch (uploadErr: any) {
-            console.warn('[DiaryCanvas] Photo upload failed:', uploadErr?.message);
+            const uploaded = await diaryPhotoApi.upload(diary.id, photo.photoUri);
+            if (uploaded?.id) {
+              await diaryPhotoApi.updatePosition(uploaded.id, diary.id, {
+                positionX: canvasW > 0 ? photo.x / canvasW : 0,
+                positionY: canvasW > 0 ? photo.y / canvasW : 0,
+                displayWidth: Math.round(photo.width),
+                displayHeight: Math.round(photo.height),
+                zIndex: photo.zIndex,
+              });
+            }
+          } catch (e: any) {
+            console.warn('[DiaryCanvas] Photo save failed:', e?.message);
           }
         }
       }
 
-      // 3. Save all object positions (photos + stickers) as decorations
-      if (objects.length > 0) {
-        const canvasW = canvasSize.width || SCREEN_W - 48;
-        const decorations = objects.map((obj, idx) => ({
-          assetType: (obj.type === 'sticker' ? obj.stickerCode : `photo_${idx}`) || '',
+      // 3. Save stickers only via decoration API
+      const stickerObjects = objects.filter(o => o.type === 'sticker');
+      if (stickerObjects.length > 0) {
+        const decorations = stickerObjects.map((obj) => ({
+          assetType: obj.stickerCode || '',
           positionX: canvasW > 0 ? obj.x / canvasW : 0,
           positionY: canvasW > 0 ? obj.y / canvasW : 0,
-          scale: obj.width / (obj.type === 'sticker' ? 60 : 200),
-          rotation: obj.rotation,
+          scale: obj.width / 60,
+          rotation: obj.rotation || 0,
           zIndex: obj.zIndex,
         }));
-
         try {
           await diaryDecorationApi.save(diary.id, decorations);
-        } catch (decoErr: any) {
-          console.warn('[DiaryCanvas] Decoration save failed:', decoErr?.message);
+        } catch (e: any) {
+          console.warn('[DiaryCanvas] Decoration save failed:', e?.message);
         }
       }
+
+      console.log('[DiaryCanvas] Save complete:', {
+        diaryId: diary.id,
+        photosUploaded: photoObjects.length,
+        stickersSaved: stickerObjects.length,
+      });
 
       refreshSubscription();
       navigation.replace('DiaryDetail', { diaryId: diary.id });

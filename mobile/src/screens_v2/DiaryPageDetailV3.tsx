@@ -194,28 +194,24 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
 
   // Convert photos + decorations to CanvasObjectData[]
   const canvasObjects: CanvasObjectData[] = [
-    // Photos
-    ...(diary.photos || []).map((p, i) => {
-      const photoW = Math.min(canvasW * 0.9, 300);
-      const photoH = photoW * 0.75;
+    // Photos — use saved coordinates from photo API
+    ...(diary.photos || []).map((p: any, i: number) => {
+      const photoW = p.displayWidth || Math.min(canvasW * 0.9, 300);
+      const photoH = p.displayHeight || photoW * 0.75;
       return {
         id: `photo_${p.id}`,
         type: 'photo' as const,
-        x: (canvasW - photoW) / 2,
-        y: 20 + i * (photoH + 16),
+        x: (p.positionX ?? 0.1) * canvasW,
+        y: (p.positionY ?? 0.05) * canvasW,
         width: photoW,
         height: photoH,
         rotation: 0,
-        zIndex: i,
+        zIndex: p.zIndex ?? i,
         photoUri: resolvePhotoUrl(p),
       };
     }),
-    // Sticker decorations
+    // Sticker decorations only
     ...(diary.decorations || [])
-      .filter(deco => {
-        const code = deco.assetCode || deco.assetType || '';
-        return !code.startsWith('photo_');
-      })
       .map(deco => {
         const code = deco.assetCode || deco.assetType || '';
         const stickerSize = Math.round(60 * (deco.scale || 1));

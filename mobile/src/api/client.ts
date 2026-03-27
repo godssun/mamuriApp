@@ -634,6 +634,16 @@ export const diaryPhotoApi = {
 
     return requestMultipart<any>(`/diaries/${diaryId}/photos`, formData);
   },
+
+  async updatePosition(photoId: number, diaryId: number, data: {
+    positionX: number; positionY: number;
+    displayWidth: number; displayHeight: number; zIndex: number;
+  }): Promise<any> {
+    return request<any>(`/diaries/${diaryId}/photos/${photoId}/position`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
 };
 
 // 일기 데코레이션 API
