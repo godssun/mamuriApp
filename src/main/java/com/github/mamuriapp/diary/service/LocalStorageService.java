@@ -27,18 +27,20 @@ public class LocalStorageService implements StorageService {
     @Override
     public String store(MultipartFile file, String directory) {
         try {
-            Path dirPath = Paths.get(uploadProperties.getDir(), directory);
+            Path dirPath = Paths.get(uploadProperties.getDir(), directory).toAbsolutePath();
             Files.createDirectories(dirPath);
 
             String extension = getExtension(file.getOriginalFilename());
             String filename = UUID.randomUUID() + extension;
             Path filePath = dirPath.resolve(filename);
 
-            file.transferTo(filePath.toFile());
-            log.debug("파일 저장 완료: {}", filePath);
+            // transferTo()가 임시 파일 정리 후 실패할 수 있으므로 InputStream 방식 사용
+            Files.copy(file.getInputStream(), filePath);
+            log.info("파일 저장 완료: {} ({}bytes)", filePath, file.getSize());
 
             return directory + "/" + filename;
         } catch (IOException e) {
+            log.error("파일 저장 실패: dir={}, originalName={}", directory, file.getOriginalFilename(), e);
             throw new RuntimeException("파일 저장에 실패했습니다.", e);
         }
     }
