@@ -144,9 +144,15 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
     setPlacedStickers(prev => prev.filter(s => s.id !== id));
   }, []);
 
+  const handleStickerResize = useCallback((id: string, newSize: number) => {
+    setPlacedStickers(prev => prev.map(s => s.id === id ? { ...s, size: newSize } : s));
+  }, []);
+
+  const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null);
+
   const handleSave = useCallback(async () => {
-    if (!content.trim()) {
-      Alert.alert('알림', '내용을 입력해주세요.');
+    if (!content.trim() && photos.length === 0 && placedStickers.length === 0) {
+      Alert.alert('알림', '텍스트, 사진, 또는 스티커를 추가해주세요.');
       return;
     }
     setSaving(true);
@@ -180,11 +186,12 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         const canvasW = canvasLayout.width || SCREEN_W - 48;
         const canvasH = canvasLayout.height || 400;
 
+        const DEFAULT_STICKER_SIZE = 60;
         const decorations = placedStickers.map(sticker => ({
           assetType: sticker.code,
           positionX: canvasW > 0 ? sticker.x / canvasW : 0,
           positionY: canvasH > 0 ? sticker.y / canvasH : 0,
-          scale: 1,
+          scale: sticker.size / DEFAULT_STICKER_SIZE,
           rotation: 0,
         }));
 
@@ -224,9 +231,9 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         <Text style={[s.headerDate, { color: selectedTheme === 'night' ? '#9898AC' : theme.colors.textTertiary }]}>
           {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
         </Text>
-        <TouchableOpacity onPress={handleSave} disabled={saving || !content.trim()} style={s.headerBtn}>
+        <TouchableOpacity onPress={handleSave} disabled={saving || (!content.trim() && photos.length === 0 && placedStickers.length === 0)} style={s.headerBtn}>
           <Text style={[s.headerBtnText, {
-            color: content.trim() ? theme.colors.primary : theme.colors.textDisabled,
+            color: (content.trim() || photos.length > 0 || placedStickers.length > 0) ? theme.colors.primary : theme.colors.textDisabled,
           }]}>
             {saving ? '저장 중...' : '저장'}
           </Text>
@@ -245,7 +252,9 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
           showsVerticalScrollIndicator={false}
         >
           {/* Canvas Area */}
-          <View
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setSelectedStickerId(null)}
             style={[s.canvas, { backgroundColor: bgColor }]}
             onLayout={(e) => {
               const { width, height } = e.nativeEvent.layout;
@@ -328,10 +337,13 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
                 size={sticker.size}
                 onPositionChange={handleStickerPositionChange}
                 onDelete={handleStickerDelete}
+                onSizeChange={handleStickerResize}
+                selected={sticker.id === selectedStickerId}
+                onSelect={setSelectedStickerId}
                 editable
               />
             ))}
-          </View>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
 

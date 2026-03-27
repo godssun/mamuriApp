@@ -1,7 +1,8 @@
 package com.github.mamuriapp.diary.service;
 
+import com.github.mamuriapp.global.config.UploadProperties;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,16 +18,16 @@ import java.util.UUID;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 @ConditionalOnProperty(name = "storage.provider", havingValue = "local", matchIfMissing = true)
 public class LocalStorageService implements StorageService {
 
-    @Value("${upload.dir:uploads}")
-    private String uploadDir;
+    private final UploadProperties uploadProperties;
 
     @Override
     public String store(MultipartFile file, String directory) {
         try {
-            Path dirPath = Paths.get(uploadDir, directory);
+            Path dirPath = Paths.get(uploadProperties.getDir(), directory);
             Files.createDirectories(dirPath);
 
             String extension = getExtension(file.getOriginalFilename());
@@ -45,7 +46,7 @@ public class LocalStorageService implements StorageService {
     @Override
     public void delete(String storageKey) {
         try {
-            Path filePath = Paths.get(uploadDir, storageKey);
+            Path filePath = Paths.get(uploadProperties.getDir(), storageKey);
             Files.deleteIfExists(filePath);
             log.debug("파일 삭제 완료: {}", filePath);
         } catch (IOException e) {
@@ -55,6 +56,10 @@ public class LocalStorageService implements StorageService {
 
     @Override
     public String getPublicUrl(String storageKey) {
+        String baseUrl = uploadProperties.getBaseUrl();
+        if (baseUrl != null && !baseUrl.isEmpty()) {
+            return baseUrl + "/uploads/" + storageKey;
+        }
         return "/uploads/" + storageKey;
     }
 

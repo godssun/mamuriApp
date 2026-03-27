@@ -12,7 +12,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Animated, TextInput, ActivityIndicator, Alert, Image, Dimensions,
+  Animated, TextInput, ActivityIndicator, Alert, Image, Dimensions, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -29,6 +29,16 @@ import { EmotionStickerView } from './components/EmotionStickerView';
 import { DraggableSticker } from './components/DraggableSticker';
 import { getStickerSource } from '../constants/stickerSources';
 
+// Photo URL resolver: handles relative paths and localhost URLs
+const DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+const SERVER_ORIGIN = __DEV__ ? `http://${DEV_HOST}:8080` : 'https://api.mamuri.app';
+
+function resolvePhotoUrl(photo: { cdnUrl?: string; url?: string }): string {
+  const raw = photo.cdnUrl || photo.url || '';
+  if (raw.startsWith('http')) return raw;
+  return `${SERVER_ORIGIN}${raw}`;
+}
+
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'DiaryDetail'>;
 
 export default function DiaryPageDetailV3({ navigation, route }: Props) {
@@ -44,6 +54,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
   const [inputText, setInputText] = useState('');
   const [isAITyping, setIsAITyping] = useState(false);
   const [reportMessageId, setReportMessageId] = useState<number | null>(null);
+  const [decoCanvasHeight, setDecoCanvasHeight] = useState(0);
 
   const contentAnim = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef<ScrollView>(null);
@@ -201,7 +212,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
               {diary.photos.map((photo) => (
                 <Image
                   key={photo.id}
-                  source={{ uri: photo.cdnUrl }}
+                  source={{ uri: resolvePhotoUrl(photo) }}
                   style={s.detailPhoto}
                   resizeMode="cover"
                 />
@@ -222,7 +233,10 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
 
           {/* Decoration Sticker Overlays (read-only, saved positions) */}
           {diary.decorations && diary.decorations.length > 0 ? (
-            <View style={s.decoOverlay}>
+            <View
+              style={s.decoOverlay}
+              onLayout={(e) => setDecoCanvasHeight(e.nativeEvent.layout.height)}
+            >
               {diary.decorations.map((deco) => {
                 const source = getStickerSource(deco.assetType);
                 if (!source) return null;
@@ -234,8 +248,8 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
                     stickerCode={deco.assetType}
                     stickerSource={source}
                     initialX={deco.positionX * canvasW}
-                    initialY={deco.positionY * 400}
-                    size={60}
+                    initialY={deco.positionY * (decoCanvasHeight || 400)}
+                    size={Math.round(60 * (deco.scale || 1))}
                     editable={false}
                     onPositionChange={() => {}}
                   />
