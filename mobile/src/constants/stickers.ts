@@ -1,3 +1,4 @@
+import { ImageSourcePropType } from 'react-native';
 import { EmotionKey } from '../types';
 
 export const EMOTION_COLORS: Record<EmotionKey, string> = {
@@ -22,6 +23,14 @@ export const EMOTION_ICONS: Record<EmotionKey, string> = {
   SAD: '💧',
   ANXIOUS: '🔥',
   COMPLEX: '🌀',
+};
+
+export const EMOTION_STICKER_IMAGES: Record<EmotionKey, ImageSourcePropType> = {
+  JOY: require('../../assets/stickers/emotion/joy.png'),
+  CALM: require('../../assets/stickers/emotion/calm.png'),
+  SAD: require('../../assets/stickers/emotion/sad.png'),
+  ANXIOUS: require('../../assets/stickers/emotion/anxious.png'),
+  COMPLEX: require('../../assets/stickers/emotion/complex.png'),
 };
 
 export const SECONDARY_TAGS: Record<EmotionKey, string[]> = {

@@ -8,7 +8,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView,
+  View, Text, Image, TouchableOpacity, StyleSheet, Animated, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -17,7 +17,7 @@ import type { Theme } from '../design-system-v2';
 import type { EmotionKey } from '../types';
 import {
   EMOTION_COLORS, EMOTION_LABELS, EMOTION_ICONS,
-  SECONDARY_TAGS, EMOTION_KEYS,
+  SECONDARY_TAGS, EMOTION_KEYS, EMOTION_STICKER_IMAGES,
 } from '../constants/stickers';
 
 type Step = 'primary' | 'secondary';
@@ -108,7 +108,7 @@ export default function EmotionPickerScreenV3() {
                   onPress={() => handleSelectPrimary(key)}
                   activeOpacity={0.7}
                 >
-                  <Text style={s.emotionIcon}>{EMOTION_ICONS[key]}</Text>
+                  <Image source={EMOTION_STICKER_IMAGES[key]} style={s.emotionImage} />
                   <Text style={[s.emotionName, { color: EMOTION_COLORS[key] }]}>
                     {EMOTION_LABELS[key]}
                   </Text>
@@ -132,7 +132,7 @@ export default function EmotionPickerScreenV3() {
               {selectedEmotion && (
                 <View style={s.selectedHeader}>
                   <View style={[s.selectedBadge, { backgroundColor: EMOTION_COLORS[selectedEmotion] + '20' }]}>
-                    <Text style={s.selectedIcon}>{EMOTION_ICONS[selectedEmotion]}</Text>
+                    <Image source={EMOTION_STICKER_IMAGES[selectedEmotion]} style={{ width: 28, height: 28, resizeMode: 'contain' }} />
                     <Text style={[s.selectedLabel, { color: EMOTION_COLORS[selectedEmotion] }]}>
                       {EMOTION_LABELS[selectedEmotion]}
                     </Text>
@@ -224,6 +224,7 @@ function makeStyles(t: Theme) {
       gap: t.spacing.sm,
     },
     emotionIcon: { fontSize: 40 },
+    emotionImage: { width: 56, height: 56, resizeMode: 'contain' as const },
     emotionName: { fontSize: 15, fontWeight: '700', letterSpacing: -0.3 },
 
     // Step 2: Selected header

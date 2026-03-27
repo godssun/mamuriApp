@@ -23,7 +23,7 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import type { DiaryStackParamListV3, EmotionKey } from '../types';
 import {
   EMOTION_COLORS, EMOTION_LABELS, EMOTION_ICONS,
-  DIARY_THEMES,
+  DIARY_THEMES, EMOTION_STICKER_IMAGES,
 } from '../constants/stickers';
 
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'WriteDiary'>;
@@ -151,7 +151,7 @@ export default function DiaryExpressiveEditorV3({ navigation, route }: Props) {
           {/* MoodBanner */}
           {selectedEmotion && (
             <View style={[s.moodBanner, { backgroundColor: EMOTION_COLORS[selectedEmotion] + '15' }]}>
-              <Text style={s.moodIcon}>{EMOTION_ICONS[selectedEmotion]}</Text>
+              <Image source={EMOTION_STICKER_IMAGES[selectedEmotion]} style={{ width: 28, height: 28, resizeMode: 'contain' }} />
               <Text style={[s.moodLabel, { color: EMOTION_COLORS[selectedEmotion] }]}>
                 {EMOTION_LABELS[selectedEmotion]}
               </Text>

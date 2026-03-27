@@ -24,7 +24,7 @@ import type { DiaryV3, ConversationMessage, ConversationLimits, DiaryStackParamL
 import { formatDiaryDate, formatTime } from '../utils/dateFormat';
 import { ChatBubble } from './components/ChatBubble';
 import { ReportModal } from './components/ReportModal';
-import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_ICONS } from '../constants/stickers';
+import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_ICONS, EMOTION_STICKER_IMAGES } from '../constants/stickers';
 
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'DiaryDetail'>;
 
@@ -172,7 +172,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
           {/* Emotion Header */}
           {emotionCode && (
             <View style={[s.emotionHeader, { backgroundColor: (emotionColor || theme.colors.primary) + '15' }]}>
-              <Text style={s.emotionIcon}>{EMOTION_ICONS[emotionCode]}</Text>
+              <Image source={EMOTION_STICKER_IMAGES[emotionCode]} style={{ width: 36, height: 36, resizeMode: 'contain' }} />
               <View>
                 <Text style={[s.emotionLabel, { color: emotionColor || theme.colors.primary }]}>
                   {EMOTION_LABELS[emotionCode]}

@@ -9,7 +9,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, Image, StyleSheet, ScrollView, TouchableOpacity,
   Animated, RefreshControl, Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import { diaryApi, emotionApi, companionApi } from '../api/client';
 import type { Diary, CompanionProfile, EmotionKey } from '../types';
 import {
   EMOTION_COLORS, EMOTION_LABELS, EMOTION_ICONS, EMOTION_KEYS,
+  EMOTION_STICKER_IMAGES,
 } from '../constants/stickers';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -113,7 +114,7 @@ export default function HomeStickerScreenV3() {
               onPress={() => handleStickerTap(key)}
               activeOpacity={0.6}
             >
-              <Text style={s.stickerIcon}>{EMOTION_ICONS[key]}</Text>
+              <Image source={EMOTION_STICKER_IMAGES[key]} style={s.stickerImage} />
               <Text style={[s.stickerLabel, { color: EMOTION_COLORS[key] }]}>
                 {EMOTION_LABELS[key]}
               </Text>
@@ -268,6 +269,7 @@ function makeStyles(t: Theme) {
       gap: 6,
     },
     stickerIcon: { fontSize: 32 },
+    stickerImage: { width: 48, height: 48, resizeMode: 'contain' as const },
     stickerLabel: { fontSize: 12, fontWeight: '600', letterSpacing: -0.2 },
 
     // Section
