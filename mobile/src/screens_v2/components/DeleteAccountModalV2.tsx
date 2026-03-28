@@ -1,23 +1,22 @@
 /**
- * Design System v2 — Delete Account Modal
+ * DeleteAccountModal v3 — Careful paper dialog for account deletion
  *
- * 3-step flow: warning → reason → password confirmation
+ * 3-step flow: warning → reason → confirmation
+ * Ivory paper surface, clear destructive action hierarchy.
+ * Serious and readable, but still part of the warm app world.
+ *
+ * v3 design system tokens.
  */
 
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  ActivityIndicator,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  View, Text, TouchableOpacity, StyleSheet, Modal,
+  ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useThemeV2 } from '../../design-system-v2';
+import {
+  colors, fontFamily, shadows, spacing, borderRadius,
+} from '../../design-system-v3';
 import { accountApi, ApiError } from '../../api/client';
 import { Button } from './Button';
 import { Input } from './Input';
@@ -41,7 +40,6 @@ interface Props {
 
 export function DeleteAccountModalV2({ visible, onClose, onDeleted, isPremium, isSocialUser }: Props) {
   const { t } = useTranslation();
-  const { theme } = useThemeV2();
   const [step, setStep] = useState(1);
   const [selectedReasonKey, setSelectedReasonKey] = useState<string | null>(null);
   const [reasonDetail, setReasonDetail] = useState('');
@@ -51,70 +49,34 @@ export function DeleteAccountModalV2({ visible, onClose, onDeleted, isPremium, i
   const [isDeleting, setIsDeleting] = useState(false);
 
   const resetState = () => {
-    setStep(1);
-    setSelectedReasonKey(null);
-    setReasonDetail('');
-    setPassword('');
-    setConfirmText('');
-    setError(null);
-    setIsDeleting(false);
+    setStep(1); setSelectedReasonKey(null); setReasonDetail('');
+    setPassword(''); setConfirmText(''); setError(null); setIsDeleting(false);
   };
 
-  const handleClose = () => {
-    resetState();
-    onClose();
-  };
-
-  const handleNext = () => {
-    setError(null);
-    setStep(step + 1);
-  };
-
-  const handleBack = () => {
-    setError(null);
-    if (step > 1) {
-      setStep(step - 1);
-    } else {
-      handleClose();
-    }
-  };
+  const handleClose = () => { resetState(); onClose(); };
+  const handleNext = () => { setError(null); setStep(step + 1); };
+  const handleBack = () => { setError(null); step > 1 ? setStep(step - 1) : handleClose(); };
 
   const handleDelete = async () => {
     if (isSocialUser) {
-      const expectedWord = t('deleteAccount.socialConfirmWord');
-      if (confirmText.trim() !== expectedWord) {
-        setError(t('deleteAccount.socialConfirmMismatch'));
-        return;
+      if (confirmText.trim() !== t('deleteAccount.socialConfirmWord')) {
+        setError(t('deleteAccount.socialConfirmMismatch')); return;
       }
     } else {
-      if (!password.trim()) {
-        setError(t('deleteAccount.passwordRequired'));
-        return;
-      }
+      if (!password.trim()) { setError(t('deleteAccount.passwordRequired')); return; }
     }
-
-    setIsDeleting(true);
-    setError(null);
-
+    setIsDeleting(true); setError(null);
     try {
       const selectedReason = DELETION_REASONS.find(r => r.key === selectedReasonKey);
-      const reasonText = selectedReason ? t(selectedReason.i18nKey) : t('deleteAccount.reasonOther');
       await accountApi.deleteAccount({
         password: isSocialUser ? undefined : password.trim(),
-        reason: reasonText,
+        reason: selectedReason ? t(selectedReason.i18nKey) : t('deleteAccount.reasonOther'),
         reasonDetail: selectedReasonKey === 'other' ? reasonDetail.trim() || undefined : undefined,
       });
-      resetState();
-      onDeleted();
+      resetState(); onDeleted();
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError(t('deleteAccount.deleteFailed'));
-      }
-    } finally {
-      setIsDeleting(false);
-    }
+      setError(err instanceof ApiError ? err.message : t('deleteAccount.deleteFailed'));
+    } finally { setIsDeleting(false); }
   };
 
   const canProceedStep2 = selectedReasonKey !== null &&
@@ -122,162 +84,99 @@ export function DeleteAccountModalV2({ visible, onClose, onDeleted, isPremium, i
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        style={[styles.overlay, { backgroundColor: theme.colors.overlay }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={[styles.modal, { backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius['2xl'] }]}>
-          {/* Step 1: 경고 */}
+      <KeyboardAvoidingView style={s.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={s.modal}>
+          {/* Step 1: Warning */}
           {step === 1 && (
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={[theme.typography.headlineSmall, { color: theme.colors.textPrimary, textAlign: 'center', marginBottom: theme.spacing.sm }]}>
-                {t('deleteAccount.confirmTitle')}
-              </Text>
+              <Text style={s.stepTitle}>{t('deleteAccount.confirmTitle')}</Text>
 
-              <View style={[styles.warningBox, { backgroundColor: theme.colors.warningSubtle, borderRadius: theme.borderRadius.md }]}>
-                <Text style={[theme.typography.titleSmall, { color: theme.colors.textPrimary, marginBottom: theme.spacing.sm }]}>
-                  {t('deleteAccount.dataDeleted')}
-                </Text>
-                <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary, lineHeight: 22 }]}>
-                  {t('deleteAccount.dataList')}
-                </Text>
+              <View style={s.warningBox}>
+                <Text style={s.warningTitle}>{t('deleteAccount.dataDeleted')}</Text>
+                <Text style={s.warningBody}>{t('deleteAccount.dataList')}</Text>
               </View>
 
-              <View style={[styles.dangerBox, { backgroundColor: theme.colors.errorSubtle, borderRadius: theme.borderRadius.md }]}>
-                <Text style={[theme.typography.bodySmall, { color: theme.colors.error, lineHeight: 20, textAlign: 'center' }]}>
-                  {t('deleteAccount.irreversible')}
-                </Text>
+              <View style={s.dangerBox}>
+                <Text style={s.dangerText}>{t('deleteAccount.irreversible')}</Text>
               </View>
 
               {isPremium && (
-                <View style={[styles.premiumWarningBox, { backgroundColor: theme.colors.warningSubtle, borderRadius: theme.borderRadius.md }]}>
-                  <Text style={[theme.typography.bodySmall, { color: theme.colors.warning, lineHeight: 20, textAlign: 'center' }]}>
-                    {t('deleteAccount.premiumWarning')}
-                  </Text>
+                <View style={s.premiumBox}>
+                  <Text style={s.premiumText}>{t('deleteAccount.premiumWarning')}</Text>
                 </View>
               )}
 
-              <View style={[styles.buttonRow, { marginTop: theme.spacing.lg }]}>
-                <View style={styles.buttonFlex}>
+              <View style={s.buttonRow}>
+                <View style={s.buttonFlex}>
                   <Button label={t('common.cancel')} variant="secondary" onPress={handleClose} fullWidth />
                 </View>
-                <View style={styles.buttonFlex}>
+                <View style={s.buttonFlex}>
                   <Button label={t('common.next')} variant="primary" onPress={handleNext} fullWidth />
                 </View>
               </View>
             </ScrollView>
           )}
 
-          {/* Step 2: 사유 선택 */}
+          {/* Step 2: Reason */}
           {step === 2 && (
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={[theme.typography.headlineSmall, { color: theme.colors.textPrimary, textAlign: 'center', marginBottom: theme.spacing.xs }]}>
-                {t('deleteAccount.reasonTitle')}
-              </Text>
-              <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary, textAlign: 'center', marginBottom: theme.spacing.xl }]}>
-                {t('deleteAccount.reasonSubtitle')}
-              </Text>
+              <Text style={s.stepTitle}>{t('deleteAccount.reasonTitle')}</Text>
+              <Text style={s.stepSubtitle}>{t('deleteAccount.reasonSubtitle')}</Text>
 
-              <View style={{ gap: theme.spacing.sm, marginBottom: theme.spacing.lg }}>
+              <View style={s.reasonList}>
                 {DELETION_REASONS.map((reason) => {
-                  const isSelected = selectedReasonKey === reason.key;
+                  const sel = selectedReasonKey === reason.key;
                   return (
                     <TouchableOpacity
                       key={reason.key}
-                      style={[
-                        styles.reasonItem,
-                        {
-                          borderColor: isSelected ? theme.colors.primary : theme.colors.border,
-                          backgroundColor: isSelected ? theme.colors.primarySubtle : theme.colors.surface,
-                          borderRadius: theme.borderRadius.md,
-                        },
-                      ]}
+                      style={[s.reasonItem, sel ? s.reasonSelected : s.reasonDefault]}
                       onPress={() => setSelectedReasonKey(reason.key)}
                     >
-                      <View style={[
-                        styles.radioCircle,
-                        { borderColor: isSelected ? theme.colors.primary : theme.colors.textDisabled },
-                      ]}>
-                        {isSelected && <View style={[styles.radioDot, { backgroundColor: theme.colors.primary }]} />}
+                      <View style={[s.radioCircle, { borderColor: sel ? colors.accentPrimary : colors.textTertiary }]}>
+                        {sel && <View style={s.radioDot} />}
                       </View>
-                      <Text style={[
-                        theme.typography.bodyMedium,
-                        { color: theme.colors.textPrimary, flex: 1 },
-                        isSelected && { fontWeight: '500' },
-                      ]}>
-                        {t(reason.i18nKey)}
-                      </Text>
+                      <Text style={[s.reasonText, sel && { fontWeight: '500' }]}>{t(reason.i18nKey)}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
 
               {selectedReasonKey === 'other' && (
-                <Input
-                  value={reasonDetail}
-                  onChangeText={setReasonDetail}
-                  placeholder={t('deleteAccount.reasonDetailPlaceholder')}
-                  multiline
-                  maxLength={500}
-                  containerStyle={{ marginBottom: theme.spacing.lg }}
-                />
+                <Input value={reasonDetail} onChangeText={setReasonDetail}
+                  placeholder={t('deleteAccount.reasonDetailPlaceholder')} multiline maxLength={500}
+                  containerStyle={{ marginBottom: spacing.lg }} />
               )}
 
-              <View style={styles.buttonRow}>
-                <View style={styles.buttonFlex}>
-                  <Button label={t('deleteAccount.previous')} variant="secondary" onPress={handleBack} fullWidth />
-                </View>
-                <View style={styles.buttonFlex}>
-                  <Button label={t('common.next')} variant="primary" onPress={handleNext} disabled={!canProceedStep2} fullWidth />
-                </View>
+              <View style={s.buttonRow}>
+                <View style={s.buttonFlex}><Button label={t('deleteAccount.previous')} variant="secondary" onPress={handleBack} fullWidth /></View>
+                <View style={s.buttonFlex}><Button label={t('common.next')} variant="primary" onPress={handleNext} disabled={!canProceedStep2} fullWidth /></View>
               </View>
             </ScrollView>
           )}
 
-          {/* Step 3: 본인 확인 (이메일: 비밀번호, 소셜: 텍스트 입력) */}
+          {/* Step 3: Confirm */}
           {step === 3 && (
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={[theme.typography.headlineSmall, { color: theme.colors.textPrimary, textAlign: 'center', marginBottom: theme.spacing.xs }]}>
+              <Text style={s.stepTitle}>
                 {isSocialUser ? t('deleteAccount.socialConfirmTitle') : t('deleteAccount.passwordTitle')}
               </Text>
-              <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary, textAlign: 'center', marginBottom: theme.spacing.xl }]}>
+              <Text style={s.stepSubtitle}>
                 {isSocialUser ? t('deleteAccount.socialConfirmSubtitle') : t('deleteAccount.passwordSubtitle')}
               </Text>
 
               {isSocialUser ? (
-                <Input
-                  value={confirmText}
-                  onChangeText={(text) => {
-                    setConfirmText(text);
-                    setError(null);
-                  }}
-                  placeholder={t('deleteAccount.socialConfirmPlaceholder')}
-                  autoFocus
-                  error={error ?? undefined}
-                  containerStyle={{ marginBottom: theme.spacing.lg }}
-                />
+                <Input value={confirmText} onChangeText={(v) => { setConfirmText(v); setError(null); }}
+                  placeholder={t('deleteAccount.socialConfirmPlaceholder')} autoFocus
+                  error={error ?? undefined} containerStyle={{ marginBottom: spacing.lg }} />
               ) : (
-                <Input
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    setError(null);
-                  }}
-                  placeholder={t('auth.password')}
-                  secureTextEntry
-                  autoFocus
-                  error={error ?? undefined}
-                  containerStyle={{ marginBottom: theme.spacing.lg }}
-                />
+                <Input value={password} onChangeText={(v) => { setPassword(v); setError(null); }}
+                  placeholder={t('auth.password')} secureTextEntry autoFocus
+                  error={error ?? undefined} containerStyle={{ marginBottom: spacing.lg }} />
               )}
 
-              <View style={styles.buttonRow}>
-                <View style={styles.buttonFlex}>
-                  <Button label={t('deleteAccount.previous')} variant="secondary" onPress={handleBack} fullWidth />
-                </View>
-                <View style={styles.buttonFlex}>
-                  <Button label={t('deleteAccount.deleteButton')} variant="danger" onPress={handleDelete} loading={isDeleting} fullWidth />
-                </View>
+              <View style={s.buttonRow}>
+                <View style={s.buttonFlex}><Button label={t('deleteAccount.previous')} variant="secondary" onPress={handleBack} fullWidth /></View>
+                <View style={s.buttonFlex}><Button label={t('deleteAccount.deleteButton')} variant="danger" onPress={handleDelete} loading={isDeleting} fullWidth /></View>
               </View>
             </ScrollView>
           )}
@@ -287,58 +186,35 @@ export function DeleteAccountModalV2({ visible, onClose, onDeleted, isPremium, i
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
+const s = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.overlayDim, padding: spacing['2xl'] },
   modal: {
-    padding: 24,
-    width: '100%',
-    maxWidth: 360,
-    maxHeight: '80%',
+    padding: spacing['2xl'], width: '100%', maxWidth: 360, maxHeight: '80%',
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.sm,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)', ...shadows.soft,
   },
-  warningBox: {
-    padding: 16,
-    marginTop: 16,
-    marginBottom: 12,
-  },
-  dangerBox: {
-    padding: 14,
-    marginBottom: 12,
-  },
-  premiumWarningBox: {
-    padding: 14,
-    marginBottom: 12,
-  },
-  reasonItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderWidth: 1,
-    gap: 12,
-  },
-  radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  buttonFlex: {
-    flex: 1,
-  },
+
+  stepTitle: { fontFamily: fontFamily.serifItalic, fontSize: 20, fontWeight: '400', color: colors.textPrimary, textAlign: 'center', marginBottom: spacing.sm },
+  stepSubtitle: { fontFamily: fontFamily.sans, fontSize: 13, color: colors.textTertiary, textAlign: 'center', marginBottom: spacing.xl },
+
+  warningBox: { padding: spacing.lg, backgroundColor: colors.accentMustard + '12', borderRadius: borderRadius.sm, marginTop: spacing.lg, marginBottom: spacing.md },
+  warningTitle: { fontFamily: fontFamily.sansMedium, fontSize: 14, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.sm },
+  warningBody: { fontFamily: fontFamily.sans, fontSize: 13, lineHeight: 22, color: colors.textSecondary },
+
+  dangerBox: { padding: 14, backgroundColor: '#F8E8E8', borderRadius: borderRadius.sm, marginBottom: spacing.md },
+  dangerText: { fontFamily: fontFamily.sans, fontSize: 13, lineHeight: 20, color: '#D04444', textAlign: 'center' },
+
+  premiumBox: { padding: 14, backgroundColor: colors.accentMustard + '12', borderRadius: borderRadius.sm, marginBottom: spacing.md },
+  premiumText: { fontFamily: fontFamily.sans, fontSize: 13, lineHeight: 20, color: colors.accentMustard, textAlign: 'center' },
+
+  reasonList: { gap: spacing.sm, marginBottom: spacing.lg },
+  reasonItem: { flexDirection: 'row', alignItems: 'center', padding: 14, borderWidth: 1, borderRadius: borderRadius.sm, gap: spacing.md },
+  reasonDefault: { borderColor: colors.accentSand + '40', backgroundColor: colors.surfaceCard },
+  reasonSelected: { borderColor: colors.accentPrimary, backgroundColor: colors.accentPrimaryLight + '15' },
+  radioCircle: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accentPrimary },
+  reasonText: { fontFamily: fontFamily.sans, fontSize: 14, color: colors.textPrimary, flex: 1 },
+
+  buttonRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
+  buttonFlex: { flex: 1 },
 });

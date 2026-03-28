@@ -1,22 +1,20 @@
 /**
- * AiConsentModal — AI Data Processing Consent
+ * AiConsentModal v3 — Warm paper consent dialog
  *
- * Modal for obtaining explicit user consent before sending
- * diary content to an external AI service (LLM API).
+ * Trustworthy, calm, readable consent surface.
+ * Ivory paper with clear hierarchy and sage accent.
+ *
+ * v3 design system tokens.
  */
 
 import React from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  ScrollView,
-  Linking,
+  View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Linking,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useThemeV2 } from '../../design-system-v2';
+import {
+  colors, fontFamily, shadows, spacing, borderRadius,
+} from '../../design-system-v3';
 
 interface AiConsentModalProps {
   visible: boolean;
@@ -25,76 +23,28 @@ interface AiConsentModalProps {
 }
 
 export function AiConsentModal({ visible, onAccept, onDecline }: AiConsentModalProps) {
-  const { theme } = useThemeV2();
   const { t } = useTranslation();
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDecline}>
-      <TouchableOpacity
-        style={[styles.overlay, { backgroundColor: theme.colors.overlay }]}
-        activeOpacity={1}
-        onPress={onDecline}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          style={[styles.sheet, {
-            backgroundColor: theme.colors.surface,
-            borderRadius: theme.borderRadius.xl,
-          }]}
-        >
-          <Text style={[theme.typography.titleLarge, {
-            color: theme.colors.textPrimary,
-            textAlign: 'center',
-            marginBottom: theme.spacing.md,
-          }]}>
-            {t('consent.title')}
-          </Text>
+      <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onDecline}>
+        <TouchableOpacity activeOpacity={1} style={s.sheet}>
+          <Text style={s.title}>{t('consent.title')}</Text>
 
-          <ScrollView style={styles.bodyScroll} showsVerticalScrollIndicator={false}>
-            <Text style={[theme.typography.bodyMedium, {
-              color: theme.colors.textSecondary,
-              lineHeight: 22,
-            }]}>
-              {t('consent.body')}
-            </Text>
+          <ScrollView style={s.bodyScroll} showsVerticalScrollIndicator={false}>
+            <Text style={s.body}>{t('consent.body')}</Text>
           </ScrollView>
 
-          <TouchableOpacity
-            style={{ marginTop: theme.spacing.md }}
-            onPress={() => Linking.openURL('https://mamuri.app/privacy')}
-          >
-            <Text style={[theme.typography.labelSmall, {
-              color: theme.colors.primary,
-              textAlign: 'center',
-              textDecorationLine: 'underline',
-            }]}>
-              {t('consent.privacyLink')}
-            </Text>
+          <TouchableOpacity style={s.privacyLink} onPress={() => Linking.openURL('https://mamuri.app/privacy')}>
+            <Text style={s.privacyText}>{t('consent.privacyLink')}</Text>
           </TouchableOpacity>
 
-          <View style={[styles.actions, { marginTop: theme.spacing.xl, gap: theme.spacing.sm }]}>
-            <TouchableOpacity
-              style={[styles.actionButton, {
-                backgroundColor: theme.colors.surfaceSecondary,
-                borderRadius: theme.borderRadius.md,
-              }]}
-              onPress={onDecline}
-            >
-              <Text style={[theme.typography.labelLarge, { color: theme.colors.textSecondary }]}>
-                {t('consent.decline')}
-              </Text>
+          <View style={s.actions}>
+            <TouchableOpacity style={s.declineBtn} onPress={onDecline}>
+              <Text style={s.declineText}>{t('consent.decline')}</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionButton, {
-                backgroundColor: theme.colors.primary,
-                borderRadius: theme.borderRadius.md,
-              }]}
-              onPress={onAccept}
-            >
-              <Text style={[theme.typography.labelLarge, { color: '#FFFFFF' }]}>
-                {t('consent.accept')}
-              </Text>
+            <TouchableOpacity style={s.acceptBtn} onPress={onAccept}>
+              <Text style={s.acceptText}>{t('consent.accept')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -103,29 +53,22 @@ export function AiConsentModal({ visible, onAccept, onDecline }: AiConsentModalP
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
+const s = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.overlayDim, padding: spacing['2xl'] },
   sheet: {
-    width: '100%',
-    maxWidth: 340,
-    padding: 24,
-    maxHeight: '80%',
+    width: '100%', maxWidth: 340, padding: spacing['2xl'], maxHeight: '80%',
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.sm,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)', ...shadows.soft,
   },
-  bodyScroll: {
-    maxHeight: 200,
-  },
-  actions: {
-    flexDirection: 'row',
-  },
-  actionButton: {
-    flex: 1,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  title: { fontFamily: fontFamily.serifItalic, fontSize: 20, fontWeight: '400', color: colors.textPrimary, textAlign: 'center', marginBottom: spacing.md },
+  bodyScroll: { maxHeight: 200 },
+  body: { fontFamily: fontFamily.sans, fontSize: 14, lineHeight: 22, color: colors.textSecondary },
+  privacyLink: { marginTop: spacing.md },
+  privacyText: { fontFamily: fontFamily.sans, fontSize: 12, color: colors.accentPrimary, textAlign: 'center', textDecorationLine: 'underline' },
+
+  actions: { flexDirection: 'row', marginTop: spacing.xl, gap: spacing.sm },
+  declineBtn: { flex: 1, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceCard, borderRadius: borderRadius.sm },
+  declineText: { fontFamily: fontFamily.sansMedium, fontSize: 14, color: colors.textSecondary },
+  acceptBtn: { flex: 1, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentPrimary, borderRadius: borderRadius.sm },
+  acceptText: { fontFamily: fontFamily.sansMedium, fontSize: 14, color: colors.surfacePure },
 });

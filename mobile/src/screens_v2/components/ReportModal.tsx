@@ -1,22 +1,20 @@
 /**
- * ReportModal — AI Response Report Flow
+ * ReportModal v3 — Calm paper report dialog
  *
- * Minimal modal for reporting inappropriate AI responses.
- * Flow: select reason → submit → confirmation
+ * Ivory paper dialog with sage radio buttons.
+ * Clear and safe for reporting, not cold system alert.
+ *
+ * v3 design system tokens.
  */
 
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  Alert,
-  ActivityIndicator,
+  View, Text, TouchableOpacity, StyleSheet, Modal, Alert, ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useThemeV2 } from '../../design-system-v2';
+import {
+  colors, fontFamily, shadows, spacing, borderRadius,
+} from '../../design-system-v3';
 import { reportApi } from '../../api/client';
 import { ReportReason } from '../../types';
 
@@ -27,15 +25,9 @@ interface ReportModalProps {
   diaryId: number;
 }
 
-const REPORT_REASONS: ReportReason[] = [
-  'inappropriate',
-  'inaccurate',
-  'offensive',
-  'other',
-];
+const REPORT_REASONS: ReportReason[] = ['inappropriate', 'inaccurate', 'offensive', 'other'];
 
 export function ReportModal({ visible, onClose, messageId, diaryId }: ReportModalProps) {
-  const { theme } = useThemeV2();
   const { t } = useTranslation();
   const [selected, setSelected] = useState<ReportReason | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -48,105 +40,48 @@ export function ReportModal({ visible, onClose, messageId, diaryId }: ReportModa
       onClose();
       setSelected(null);
       Alert.alert(t('report.thankYouTitle'), t('report.thankYouMessage'));
-    } catch {
-      Alert.alert(t('common.error'), t('report.submitFailed'));
-    } finally {
-      setSubmitting(false);
-    }
+    } catch { Alert.alert(t('common.error'), t('report.submitFailed')); }
+    finally { setSubmitting(false); }
   };
 
-  const handleClose = () => {
-    setSelected(null);
-    onClose();
-  };
+  const handleClose = () => { setSelected(null); onClose(); };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <TouchableOpacity
-        style={[styles.overlay, { backgroundColor: theme.colors.overlay }]}
-        activeOpacity={1}
-        onPress={handleClose}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          style={[styles.sheet, {
-            backgroundColor: theme.colors.surface,
-            borderRadius: theme.borderRadius.xl,
-          }]}
-        >
-          <Text style={[theme.typography.titleLarge, {
-            color: theme.colors.textPrimary,
-            textAlign: 'center',
-            marginBottom: theme.spacing.xs,
-          }]}>
-            {t('report.title')}
-          </Text>
-
-          <Text style={[theme.typography.bodySmall, {
-            color: theme.colors.textTertiary,
-            textAlign: 'center',
-            marginBottom: theme.spacing.xl,
-          }]}>
-            {t('report.subtitle')}
-          </Text>
+      <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={handleClose}>
+        <TouchableOpacity activeOpacity={1} style={s.sheet}>
+          <Text style={s.title}>{t('report.title')}</Text>
+          <Text style={s.subtitle}>{t('report.subtitle')}</Text>
 
           {REPORT_REASONS.map((reason) => {
-            const isSelected = selected === reason;
+            const sel = selected === reason;
             return (
               <TouchableOpacity
                 key={reason}
-                style={[styles.reasonRow, {
-                  backgroundColor: isSelected ? theme.colors.primarySubtle : theme.colors.surfaceSecondary,
-                  borderColor: isSelected ? theme.colors.primary : theme.colors.border,
-                  borderRadius: theme.borderRadius.md,
-                  marginBottom: theme.spacing.sm,
-                }]}
+                style={[s.reasonRow, sel ? s.reasonSelected : s.reasonDefault]}
                 onPress={() => setSelected(reason)}
               >
-                <View style={[styles.radio, {
-                  borderColor: isSelected ? theme.colors.primary : theme.colors.textTertiary,
-                }]}>
-                  {isSelected && (
-                    <View style={[styles.radioDot, { backgroundColor: theme.colors.primary }]} />
-                  )}
+                <View style={[s.radio, { borderColor: sel ? colors.accentPrimary : colors.textTertiary }]}>
+                  {sel && <View style={s.radioDot} />}
                 </View>
-                <Text style={[theme.typography.bodyMedium, {
-                  color: theme.colors.textPrimary,
-                  flex: 1,
-                }]}>
-                  {t(`report.reason_${reason}`)}
-                </Text>
+                <Text style={s.reasonText}>{t(`report.reason_${reason}`)}</Text>
               </TouchableOpacity>
             );
           })}
 
-          <View style={[styles.actions, { marginTop: theme.spacing.lg, gap: theme.spacing.sm }]}>
-            <TouchableOpacity
-              style={[styles.actionButton, {
-                backgroundColor: theme.colors.surfaceSecondary,
-                borderRadius: theme.borderRadius.md,
-              }]}
-              onPress={handleClose}
-            >
-              <Text style={[theme.typography.labelLarge, { color: theme.colors.textSecondary }]}>
-                {t('common.cancel')}
-              </Text>
+          <View style={s.actions}>
+            <TouchableOpacity style={s.cancelBtn} onPress={handleClose}>
+              <Text style={s.cancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
-              style={[styles.actionButton, {
-                backgroundColor: selected ? theme.colors.primary : theme.colors.surfaceTertiary,
-                borderRadius: theme.borderRadius.md,
-              }]}
+              style={[s.submitBtn, { backgroundColor: selected ? colors.accentPrimary : colors.accentSand + '40' }]}
               onPress={handleSubmit}
               disabled={!selected || submitting}
             >
               {submitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={colors.surfacePure} />
               ) : (
-                <Text style={[theme.typography.labelLarge, {
-                  color: selected ? '#FFFFFF' : theme.colors.textDisabled,
-                }]}>
+                <Text style={[s.submitText, { color: selected ? colors.surfacePure : colors.textTertiary }]}>
                   {t('report.submit')}
                 </Text>
               )}
@@ -158,45 +93,26 @@ export function ReportModal({ visible, onClose, messageId, diaryId }: ReportModa
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
+const s = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.overlayDim, padding: spacing['2xl'] },
   sheet: {
-    width: '100%',
-    maxWidth: 340,
-    padding: 24,
+    width: '100%', maxWidth: 340, padding: spacing['2xl'],
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.sm,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)', ...shadows.soft,
   },
-  reasonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderWidth: 1,
-    gap: 12,
-  },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  actions: {
-    flexDirection: 'row',
-  },
-  actionButton: {
-    flex: 1,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  title: { fontFamily: fontFamily.serifItalic, fontSize: 20, fontWeight: '400', color: colors.textPrimary, textAlign: 'center', marginBottom: spacing.xs },
+  subtitle: { fontFamily: fontFamily.sans, fontSize: 13, color: colors.textTertiary, textAlign: 'center', marginBottom: spacing.xl },
+
+  reasonRow: { flexDirection: 'row', alignItems: 'center', padding: 14, borderWidth: 1, borderRadius: borderRadius.sm, marginBottom: spacing.sm, gap: spacing.md },
+  reasonDefault: { borderColor: colors.accentSand + '40', backgroundColor: colors.surfaceCard },
+  reasonSelected: { borderColor: colors.accentPrimary, backgroundColor: colors.accentPrimaryLight + '15' },
+  radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accentPrimary },
+  reasonText: { fontFamily: fontFamily.sans, fontSize: 14, color: colors.textPrimary, flex: 1 },
+
+  actions: { flexDirection: 'row', marginTop: spacing.lg, gap: spacing.sm },
+  cancelBtn: { flex: 1, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceCard, borderRadius: borderRadius.sm },
+  cancelText: { fontFamily: fontFamily.sansMedium, fontSize: 14, color: colors.textSecondary },
+  submitBtn: { flex: 1, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: borderRadius.sm },
+  submitText: { fontFamily: fontFamily.sansMedium, fontSize: 14 },
 });
