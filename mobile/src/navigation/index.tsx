@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeV2 } from '../design-system-v2';
+import { colors as v3Colors, fontFamily as v3FontFamily } from '../design-system-v3';
 import { companionApi } from '../api/client';
 import {
   RootStackParamList,
@@ -14,8 +15,9 @@ import {
   DiaryStackParamListV3,
 } from '../types';
 
-// V2 Screens
-import { WelcomeScreen } from '../screens_v2/WelcomeScreen';
+// V2 Screens (legacy Welcome kept for reference)
+// import { WelcomeScreen } from '../screens_v2/WelcomeScreen';
+import { WelcomeScreenV3 as WelcomeScreen } from '../screens_v2/WelcomeScreenV3';
 import { LoginScreenV2 } from '../screens_v2/LoginScreenV2';
 import { SignupScreenV2 } from '../screens_v2/SignupScreenV2';
 import { SocialNicknameScreenV2 } from '../screens_v2/SocialNicknameScreenV2';
@@ -150,9 +152,9 @@ export default function Navigation() {
 
   if (isLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
-        <Text style={[styles.loadingText, { color: theme.colors.primary }]}>마무리</Text>
-        <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 16 }} />
+      <View style={[styles.loadingContainer, { backgroundColor: v3Colors.bgCream }]}>
+        <Text style={[styles.loadingText, { color: v3Colors.textPrimary, fontFamily: v3FontFamily.serifItalic }]}>마무리</Text>
+        <ActivityIndicator color={v3Colors.accentPrimary} style={{ marginTop: 16 }} />
       </View>
     );
   }

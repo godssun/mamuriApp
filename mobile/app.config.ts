@@ -13,7 +13,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
-      backgroundColor: '#6356D9',
+      backgroundColor: '#F4EFEA',
     },
     ios: {
       supportsTablet: true,

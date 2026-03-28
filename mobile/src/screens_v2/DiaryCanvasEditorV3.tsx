@@ -19,8 +19,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useThemeV2 } from '../design-system-v2';
-import type { Theme } from '../design-system-v2';
+import {
+  colors, typography, shadows, spacing, borderRadius, layout,
+  fontFamily, PaperBackground,
+} from '../design-system-v3';
 import { diaryApiV3, diaryPhotoApi, diaryDecorationApi, emotionApi, ApiError } from '../api/client';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import type { DiaryStackParamListV3, EmotionKey } from '../types';
@@ -45,9 +47,8 @@ function nextId(): string {
 
 
 export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
-  const { theme } = useThemeV2();
   const insets = useSafeAreaInsets();
-  const s = makeStyles(theme);
+  const s = styles;
 
   const initialEmotion = route.params?.selectedEmotion as EmotionKey | undefined;
   const secondaryTags = route.params?.secondaryTags as string[] | undefined;
@@ -357,28 +358,34 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
 
   const { refresh: refreshSubscription } = useSubscription();
 
-  // ── Theme colors ──
-  const themeColors: Record<string, string> = { night: '#1A1A2E', warm: '#FFF8F0', nature: '#F0F7F0', note: '#FFFDF5', grid: '#F8FBF8' };
-  const bgColor = themeColors[selectedTheme] || theme.colors.background;
-  const textColor = selectedTheme === 'night' ? '#EDEDF0' : theme.colors.textPrimary;
-  const subtleColor = selectedTheme === 'night' ? '#686880' : theme.colors.textDisabled;
-  const borderColor = selectedTheme === 'night' ? '#2A2A3A' : theme.colors.borderSubtle;
+  // ── Theme colors (v3 palette) ──
+  const themeColors: Record<string, string> = {
+    night: '#1A1A2E',
+    warm: colors.bgWarm,
+    nature: colors.bgCream,
+    note: colors.bgIvory,
+    grid: colors.bgCream,
+  };
+  const bgColor = themeColors[selectedTheme] || colors.bgWarm;
+  const textColor = selectedTheme === 'night' ? '#EDEDF0' : colors.textPrimary;
+  const subtleColor = selectedTheme === 'night' ? '#686880' : colors.textTertiary;
+  const borderColor = selectedTheme === 'night' ? '#2A2A3A' : colors.accentSand + '40';
 
   const canHaveSomething = content.trim() || objects.length > 0;
 
   return (
-    <View style={[s.root, { backgroundColor: bgColor, paddingTop: insets.top }]}>
-      {/* Header */}
+    <PaperBackground variant="lined" color="warm" style={{ paddingTop: insets.top }}>
+      {/* Header — transparent on paper */}
       <View style={[s.header, { borderBottomColor: borderColor }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerBtn}>
           <Text style={[s.headerBtnText, { color: textColor }]}>취소</Text>
         </TouchableOpacity>
-        <Text style={[s.headerDate, { color: selectedTheme === 'night' ? '#9898AC' : theme.colors.textTertiary }]}>
+        <Text style={[s.headerDate, { color: selectedTheme === 'night' ? '#9898AC' : colors.textSecondary }]}>
           {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
         </Text>
         <TouchableOpacity onPress={handleSave} disabled={saving || !canHaveSomething} style={s.headerBtn}>
-          <Text style={[s.headerBtnText, {
-            color: canHaveSomething ? theme.colors.primary : theme.colors.textDisabled,
+          <Text style={[s.headerSaveText, {
+            color: canHaveSomething ? colors.accentPrimary : colors.textTertiary,
           }]}>
             {saving ? '저장 중...' : '저장'}
           </Text>
@@ -396,11 +403,11 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Emotion Banner */}
+          {/* Emotion Banner — paper memo card style */}
           <Animated.View style={{
             opacity: contentAnim,
             transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
-            paddingHorizontal: theme.layout.screenPaddingH,
+            paddingHorizontal: layout.screenPaddingH,
           }}>
             <TouchableOpacity
               onPress={() => setShowEmotionPicker(true)}
@@ -408,8 +415,11 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
                 s.moodBanner,
                 {
                   backgroundColor: currentEmotion
-                    ? EMOTION_COLORS[currentEmotion] + '15'
-                    : theme.colors.surfaceSecondary,
+                    ? EMOTION_COLORS[currentEmotion] + '10'
+                    : colors.bgIvory,
+                  borderColor: currentEmotion
+                    ? EMOTION_COLORS[currentEmotion] + '30'
+                    : colors.accentSand,
                 },
               ]}
               activeOpacity={0.7}
@@ -427,11 +437,11 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
                   )}
                 </>
               ) : (
-                <Text style={[s.moodLabel, { color: theme.colors.textTertiary }]}>
+                <Text style={[s.moodLabel, { color: colors.textSecondary }]}>
                   오늘 기분을 선택해주세요
                 </Text>
               )}
-              <Text style={[s.moodChangeHint, { color: theme.colors.textDisabled }]}>
+              <Text style={[s.moodChangeHint, { color: colors.textTertiary }]}>
                 {currentEmotion ? '변경' : '선택'}
               </Text>
             </TouchableOpacity>
@@ -465,51 +475,56 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Bottom Toolbar */}
+      {/* Bottom Toolbar — glass scrapbook tool tray */}
       <View style={[s.toolbar, {
-        backgroundColor: bgColor,
-        borderTopColor: borderColor,
         paddingBottom: insets.bottom + 8,
       }]}>
         <TouchableOpacity style={s.toolBtn} onPress={handleAddPhoto}>
           <View style={s.toolIconView}>
-            <View style={{ width: 18, height: 14, borderRadius: 3, borderWidth: 1.5, borderColor: theme.colors.textTertiary, alignItems: 'center', justifyContent: 'flex-end' }}>
-              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: theme.colors.textTertiary, position: 'absolute', top: 1.5, right: 2.5 }} />
-              <View style={{ width: 0, height: 0, borderLeftWidth: 4, borderRightWidth: 4, borderBottomWidth: 5, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: theme.colors.textTertiary, marginBottom: 1 }} />
+            <View style={{ width: 18, height: 14, borderRadius: 3, borderWidth: 1.5, borderColor: colors.accentTerra, alignItems: 'center', justifyContent: 'flex-end' }}>
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.accentTerra, position: 'absolute', top: 1.5, right: 2.5 }} />
+              <View style={{ width: 0, height: 0, borderLeftWidth: 4, borderRightWidth: 4, borderBottomWidth: 5, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: colors.accentTerra, marginBottom: 1 }} />
             </View>
           </View>
-          <Text style={[s.toolLabel, { color: theme.colors.textTertiary }]}>사진</Text>
+          <Text style={s.toolLabel}>사진</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={s.toolBtn} onPress={() => setShowThemeSheet(true)}>
           <View style={s.toolIconView}>
-            <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: theme.colors.textTertiary }}>
-              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#FFD166', position: 'absolute', top: 1.5, left: 4 }} />
-              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#83C9A8', position: 'absolute', bottom: 1.5, left: 1.5 }} />
-              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#7BA7D9', position: 'absolute', bottom: 1.5, right: 1.5 }} />
+            <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: colors.accentPrimary }}>
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.accentMustard, position: 'absolute', top: 1.5, left: 4 }} />
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.accentPrimary, position: 'absolute', bottom: 1.5, left: 1.5 }} />
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.accentDustyBlue, position: 'absolute', bottom: 1.5, right: 1.5 }} />
             </View>
           </View>
-          <Text style={[s.toolLabel, { color: theme.colors.textTertiary }]}>테마</Text>
+          <Text style={s.toolLabel}>테마</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={s.toolBtn} onPress={() => setShowStickerSheet(true)}>
           <View style={s.toolIconView}>
             <View style={{ width: 16, height: 16, alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ position: 'absolute', width: 14, height: 2, backgroundColor: theme.colors.textTertiary, borderRadius: 1 }} />
-              <View style={{ position: 'absolute', width: 2, height: 14, backgroundColor: theme.colors.textTertiary, borderRadius: 1 }} />
-              <View style={{ position: 'absolute', width: 10, height: 2, backgroundColor: theme.colors.textTertiary, borderRadius: 1, transform: [{ rotate: '45deg' }] }} />
-              <View style={{ position: 'absolute', width: 10, height: 2, backgroundColor: theme.colors.textTertiary, borderRadius: 1, transform: [{ rotate: '-45deg' }] }} />
+              <View style={{ position: 'absolute', width: 14, height: 2, backgroundColor: colors.accentPrimary, borderRadius: 1 }} />
+              <View style={{ position: 'absolute', width: 2, height: 14, backgroundColor: colors.accentPrimary, borderRadius: 1 }} />
+              <View style={{ position: 'absolute', width: 10, height: 2, backgroundColor: colors.accentPrimary, borderRadius: 1, transform: [{ rotate: '45deg' }] }} />
+              <View style={{ position: 'absolute', width: 10, height: 2, backgroundColor: colors.accentPrimary, borderRadius: 1, transform: [{ rotate: '-45deg' }] }} />
             </View>
           </View>
-          <Text style={[s.toolLabel, { color: theme.colors.textTertiary }]}>스티커</Text>
+          <Text style={s.toolLabel}>스티커</Text>
         </TouchableOpacity>
 
         {content.length > 0 && (
-          <Text style={[s.charCount, { color: theme.colors.textTertiary }]}>
+          <Text style={s.charCount}>
             {content.length}자
           </Text>
         )}
       </View>
+
+      {/* AI Feedback Toast placeholder */}
+      {/* TODO: Show after save or specific conditions
+      <View style={s.aiToast}>
+        <Text style={s.aiToastText}>오늘 하루도 수고했어요 ✿</Text>
+      </View>
+      */}
 
       {/* Sticker Picker Sheet */}
       <StickerPickerSheet
@@ -521,16 +536,19 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       {/* Theme Sheet Modal */}
       <Modal visible={showThemeSheet} transparent animationType="slide">
         <TouchableOpacity style={s.sheetOverlay} activeOpacity={1} onPress={() => setShowThemeSheet(false)}>
-          <View style={[s.sheetContent, { backgroundColor: theme.colors.surface, paddingBottom: insets.bottom + 16 }]}>
-            <Text style={[s.sheetTitle, { color: theme.colors.textPrimary }]}>테마 선택</Text>
+          <View style={[s.sheetContent, { paddingBottom: insets.bottom + 16 }]}>
+            <Text style={s.sheetTitle}>테마 선택</Text>
             {DIARY_THEMES.map((t) => (
               <TouchableOpacity
                 key={t.key}
-                style={[s.sheetOption, { borderColor: selectedTheme === t.key ? theme.colors.primary : theme.colors.border }]}
+                style={[s.sheetOption, {
+                  borderColor: selectedTheme === t.key ? colors.accentPrimary : colors.accentSand + '60',
+                  backgroundColor: selectedTheme === t.key ? colors.accentPrimaryLight + '30' : colors.surfaceCard,
+                }]}
                 onPress={() => { setSelectedTheme(t.key); setShowThemeSheet(false); }}
               >
-                <View style={[s.sheetDot, { backgroundColor: t.color, borderWidth: 1, borderColor: theme.colors.border }]} />
-                <Text style={[s.sheetOptionText, { color: theme.colors.textPrimary }]}>{t.label}</Text>
+                <View style={[s.sheetDot, { backgroundColor: t.color, borderWidth: 1, borderColor: colors.accentSand }]} />
+                <Text style={[s.sheetOptionText, { color: colors.textPrimary }]}>{t.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -540,8 +558,8 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       {/* Emotion Picker Modal */}
       <Modal visible={showEmotionPicker} transparent animationType="slide">
         <TouchableOpacity style={s.sheetOverlay} activeOpacity={1} onPress={() => setShowEmotionPicker(false)}>
-          <View style={[s.sheetContent, { backgroundColor: theme.colors.surface, paddingBottom: insets.bottom + 16 }]}>
-            <Text style={[s.sheetTitle, { color: theme.colors.textPrimary }]}>오늘의 기분</Text>
+          <View style={[s.sheetContent, { paddingBottom: insets.bottom + 16 }]}>
+            <Text style={s.sheetTitle}>오늘의 기분</Text>
             <View style={s.emotionGrid}>
               {EMOTION_KEYS.map((key) => {
                 const isSelected = currentEmotion === key;
@@ -551,14 +569,14 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
                     style={[
                       s.emotionGridItem,
                       {
-                        borderColor: isSelected ? EMOTION_COLORS[key] : theme.colors.border,
-                        backgroundColor: isSelected ? EMOTION_COLORS[key] + '15' : 'transparent',
+                        borderColor: isSelected ? EMOTION_COLORS[key] : colors.accentSand + '60',
+                        backgroundColor: isSelected ? EMOTION_COLORS[key] + '15' : colors.surfaceCard,
                       },
                     ]}
                     onPress={() => { setCurrentEmotion(key); setShowEmotionPicker(false); }}
                   >
                     <EmotionStickerView emotionKey={key} size="small" />
-                    <Text style={[s.emotionGridLabel, { color: isSelected ? EMOTION_COLORS[key] : theme.colors.textSecondary }]}>
+                    <Text style={[s.emotionGridLabel, { color: isSelected ? EMOTION_COLORS[key] : colors.textSecondary }]}>
                       {EMOTION_LABELS[key]}
                     </Text>
                   </TouchableOpacity>
@@ -568,79 +586,131 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </PaperBackground>
   );
 }
 
-function makeStyles(t: Theme) {
-  return StyleSheet.create({
-    root: { flex: 1 },
+const styles = StyleSheet.create({
+  // Header — transparent on paper
+  header: {
+    height: 56, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', paddingHorizontal: layout.screenPaddingH,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  headerBtn: { height: 44, justifyContent: 'center', paddingHorizontal: 4 },
+  headerBtnText: {
+    fontFamily: fontFamily.sans,
+    fontSize: 15, fontWeight: '500',
+  },
+  headerDate: {
+    fontFamily: fontFamily.serifItalic,
+    fontSize: 16, fontWeight: '400',
+    color: colors.textSecondary,
+  },
+  headerSaveText: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 15, fontWeight: '600',
+  },
 
-    // Header
-    header: {
-      height: 56, flexDirection: 'row', alignItems: 'center',
-      justifyContent: 'space-between', paddingHorizontal: t.layout.screenPaddingH,
-      borderBottomWidth: 1,
-    },
-    headerBtn: { height: 44, justifyContent: 'center', paddingHorizontal: 4 },
-    headerBtnText: { ...t.typography.bodyLarge, fontWeight: '500' },
-    headerDate: { ...t.typography.labelMedium },
+  // Mood Banner — paper memo card feel
+  moodBanner: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderRadius: borderRadius.sm, marginTop: spacing.xl,
+    borderWidth: 1, gap: spacing.sm,
+    ...shadows.crisp,
+  },
+  moodLabel: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 15, fontWeight: '600',
+  },
+  moodTags: {
+    fontFamily: fontFamily.sans,
+    fontSize: 12, marginLeft: 4, flex: 1,
+  },
+  moodChangeHint: {
+    fontFamily: fontFamily.sans,
+    fontSize: 12, marginLeft: 'auto',
+    color: colors.textTertiary,
+  },
 
-    // MoodBanner
-    moodBanner: {
-      flexDirection: 'row', alignItems: 'center',
-      paddingHorizontal: 16, paddingVertical: 12,
-      borderRadius: t.borderRadius.lg, marginTop: t.spacing.xl,
-      gap: 8,
-    },
-    moodLabel: { fontSize: 15, fontWeight: '700' },
-    moodTags: { fontSize: 12, marginLeft: 4, flex: 1 },
-    moodChangeHint: { fontSize: 12, marginLeft: 'auto' },
+  // Bottom Toolbar — glass tool tray
+  toolbar: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingTop: 10, paddingHorizontal: layout.screenPaddingH,
+    borderTopWidth: 1, borderTopColor: colors.glassBorderSubtle,
+    backgroundColor: colors.glassWhite,
+    gap: spacing.xl,
+  },
+  toolBtn: { alignItems: 'center', gap: 2 },
+  toolIconView: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  toolLabel: {
+    fontFamily: fontFamily.sans,
+    fontSize: 10, color: colors.textSecondary,
+  },
+  charCount: {
+    ...typography.caption,
+    marginLeft: 'auto',
+    color: colors.textTertiary,
+  },
 
-    // Toolbar
-    toolbar: {
-      flexDirection: 'row', alignItems: 'center',
-      paddingTop: 10, paddingHorizontal: t.layout.screenPaddingH,
-      borderTopWidth: 1, gap: t.spacing.xl,
-    },
-    toolBtn: { alignItems: 'center', gap: 2 },
-    toolIconView: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
-    toolLabel: { fontSize: 10 },
-    charCount: { ...t.typography.caption, marginLeft: 'auto' },
+  // AI Feedback Toast
+  aiToast: {
+    position: 'absolute', bottom: 100, left: spacing['2xl'], right: spacing['2xl'],
+    backgroundColor: colors.bgIvory,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    ...shadows.soft,
+    alignItems: 'center',
+  },
+  aiToastText: {
+    fontFamily: fontFamily.script,
+    fontSize: 16, color: colors.textSecondary,
+  },
 
-    // Sheet
-    sheetOverlay: {
-      flex: 1, justifyContent: 'flex-end',
-      backgroundColor: 'rgba(0,0,0,0.4)',
-    },
-    sheetContent: {
-      borderTopLeftRadius: 20, borderTopRightRadius: 20,
-      padding: t.spacing['2xl'],
-    },
-    sheetTitle: {
-      ...t.typography.titleLarge, fontWeight: '700',
-      marginBottom: t.spacing.xl, textAlign: 'center',
-    },
-    sheetOption: {
-      flexDirection: 'row', alignItems: 'center',
-      paddingVertical: 14, paddingHorizontal: 16,
-      borderRadius: t.borderRadius.md, borderWidth: 1, marginBottom: 8,
-      gap: 12,
-    },
-    sheetDot: { width: 20, height: 20, borderRadius: 10 },
-    sheetOptionText: { fontSize: 15, fontWeight: '500' },
+  // Sheet — glass style
+  sheetOverlay: {
+    flex: 1, justifyContent: 'flex-end',
+    backgroundColor: colors.overlayDim,
+  },
+  sheetContent: {
+    borderTopLeftRadius: borderRadius['3xl'],
+    borderTopRightRadius: borderRadius['3xl'],
+    padding: spacing['2xl'],
+    backgroundColor: colors.glassWhite,
+  },
+  sheetTitle: {
+    fontFamily: fontFamily.serifItalic,
+    fontSize: 22, fontWeight: '500',
+    color: colors.textPrimary,
+    marginBottom: spacing.xl, textAlign: 'center',
+  },
+  sheetOption: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 14, paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.sm, borderWidth: 1, marginBottom: spacing.sm,
+    gap: spacing.md,
+  },
+  sheetDot: { width: 20, height: 20, borderRadius: 10 },
+  sheetOptionText: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 15, fontWeight: '500',
+    color: colors.textPrimary,
+  },
 
-    // Emotion picker grid
-    emotionGrid: {
-      flexDirection: 'row', flexWrap: 'wrap',
-      justifyContent: 'center', gap: 12,
-    },
-    emotionGridItem: {
-      alignItems: 'center', justifyContent: 'center',
-      width: 72, paddingVertical: 12,
-      borderRadius: t.borderRadius.lg, borderWidth: 1.5,
-      gap: 6,
-    },
-    emotionGridLabel: { fontSize: 12, fontWeight: '600' },
-  });
-}
+  // Emotion picker grid
+  emotionGrid: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    justifyContent: 'center', gap: spacing.md,
+  },
+  emotionGridItem: {
+    alignItems: 'center', justifyContent: 'center',
+    width: 72, paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg, borderWidth: 1.5,
+    gap: 6,
+  },
+  emotionGridLabel: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 12, fontWeight: '600',
+  },
+});

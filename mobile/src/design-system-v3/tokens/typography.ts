@@ -12,59 +12,23 @@
 import { TextStyle, Platform } from 'react-native';
 
 // ============================================================
-// Font Families
+// Font Families — using @expo-google-fonts naming convention
 // ============================================================
 export const fontFamily = {
   /** Serif — editorial, emotional titles */
-  serif: Platform.select({
-    ios: 'PlayfairDisplay-Regular',
-    android: 'PlayfairDisplay-Regular',
-    default: 'PlayfairDisplay-Regular',
-  }),
-  serifItalic: Platform.select({
-    ios: 'PlayfairDisplay-Italic',
-    android: 'PlayfairDisplay-Italic',
-    default: 'PlayfairDisplay-Italic',
-  }),
-  serifMedium: Platform.select({
-    ios: 'PlayfairDisplay-Medium',
-    android: 'PlayfairDisplay-Medium',
-    default: 'PlayfairDisplay-Medium',
-  }),
+  serif: 'PlayfairDisplay_400Regular',
+  serifItalic: 'PlayfairDisplay_400Regular_Italic',
+  serifMedium: 'PlayfairDisplay_500Medium',
 
   /** Sans — UI, body, readability */
-  sans: Platform.select({
-    ios: 'Inter-Regular',
-    android: 'Inter-Regular',
-    default: 'Inter-Regular',
-  }),
-  sansLight: Platform.select({
-    ios: 'Inter-Light',
-    android: 'Inter-Light',
-    default: 'Inter-Light',
-  }),
-  sansMedium: Platform.select({
-    ios: 'Inter-Medium',
-    android: 'Inter-Medium',
-    default: 'Inter-Medium',
-  }),
-  sansSemiBold: Platform.select({
-    ios: 'Inter-SemiBold',
-    android: 'Inter-SemiBold',
-    default: 'Inter-SemiBold',
-  }),
+  sans: 'Inter_400Regular',
+  sansLight: 'Inter_300Light',
+  sansMedium: 'Inter_500Medium',
+  sansSemiBold: 'Inter_600SemiBold',
 
   /** Script — handwritten accents, decorative */
-  script: Platform.select({
-    ios: 'Caveat-Regular',
-    android: 'Caveat-Regular',
-    default: 'Caveat-Regular',
-  }),
-  scriptMedium: Platform.select({
-    ios: 'Caveat-Medium',
-    android: 'Caveat-Medium',
-    default: 'Caveat-Medium',
-  }),
+  script: 'Caveat_400Regular',
+  scriptMedium: 'Caveat_500Medium',
 
   /** System fallback — when custom fonts not loaded */
   systemDefault: Platform.select({
@@ -80,48 +44,40 @@ export const fontFamily = {
 } as const;
 
 // ============================================================
-// Font asset map — for expo-font loading
-// Place .ttf files in mobile/assets/fonts/ and uncomment below.
-// Download from Google Fonts: Playfair Display, Inter, Caveat
+// Font asset map — uses @expo-google-fonts packages
 // ============================================================
 export const fontAssetNames = [
-  'PlayfairDisplay-Regular',
-  'PlayfairDisplay-Italic',
-  'PlayfairDisplay-Medium',
-  'Inter-Light',
-  'Inter-Regular',
-  'Inter-Medium',
-  'Inter-SemiBold',
-  'Caveat-Regular',
-  'Caveat-Medium',
+  'PlayfairDisplay_400Regular',
+  'PlayfairDisplay_400Regular_Italic',
+  'PlayfairDisplay_500Medium',
+  'Inter_300Light',
+  'Inter_400Regular',
+  'Inter_500Medium',
+  'Inter_600SemiBold',
+  'Caveat_400Regular',
+  'Caveat_500Medium',
 ] as const;
 
 /**
- * Build font assets map for useFonts() / Font.loadAsync().
- * Usage:
- *   import { buildFontAssets } from './typography';
- *   const fonts = buildFontAssets();
- *   const [loaded] = useFonts(fonts);
+ * Build font assets map for useFonts().
  *
- * Returns empty object if font files are not yet available.
+ * Usage:
+ *   import { useFonts } from 'expo-font';
+ *   import { buildFontAssets } from '@/design-system-v3';
+ *   const [loaded] = useFonts(buildFontAssets());
  */
 export function buildFontAssets(): Record<string, any> {
-  try {
-    return {
-      'PlayfairDisplay-Regular': require('../../../assets/fonts/PlayfairDisplay-Regular.ttf'),
-      'PlayfairDisplay-Italic': require('../../../assets/fonts/PlayfairDisplay-Italic.ttf'),
-      'PlayfairDisplay-Medium': require('../../../assets/fonts/PlayfairDisplay-Medium.ttf'),
-      'Inter-Light': require('../../../assets/fonts/Inter-Light.ttf'),
-      'Inter-Regular': require('../../../assets/fonts/Inter-Regular.ttf'),
-      'Inter-Medium': require('../../../assets/fonts/Inter-Medium.ttf'),
-      'Inter-SemiBold': require('../../../assets/fonts/Inter-SemiBold.ttf'),
-      'Caveat-Regular': require('../../../assets/fonts/Caveat-Regular.ttf'),
-      'Caveat-Medium': require('../../../assets/fonts/Caveat-Medium.ttf'),
-    };
-  } catch {
-    // Font files not yet downloaded — use system fallbacks
-    return {};
-  }
+  return {
+    PlayfairDisplay_400Regular: require('@expo-google-fonts/playfair-display/400Regular/PlayfairDisplay_400Regular.ttf'),
+    PlayfairDisplay_400Regular_Italic: require('@expo-google-fonts/playfair-display/400Regular_Italic/PlayfairDisplay_400Regular_Italic.ttf'),
+    PlayfairDisplay_500Medium: require('@expo-google-fonts/playfair-display/500Medium/PlayfairDisplay_500Medium.ttf'),
+    Inter_300Light: require('@expo-google-fonts/inter/300Light/Inter_300Light.ttf'),
+    Inter_400Regular: require('@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf'),
+    Inter_500Medium: require('@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf'),
+    Inter_600SemiBold: require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
+    Caveat_400Regular: require('@expo-google-fonts/caveat/400Regular/Caveat_400Regular.ttf'),
+    Caveat_500Medium: require('@expo-google-fonts/caveat/500Medium/Caveat_500Medium.ttf'),
+  };
 }
 
 // ============================================================

@@ -11,6 +11,7 @@ if (SCREENSHOT_MODE) {
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { NanumMyeongjo_400Regular, NanumMyeongjo_700Bold } from '@expo-google-fonts/nanum-myeongjo';
+import { buildFontAssets } from './src/design-system-v3';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { SubscriptionProvider } from './src/contexts/SubscriptionContext';
@@ -23,6 +24,7 @@ export default function App() {
   const [fontsLoaded] = useFonts({
     NanumMyeongjo_400Regular,
     NanumMyeongjo_700Bold,
+    ...buildFontAssets(),
   });
 
   if (!fontsLoaded) {
