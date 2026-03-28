@@ -1,17 +1,20 @@
 /**
- * DiaryListScreen v3 — Scrapbook diary collection
+ * DiaryListScreen v3 — Editorial scrapbook diary collection
  *
- * "기록 조각들이 모여 있는 느낌"
- * Paper-textured background with ivory diary cards,
- * serif headers, emotion blob chips, and handwritten dates.
+ * "기억 페이지를 넘겨보는 스크랩북 리스트"
  *
- * v3 design system tokens. No react-native-svg dependency.
+ * Each diary entry is a curated scrapbook page — not a generic card.
+ * Photos in polaroid frames, serif titles, script dates,
+ * tape accents, warm paper composition.
+ *
+ * DateStrip removed — replaced with minimal serif month header.
+ * Fetches all recent diaries (not date-filtered) for browse feel.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, Animated, RefreshControl,
-  ActivityIndicator, TouchableOpacity, Image, Platform,
+  ActivityIndicator, TouchableOpacity, Image, Platform, Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -25,9 +28,11 @@ import i18n from '../i18n/i18n';
 import { diaryApi, diaryApiV3, companionApi } from '../api/client';
 import { DiaryV3, StreakResponse, DiaryStackParamListV3, EmotionKey } from '../types';
 import { formatDiaryDate } from '../utils/dateFormat';
-import { DateStrip } from './components/DateStrip';
 import { EmotionStickerView } from './components/EmotionStickerView';
 import { EMOTION_COLORS, EMOTION_LABELS } from '../constants/stickers';
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const CONTENT_W = SCREEN_W - spacing['2xl'] * 2;
 
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'DiaryListHome'>;
 
@@ -38,30 +43,20 @@ function formatDateKey(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 6) return i18n.t('diary.greetingDawn');
-  if (hour < 12) return i18n.t('diary.greetingMorning');
-  if (hour < 18) return i18n.t('diary.greetingAfternoon');
-  return i18n.t('diary.greetingEvening');
-}
-
-// Blob shapes for emotion chips
-const chipBlobRadii = [
-  { borderTopLeftRadius: 10, borderTopRightRadius: 14, borderBottomRightRadius: 12, borderBottomLeftRadius: 14 },
-  { borderTopLeftRadius: 14, borderTopRightRadius: 10, borderBottomRightRadius: 14, borderBottomLeftRadius: 12 },
-  { borderTopLeftRadius: 12, borderTopRightRadius: 14, borderBottomRightRadius: 10, borderBottomLeftRadius: 14 },
-];
+// Polaroid rotation per card index — hand-placed feel
+const polaroidRotations = ['-2deg', '1.5deg', '-1deg', '2deg', '-0.5deg'];
+// Tape presence per card
+const showTapeFor = [true, false, true, false, true];
 
 export function DiaryListScreenV2({ navigation, route }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const headerAnim = useRef(new Animated.Value(0)).current;
   const listAnim = useRef(new Animated.Value(0)).current;
 
   const filterDate = route.params?.filterDate;
-  const initialDate = filterDate ? new Date(filterDate + 'T00:00:00') : new Date();
-  const [selectedDate, setSelectedDate] = useState(initialDate);
+  const [selectedDate, setSelectedDate] = useState(
+    filterDate ? new Date(filterDate + 'T00:00:00') : new Date()
+  );
 
   useEffect(() => {
     if (filterDate) {
@@ -71,23 +66,12 @@ export function DiaryListScreenV2({ navigation, route }: Props) {
   }, [filterDate]);
 
   const [diaries, setDiaries] = useState<DiaryV3[]>([]);
-  const [datesWithDiaries, setDatesWithDiaries] = useState<Set<string>>(new Set());
   const [streak, setStreak] = useState<StreakResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    Animated.stagger(150, [
-      Animated.spring(headerAnim, { toValue: 1, tension: 50, friction: 8, useNativeDriver: true }),
-      Animated.spring(listAnim, { toValue: 1, tension: 40, friction: 10, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  const fetchCalendar = useCallback(async (year: number, month: number) => {
-    try {
-      const calData = await diaryApi.getCalendar(year, month);
-      setDatesWithDiaries(new Set(calData.datesWithDiaries));
-    } catch {}
+    Animated.spring(listAnim, { toValue: 1, tension: 40, friction: 10, useNativeDriver: true }).start();
   }, []);
 
   const fetchDiaries = useCallback(async () => {
@@ -106,30 +90,22 @@ export function DiaryListScreenV2({ navigation, route }: Props) {
     }
   }, [selectedDate]);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchDiaries();
-      fetchCalendar(selectedDate.getFullYear(), selectedDate.getMonth() + 1);
-    }, [fetchDiaries, fetchCalendar, selectedDate]),
-  );
+  useFocusEffect(useCallback(() => { fetchDiaries(); }, [fetchDiaries]));
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     fetchDiaries();
-    fetchCalendar(selectedDate.getFullYear(), selectedDate.getMonth() + 1);
-  }, [fetchDiaries, fetchCalendar, selectedDate]);
+  }, [fetchDiaries]);
 
-  const handleDateSelect = useCallback((date: Date) => {
-    setSelectedDate(date);
-    Animated.sequence([
-      Animated.timing(listAnim, { toValue: 0.3, duration: 100, useNativeDriver: true }),
-      Animated.spring(listAnim, { toValue: 1, tension: 50, friction: 8, useNativeDriver: true }),
-    ]).start();
-  }, [listAnim]);
-
-  const handleMonthChange = useCallback((year: number, month: number) => {
-    fetchCalendar(year, month);
-  }, [fetchCalendar]);
+  // Resolve photo URL
+  const resolvePhoto = (item: DiaryV3): string | null => {
+    const firstPhoto = item.photos && item.photos.length > 0 ? item.photos[0] : null;
+    if (!firstPhoto) return null;
+    const raw = firstPhoto.cdnUrl || (firstPhoto as any).url || '';
+    if (raw.startsWith('http')) return raw;
+    const host = __DEV__ ? `http://${Platform.OS === 'android' ? '10.0.2.2' : 'localhost'}:8080` : 'https://api.mamuri.app';
+    return `${host}${raw}`;
+  };
 
   const renderDiaryItem = ({ item, index }: { item: DiaryV3; index: number }) => {
     const emotionCode = (
@@ -138,82 +114,80 @@ export function DiaryListScreenV2({ navigation, route }: Props) {
       || (item as any).primaryEmotion
     ) as EmotionKey | undefined;
     const emotionColor = emotionCode ? EMOTION_COLORS[emotionCode] : null;
-
-    const firstPhoto = item.photos && item.photos.length > 0 ? item.photos[0] : null;
-    const photoUrl = firstPhoto
-      ? (firstPhoto.cdnUrl || (firstPhoto as any).url || '').startsWith('http')
-        ? (firstPhoto.cdnUrl || (firstPhoto as any).url || '')
-        : `${__DEV__ ? `http://${Platform.OS === 'android' ? '10.0.2.2' : 'localhost'}:8080` : 'https://api.mamuri.app'}${firstPhoto.cdnUrl || (firstPhoto as any).url || ''}`
-      : null;
+    const photoUrl = resolvePhoto(item);
+    const rotation = polaroidRotations[index % polaroidRotations.length];
+    const hasTape = showTapeFor[index % showTapeFor.length];
+    const diaryDate = new Date(item.diaryDate);
+    const dateLabel = `${diaryDate.getMonth() + 1}월 ${diaryDate.getDate()}일`;
 
     return (
-      <Animated.View style={{
-        opacity: listAnim,
-        transform: [{
-          translateY: listAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [16 + index * 8, 0],
-          }),
-        }],
-        marginBottom: spacing.md,
-      }}>
+      <Animated.View style={[
+        styles.entryContainer,
+        {
+          opacity: listAnim,
+          transform: [{
+            translateY: listAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [24 + index * 12, 0],
+            }),
+          }],
+        },
+      ]}>
         <TouchableOpacity
           onPress={() => navigation.navigate('DiaryDetail', { diaryId: item.id })}
-          activeOpacity={0.7}
-          style={[
-            styles.diaryCard,
-            emotionColor ? { borderLeftWidth: 3, borderLeftColor: emotionColor + '60' } : {},
-          ]}
+          activeOpacity={0.8}
+          style={styles.pageCard}
         >
-          <View style={styles.cardInner}>
-            {/* Photo thumbnail */}
-            {photoUrl && (
-              <View style={styles.thumbnailWrap}>
-                <Image source={{ uri: photoUrl }} style={styles.thumbnail} resizeMode="cover" />
-                {/* Vintage overlay */}
-                <View style={styles.thumbnailOverlay} />
+          {/* ── Tape decoration (on some cards) ── */}
+          {hasTape && <View style={styles.tape} />}
+
+          {/* ── Date — handwritten script ── */}
+          <Text style={styles.dateScript}>{dateLabel}</Text>
+
+          {/* ── Photo — polaroid framing ── */}
+          {photoUrl && (
+            <View style={[styles.polaroidWrap, { transform: [{ rotate: rotation }] }]}>
+              <View style={styles.polaroidFrame}>
+                <Image
+                  source={{ uri: photoUrl }}
+                  style={styles.polaroidPhoto}
+                  resizeMode="cover"
+                />
+                {/* Vintage warmth overlay */}
+                <View style={styles.vintageOverlay} />
+              </View>
+            </View>
+          )}
+
+          {/* ── Emotion indicator ── */}
+          {emotionCode && (
+            <View style={styles.emotionRow}>
+              <EmotionStickerView emotionKey={emotionCode} size="small" />
+              <Text style={[styles.emotionText, { color: emotionColor || colors.textSecondary }]}>
+                {EMOTION_LABELS[emotionCode]}
+              </Text>
+            </View>
+          )}
+
+          {/* ── Title — editorial serif ── */}
+          <Text numberOfLines={2} style={styles.entryTitle}>
+            {item.title}
+          </Text>
+
+          {/* ── Content preview ── */}
+          <Text numberOfLines={3} style={styles.entryPreview}>
+            {item.content.substring(0, 150)}
+          </Text>
+
+          {/* ── Footer: formatted date + AI indicator ── */}
+          <View style={styles.entryFooter}>
+            <Text style={styles.footerDate}>{formatDiaryDate(item.diaryDate)}</Text>
+            {item.aiComment !== null && (
+              <View style={styles.aiTag}>
+                <View style={styles.aiDot} />
+                <Text style={styles.aiTagText}>마무리의 한마디</Text>
               </View>
             )}
-
-            {/* Content */}
-            <View style={styles.cardContent}>
-              {/* Top: Emotion chip + Date */}
-              <View style={styles.cardTopRow}>
-                {emotionCode && (
-                  <View style={[
-                    styles.emotionChip,
-                    chipBlobRadii[index % chipBlobRadii.length],
-                    { backgroundColor: (emotionColor || colors.accentSand) + '15' },
-                  ]}>
-                    <EmotionStickerView emotionKey={emotionCode} size="mini" />
-                    <Text style={[styles.emotionLabel, { color: emotionColor || colors.accentPrimary }]}>
-                      {EMOTION_LABELS[emotionCode]}
-                    </Text>
-                  </View>
-                )}
-                <Text style={styles.cardDate}>
-                  {formatDiaryDate(item.diaryDate)}
-                </Text>
-              </View>
-
-              {/* Title */}
-              <Text numberOfLines={1} style={styles.cardTitle}>
-                {item.title}
-              </Text>
-
-              {/* Preview */}
-              <Text numberOfLines={2} style={styles.cardPreview}>
-                {item.content.substring(0, 100)}
-              </Text>
-
-              {/* AI badge */}
-              {item.aiComment !== null && (
-                <View style={styles.aiBadge}>
-                  <View style={styles.aiDot} />
-                  <Text style={styles.aiBadgeText}>AI</Text>
-                </View>
-              )}
-            </View>
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -232,23 +206,20 @@ export function DiaryListScreenV2({ navigation, route }: Props) {
     const isToday = formatDateKey(selectedDate) === formatDateKey(new Date());
 
     return (
-      <Animated.View style={[
-        styles.emptyState,
-        {
-          opacity: listAnim,
-          transform: [{
-            translateY: listAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }),
-          }],
-        },
-      ]}>
-        <View style={styles.emptyIcon}>
-          <Text style={styles.emptyDot}>·</Text>
+      <Animated.View style={[styles.emptyState, { opacity: listAnim }]}>
+        {/* Empty page illustration */}
+        <View style={styles.emptyPage}>
+          <View style={styles.emptyPageLine} />
+          <View style={[styles.emptyPageLine, { width: '60%' }]} />
+          <View style={[styles.emptyPageLine, { width: '40%' }]} />
         </View>
         <Text style={styles.emptyTitle}>
-          {isToday ? t('diary.emptyToday') : t('diary.emptyOther')}
+          {isToday ? '오늘의 페이지가 비어있어요' : '이 날의 기록이 없어요'}
         </Text>
         <Text style={styles.emptyDesc}>
-          {isToday ? t('diary.emptyTodayDesc') : t('diary.emptyOtherDesc')}
+          {isToday
+            ? '오늘의 감정을 한 장의 페이지로 남겨보세요'
+            : '다른 날의 기록을 둘러보세요'}
         </Text>
 
         {isToday && (
@@ -257,59 +228,45 @@ export function DiaryListScreenV2({ navigation, route }: Props) {
             onPress={() => navigation.navigate('WriteDiary', {})}
             activeOpacity={0.8}
           >
-            <Text style={styles.writeBtnText}>{t('diary.writeToday')}</Text>
+            <Text style={styles.writeBtnText}>페이지 시작하기</Text>
           </TouchableOpacity>
         )}
       </Animated.View>
     );
   };
 
+  const now = new Date();
+  const monthLabel = `${selectedDate.getFullYear()}년 ${selectedDate.getMonth() + 1}월`;
+
   return (
     <PaperBackground variant="plain" color="cream">
-      {/* Sticky Header */}
-      <View style={[styles.stickyHeader, { paddingTop: insets.top + spacing.sm }]}>
-        <Animated.View style={[
-          styles.greetingRow,
-          {
-            opacity: headerAnim,
-            transform: [{
-              translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }),
-            }],
-          },
-        ]}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.pageTitle}>{t('diary.myDiary')}</Text>
-            <Text style={styles.greeting}>{getGreeting()}</Text>
+      {/* ── Header — minimal, editorial ── */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.headerTitle}>나의 기록</Text>
+            <Text style={styles.headerMonth}>{monthLabel}</Text>
           </View>
 
           {streak && streak.currentStreak > 0 && (
             <View style={styles.streakBadge}>
-              <View style={styles.streakDot} />
-              <Text style={styles.streakText}>
-                {t('diary.streakDays', { count: streak.currentStreak })}
-              </Text>
+              <Text style={styles.streakNum}>{streak.currentStreak}</Text>
+              <Text style={styles.streakLabel}>일째</Text>
             </View>
           )}
-        </Animated.View>
-
-        <DateStrip
-          selectedDate={selectedDate}
-          onDateSelect={handleDateSelect}
-          datesWithDiaries={datesWithDiaries}
-          onMonthChange={handleMonthChange}
-        />
+        </View>
       </View>
 
-      {/* Diary list */}
+      {/* ── Diary entries ── */}
       <FlatList
         data={diaries}
         renderItem={renderDiaryItem}
         keyExtractor={(item) => item.id.toString()}
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={{
-          paddingHorizontal: layout.screenPaddingH,
-          paddingTop: spacing.lg,
-          paddingBottom: insets.bottom + 100,
+          paddingHorizontal: spacing['2xl'],
+          paddingTop: spacing['2xl'],
+          paddingBottom: insets.bottom + 120,
           flexGrow: diaries.length === 0 ? 1 : undefined,
         }}
         showsVerticalScrollIndicator={false}
@@ -326,140 +283,205 @@ export function DiaryListScreenV2({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  // Header
-  stickyHeader: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.accentSand + '40',
+  // ── Header ──
+  header: {
+    paddingHorizontal: spacing['2xl'],
+    paddingBottom: spacing.xl,
   },
-  greetingRow: {
-    flexDirection: 'row', alignItems: 'flex-start',
+  headerTop: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: layout.screenPaddingH,
-    paddingBottom: 4,
+    alignItems: 'flex-start',
   },
-  pageTitle: {
+  headerTitle: {
     fontFamily: fontFamily.serifItalic,
-    fontSize: 24, fontWeight: '500',
+    fontSize: 28, fontWeight: '400',
     color: colors.textPrimary,
+    letterSpacing: -0.5,
   },
-  greeting: {
+  headerMonth: {
     fontFamily: fontFamily.sans,
-    fontSize: 13, color: colors.textSecondary,
-    marginTop: 2,
+    fontSize: 13, color: colors.textTertiary,
+    marginTop: 4,
   },
   streakBadge: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.accentMustard + '18',
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderRadius: borderRadius.full, gap: 4,
-  },
-  streakDot: {
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: colors.accentMustard,
-  },
-  streakText: {
-    fontFamily: fontFamily.sansMedium,
-    fontSize: 12, color: colors.accentMustard, fontWeight: '600',
-  },
-
-  // Diary card — paper note feel
-  diaryCard: {
+    alignItems: 'center',
+    paddingHorizontal: 14, paddingVertical: 8,
     backgroundColor: colors.bgIvory,
     borderRadius: borderRadius.sm,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.5)',
-    overflow: 'hidden',
     ...shadows.crisp,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
   },
-  cardInner: {
-    flexDirection: 'row',
+  streakNum: {
+    fontFamily: fontFamily.serifItalic,
+    fontSize: 22, color: colors.accentPrimary, fontWeight: '500',
   },
-  thumbnailWrap: {
-    width: 80, position: 'relative',
-  },
-  thumbnail: {
-    width: 80, height: '100%', minHeight: 100,
-  },
-  thumbnailOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(180, 150, 120, 0.06)',
-  },
-  cardContent: {
-    flex: 1, padding: spacing.lg,
-  },
-  cardTopRow: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  emotionChip: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 8, paddingVertical: 3, gap: 4,
-  },
-  emotionLabel: {
-    fontFamily: fontFamily.sansMedium,
-    fontSize: 11, fontWeight: '600',
-  },
-  cardDate: {
-    fontFamily: fontFamily.script,
-    fontSize: 12, color: colors.textTertiary,
-  },
-  cardTitle: {
-    fontFamily: fontFamily.sansMedium,
-    fontSize: 15, fontWeight: '600',
-    color: colors.textPrimary, marginTop: spacing.sm,
-  },
-  cardPreview: {
+  streakLabel: {
     fontFamily: fontFamily.sans,
-    fontSize: 13, lineHeight: 19,
-    color: colors.textSecondary, marginTop: spacing.xs,
-  },
-  aiBadge: {
-    flexDirection: 'row', alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: colors.accentPrimaryLight + '30',
-    paddingHorizontal: 7, paddingVertical: 2,
-    borderRadius: borderRadius.full, gap: 4,
-    marginTop: spacing.sm,
-  },
-  aiDot: {
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: colors.accentPrimary,
-  },
-  aiBadgeText: {
-    fontFamily: fontFamily.sansMedium,
-    fontSize: 10, color: colors.accentPrimary,
+    fontSize: 10, color: colors.textTertiary, marginTop: 1,
   },
 
-  // Empty state
+  // ── Page Card — each entry is a scrapbook page ──
+  entryContainer: {
+    marginBottom: spacing['3xl'],
+  },
+  pageCard: {
+    backgroundColor: colors.bgIvory,
+    borderRadius: borderRadius.xs,
+    padding: spacing['2xl'],
+    paddingTop: spacing['3xl'],
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    ...shadows.soft,
+  },
+
+  // Tape decoration
+  tape: {
+    position: 'absolute',
+    top: -10,
+    alignSelf: 'center',
+    left: '50%',
+    marginLeft: -30,
+    width: 60,
+    height: 20,
+    backgroundColor: colors.glassWhiteLight,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.03)',
+    transform: [{ rotate: '1.5deg' }],
+    zIndex: 10,
+  },
+
+  // Date — handwritten script at top
+  dateScript: {
+    fontFamily: fontFamily.script,
+    fontSize: 20, color: colors.textSecondary,
+    marginBottom: spacing.xl,
+    transform: [{ rotate: '-1deg' }],
+  },
+
+  // Polaroid photo frame
+  polaroidWrap: {
+    alignSelf: 'center',
+    marginBottom: spacing.xl,
+  },
+  polaroidFrame: {
+    backgroundColor: colors.surfacePure,
+    padding: 8,
+    paddingBottom: 28,
+    width: CONTENT_W - spacing['2xl'] * 2,
+    ...shadows.soft,
+  },
+  polaroidPhoto: {
+    width: '100%',
+    height: 180,
+    borderRadius: 1,
+  },
+  vintageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(180, 150, 120, 0.05)',
+    margin: 8,
+    marginBottom: 28,
+  },
+
+  // Emotion row
+  emotionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  emotionText: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 13, fontWeight: '600',
+  },
+
+  // Title — editorial serif, strong hierarchy
+  entryTitle: {
+    fontFamily: fontFamily.serifItalic,
+    fontSize: 22, fontWeight: '400',
+    color: colors.textPrimary,
+    lineHeight: 30,
+    letterSpacing: -0.3,
+    marginBottom: spacing.md,
+  },
+
+  // Content preview
+  entryPreview: {
+    fontFamily: fontFamily.sans,
+    fontSize: 14, lineHeight: 22,
+    color: colors.textSecondary,
+    marginBottom: spacing.xl,
+  },
+
+  // Footer
+  entryFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.accentSand + '30',
+    paddingTop: spacing.md,
+  },
+  footerDate: {
+    fontFamily: fontFamily.sans,
+    fontSize: 11, color: colors.textTertiary,
+  },
+  aiTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  aiDot: {
+    width: 5, height: 5, borderRadius: 3,
+    backgroundColor: colors.accentPrimary,
+  },
+  aiTagText: {
+    fontFamily: fontFamily.sans,
+    fontSize: 11, color: colors.accentPrimary,
+  },
+
+  // ── Empty state ──
   emptyState: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 32, paddingBottom: 60,
+    paddingHorizontal: 40, paddingBottom: 60,
   },
-  emptyIcon: {
-    width: 72, height: 72,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentSand + '20',
-    borderRadius: borderRadius.xl,
+  emptyPage: {
+    width: 120, height: 160,
+    backgroundColor: colors.bgIvory,
+    borderRadius: borderRadius.xs,
+    padding: spacing.xl,
+    justifyContent: 'center',
+    gap: spacing.md,
+    ...shadows.crisp,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
+    marginBottom: spacing['2xl'],
   },
-  emptyDot: { fontSize: 32, color: colors.textTertiary },
+  emptyPageLine: {
+    height: 2,
+    backgroundColor: colors.accentSand + '30',
+    borderRadius: 1,
+    width: '80%',
+  },
   emptyTitle: {
     fontFamily: fontFamily.serifItalic,
     fontSize: 18, color: colors.textPrimary,
-    marginTop: spacing.xl,
+    textAlign: 'center',
   },
   emptyDesc: {
     fontFamily: fontFamily.sans,
     fontSize: 13, lineHeight: 20,
-    color: colors.textSecondary, marginTop: spacing.sm,
-    textAlign: 'center',
+    color: colors.textSecondary,
+    marginTop: spacing.sm, textAlign: 'center',
   },
   writeBtn: {
     borderWidth: 1, borderColor: colors.accentPrimary,
-    borderRadius: borderRadius.full,
-    paddingHorizontal: 24, paddingVertical: 12,
-    marginTop: spacing.lg,
+    borderRadius: borderRadius['2xl'],
+    paddingHorizontal: 28, paddingVertical: 14,
+    marginTop: spacing.xl,
+    backgroundColor: 'rgba(253, 252, 248, 0.5)',
   },
   writeBtnText: {
-    fontFamily: fontFamily.sansMedium,
-    fontSize: 14, color: colors.accentPrimary, fontWeight: '600',
+    fontFamily: fontFamily.serifItalic,
+    fontSize: 15, color: colors.textPrimary,
   },
 });
