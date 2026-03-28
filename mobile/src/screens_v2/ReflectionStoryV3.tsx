@@ -67,7 +67,7 @@ export default function ReflectionStoryV3() {
   const weeklyDist = weekly?.emotionDistribution || {};
 
   return (
-    <PaperBackground variant="lined" color="warm" style={{ flex: 1, paddingTop: insets.top }}>
+    <PaperBackground variant="plain" color="warm" style={{ flex: 1, paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.scroll}

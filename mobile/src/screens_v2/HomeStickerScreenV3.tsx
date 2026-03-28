@@ -80,7 +80,7 @@ export default function HomeStickerScreenV3() {
   const weekStrip = getWeekStrip(weekly);
 
   return (
-    <PaperBackground variant="lined" color="cream">
+    <PaperBackground variant="plain" color="cream">
       <Animated.View style={[styles.root, { paddingTop: insets.top, opacity: fade }]}>
         <ScrollView
           showsVerticalScrollIndicator={false}

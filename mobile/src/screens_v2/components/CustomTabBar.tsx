@@ -1,9 +1,9 @@
 /**
- * Tab Bar v5 — Warm emotional journal navigation
+ * Tab Bar v6 — Scrapbook / warm paper navigation
  *
  * Layout: [Home] [Diary] [+] [Companion] [Reflect]
- * Pure View-based icons — warm, rounded, premium feel
- * Soft shadow instead of border, semi-transparent background
+ * Pure View-based icons — warm, rounded, paper-journal feel
+ * Soft warm shadow, semi-transparent paper background
  */
 
 import React, { useRef } from 'react';
@@ -12,9 +12,8 @@ import {
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, fontFamily } from '../../design-system-v3';
 
-const ACCENT = '#6356D9';
-const MUTED = '#C4C1B9';
 const W = 1.8; // stroke width for icons
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -35,9 +34,9 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
       height: 60 + insets.bottom,
       ...Platform.select({
         ios: {
-          shadowColor: '#000',
+          shadowColor: '#3E342F',
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.06,
+          shadowOpacity: 0.04,
           shadowRadius: 12,
         },
         android: { elevation: 8 },
@@ -61,7 +60,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   function renderTab(route: typeof state.routes[0], idx: number) {
     const focused = state.index === idx;
     const label = descriptors[route.key].options.title ?? route.name;
-    const color = focused ? ACCENT : MUTED;
+    const color = focused ? colors.textPrimary : colors.textTertiary;
 
     return (
       <TouchableOpacity
@@ -74,7 +73,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
           {route.name === 'Companion' && <CompanionIcon color={color} filled={focused} />}
           {route.name === 'Reflect' && <ReflectIcon color={color} filled={focused} />}
         </View>
-        <Text style={[st.label, { color, fontWeight: focused ? '600' : '400' }]}>{label}</Text>
+        <Text style={[st.label, { color, fontWeight: focused ? '600' : '400', fontFamily: fontFamily.sans }]}>{label}</Text>
       </TouchableOpacity>
     );
   }
@@ -99,7 +98,7 @@ function HomeIcon({ color, filled }: { color: string; filled: boolean }) {
         {/* Cutout circle to create crescent shape */}
         <View style={{
           width: 12, height: 12, borderRadius: 6,
-          backgroundColor: filled ? '#FAFAF8' : '#FAFAF8',
+          backgroundColor: colors.bgCream,
           position: 'absolute', top: 0, right: 0,
         }} />
         {/* Small leaf dot */}
@@ -159,12 +158,12 @@ function CompanionIcon({ color, filled }: { color: string; filled: boolean }) {
         {/* Left eye */}
         <View style={{
           width: 3, height: 3, borderRadius: 1.5,
-          backgroundColor: filled ? '#FAFAF8' : color,
+          backgroundColor: filled ? colors.surfacePure : color,
         }} />
         {/* Right eye */}
         <View style={{
           width: 3, height: 3, borderRadius: 1.5,
-          backgroundColor: filled ? '#FAFAF8' : color,
+          backgroundColor: filled ? colors.surfacePure : color,
         }} />
       </View>
     </View>
@@ -223,7 +222,7 @@ const st = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.97)',
+    backgroundColor: colors.tabBarBg,
     borderTopWidth: 0,
   },
   tab: {
@@ -235,12 +234,12 @@ const st = StyleSheet.create({
   center: { paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' },
   writeBtn: {
     width: 46, height: 46, borderRadius: 23,
-    backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentPrimary, alignItems: 'center', justifyContent: 'center',
     ...Platform.select({
-      ios: { shadowColor: ACCENT, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+      ios: { shadowColor: colors.accentPrimary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
       android: { elevation: 6 },
     }),
   },
-  plusH: { position: 'absolute', width: 16, height: 1.5, backgroundColor: '#FFF', borderRadius: 1 },
-  plusV: { position: 'absolute', width: 1.5, height: 16, backgroundColor: '#FFF', borderRadius: 1 },
+  plusH: { position: 'absolute', width: 16, height: 1.5, backgroundColor: colors.surfacePure, borderRadius: 1 },
+  plusV: { position: 'absolute', width: 1.5, height: 16, backgroundColor: colors.surfacePure, borderRadius: 1 },
 });

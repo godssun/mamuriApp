@@ -93,7 +93,7 @@ export default function EmotionCalendarV3() {
   };
 
   return (
-    <PaperBackground variant="lined" color="warm" style={{ paddingTop: insets.top }}>
+    <PaperBackground variant="plain" color="warm" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => nav.goBack()} style={s.backBtn}>

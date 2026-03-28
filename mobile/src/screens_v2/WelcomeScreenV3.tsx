@@ -198,7 +198,7 @@ export function WelcomeScreenV3({ navigation }: Props) {
   }, []);
 
   return (
-    <PaperBackground variant="lined" color="cream">
+    <PaperBackground variant="plain" color="cream">
       <View style={[styles.container, { paddingTop: insets.top + 80 }]}>
         {/* ── Welcome Card ── */}
         <Animated.View style={[

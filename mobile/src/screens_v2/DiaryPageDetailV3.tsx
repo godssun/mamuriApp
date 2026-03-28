@@ -14,8 +14,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useThemeV2 } from '../design-system-v2';
-import type { Theme } from '../design-system-v2';
+import { colors, fontFamily, shadows, spacing, borderRadius, layout } from '../design-system-v3';
+import { PaperBackground } from '../design-system-v3/components/PaperBackground';
 import { diaryApiV3, diaryApi, conversationApi, ApiError } from '../api/client';
 import type { DiaryV3, ConversationMessage, ConversationLimits, DiaryStackParamListV3, EmotionKey } from '../types';
 import { formatDiaryDate, formatTime } from '../utils/dateFormat';
@@ -38,12 +38,18 @@ function resolvePhotoUrl(photo: { cdnUrl?: string; url?: string }): string {
 
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'DiaryDetail'>;
 
+const themeColors: Record<string, string> = {
+  night: '#1A1A2E',
+  warm: colors.bgWarm,
+  nature: colors.bgCream,
+  note: colors.bgIvory,
+  grid: colors.bgCream,
+};
+
 
 export default function DiaryPageDetailV3({ navigation, route }: Props) {
   const { diaryId } = route.params;
-  const { theme } = useThemeV2();
   const insets = useSafeAreaInsets();
-  const s = makeStyles(theme);
 
   const [diary, setDiary] = useState<DiaryV3 | null>(null);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
@@ -132,18 +138,18 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
 
   if (loading) {
     return (
-      <View style={[s.root, { paddingTop: insets.top }]}>
-        <View style={s.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-            <Text style={s.backText}>←</Text>
+      <PaperBackground variant="plain" color="cream" style={[styles.root, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Text style={styles.backText}>←</Text>
           </TouchableOpacity>
           <View style={{ width: 44 }} />
           <View style={{ width: 44 }} />
         </View>
-        <View style={s.loadingCenter}>
-          <ActivityIndicator color={theme.colors.primary} />
+        <View style={styles.loadingCenter}>
+          <ActivityIndicator color={colors.accentPrimary} />
         </View>
-      </View>
+      </PaperBackground>
     );
   }
 
@@ -158,9 +164,8 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
   ) as EmotionKey | undefined;
   const emotionColor = emotionCode ? EMOTION_COLORS[emotionCode] : null;
   const diaryTheme = diary.theme || 'note';
-  const themeColors: Record<string, string> = { night: '#1A1A2E', warm: '#FFF8F0', nature: '#F0F7F0', note: '#FFFDF5', grid: '#F8FBF8' };
-  const bgColor = themeColors[diaryTheme] || theme.colors.background;
-  const txtColor = diaryTheme === 'night' ? '#EDEDF0' : theme.colors.textPrimary;
+  const bgColor = themeColors[diaryTheme] || colors.bgCream;
+  const txtColor = diaryTheme === 'night' ? '#EDEDF0' : colors.textPrimary;
   const canvasW = Dimensions.get('window').width - (CANVAS_PADDING_H * 2);
 
   // Convert photos + decorations to CanvasObjectData[]
@@ -202,17 +207,17 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
   ];
 
   return (
-    <View style={[s.root, { backgroundColor: bgColor, paddingTop: insets.top }]}>
+    <PaperBackground variant="plain" color="cream" style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-          <Text style={[s.backText, { color: txtColor }]}>←</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Text style={[styles.backText, { color: txtColor }]}>←</Text>
         </TouchableOpacity>
-        <Text style={[s.headerDate, { color: diaryTheme === 'night' ? '#9898AC' : theme.colors.textTertiary }]}>
+        <Text style={[styles.headerDate, { color: diaryTheme === 'night' ? '#9898AC' : colors.textSecondary }]}>
           {formatDiaryDate(diary.diaryDate)}
         </Text>
-        <TouchableOpacity style={s.backBtn} onPress={handleMorePress}>
-          <Text style={[s.backText, { color: diaryTheme === 'night' ? '#9898AC' : theme.colors.textTertiary }]}>⋯</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={handleMorePress}>
+          <Text style={[styles.moreText, { color: diaryTheme === 'night' ? '#9898AC' : colors.textSecondary }]}>⋯</Text>
         </TouchableOpacity>
       </View>
 
@@ -229,14 +234,17 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
         }}>
           {/* Emotion Header */}
           {emotionCode && (
-            <View style={[s.emotionHeader, { backgroundColor: (emotionColor || theme.colors.primary) + '15' }]}>
+            <View style={[styles.emotionHeader, {
+              backgroundColor: (emotionColor || colors.accentPrimary) + '10',
+              borderColor: (emotionColor || colors.accentPrimary) + '20',
+            }]}>
               <EmotionStickerView emotionKey={emotionCode} size="small" />
               <View>
-                <Text style={[s.emotionLabel, { color: emotionColor || theme.colors.primary }]}>
+                <Text style={[styles.emotionLabel, { color: emotionColor || colors.accentPrimary }]}>
                   {EMOTION_LABELS[emotionCode]}
                 </Text>
                 {diary.emotion?.secondaryTags && diary.emotion.secondaryTags.length > 0 && (
-                  <Text style={[s.emotionTags, { color: (emotionColor || theme.colors.primary) + 'AA' }]}>
+                  <Text style={[styles.emotionTags, { color: (emotionColor || colors.accentPrimary) + 'AA' }]}>
                     {diary.emotion.secondaryTags.join(' · ')}
                   </Text>
                 )}
@@ -246,7 +254,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
 
           {/* Meta */}
           <View style={{ paddingHorizontal: CANVAS_PADDING_H }}>
-            <Text style={[s.meta, { color: diaryTheme === 'night' ? '#686880' : theme.colors.textTertiary }]}>
+            <Text style={[styles.meta, { color: diaryTheme === 'night' ? '#686880' : colors.textTertiary }]}>
               {formatTime(diary.createdAt)}
             </Text>
           </View>
@@ -258,24 +266,24 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
             objects={canvasObjects}
             editable={false}
             textColor={txtColor}
-            borderColor={diaryTheme === 'night' ? '#2A2A3A' : theme.colors.borderSubtle}
+            borderColor={diaryTheme === 'night' ? '#2A2A3A' : colors.accentSand + '40'}
             bgColor={bgColor}
           />
         </Animated.View>
 
         {/* Conversation */}
         {messages.length > 0 && (
-          <View style={[s.conversationSection, { paddingHorizontal: theme.layout.screenPaddingH }]}>
-            <View style={s.dividerRow}>
-              <View style={[s.dividerLine, { backgroundColor: theme.colors.border }]} />
-              <View style={[s.aiLabel, { backgroundColor: theme.colors.primarySubtle }]}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.primary, marginRight: 6 }} />
-                <Text style={[s.aiLabelText, { color: theme.colors.primary }]}>대화</Text>
+          <View style={[styles.conversationSection, { paddingHorizontal: layout.screenPaddingH }]}>
+            <View style={styles.dividerRow}>
+              <View style={[styles.dividerLine, { backgroundColor: colors.accentSand + '30' }]} />
+              <View style={styles.aiLabel}>
+                <View style={styles.aiDot} />
+                <Text style={styles.aiLabelText}>대화</Text>
               </View>
-              <View style={[s.dividerLine, { backgroundColor: theme.colors.border }]} />
+              <View style={[styles.dividerLine, { backgroundColor: colors.accentSand + '30' }]} />
             </View>
 
-            <View style={{ marginTop: theme.spacing.xl }}>
+            <View style={{ marginTop: spacing.xl }}>
               {messages.map((msg) => (
                 <ChatBubble
                   key={msg.id}
@@ -294,18 +302,15 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
       </ScrollView>
 
       {/* Input bar */}
-      <View style={[s.inputBar, {
-        backgroundColor: bgColor,
-        borderTopColor: diaryTheme === 'night' ? '#2A2A3A' : theme.colors.border,
+      <View style={[styles.inputBar, {
+        borderTopColor: diaryTheme === 'night' ? '#2A2A3A' : colors.glassBorderSubtle,
         paddingBottom: insets.bottom + 8,
       }]}>
-        <View style={[s.inputRow, {
-          backgroundColor: diaryTheme === 'night' ? '#252535' : theme.colors.surfaceSecondary,
-        }]}>
+        <View style={styles.inputRow}>
           <TextInput
-            style={[s.messageInput, { color: txtColor }]}
+            style={[styles.messageInput, { color: txtColor }]}
             placeholder="이야기를 이어가보세요..."
-            placeholderTextColor={diaryTheme === 'night' ? '#686880' : theme.colors.textDisabled}
+            placeholderTextColor={diaryTheme === 'night' ? '#686880' : colors.textTertiary}
             value={inputText}
             onChangeText={setInputText}
             multiline
@@ -314,11 +319,11 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
           <TouchableOpacity
             onPress={handleSendMessage}
             disabled={!inputText.trim() || isAITyping}
-            style={[s.sendBtn, {
-              backgroundColor: inputText.trim() && !isAITyping ? theme.colors.primary : 'transparent',
+            style={[styles.sendBtn, {
+              backgroundColor: inputText.trim() && !isAITyping ? colors.accentPrimary : 'transparent',
             }]}
           >
-            <Text style={{ fontSize: 16, color: inputText.trim() && !isAITyping ? '#FFFFFF' : theme.colors.textDisabled }}>
+            <Text style={{ fontSize: 16, color: inputText.trim() && !isAITyping ? '#FFFFFF' : colors.textTertiary }}>
               ↑
             </Text>
           </TouchableOpacity>
@@ -331,58 +336,72 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
         messageId={reportMessageId ?? 0}
         diaryId={diaryId}
       />
-    </View>
+    </PaperBackground>
   );
 }
 
-function makeStyles(t: Theme) {
-  return StyleSheet.create({
-    root: { flex: 1 },
+const styles = StyleSheet.create({
+  root: { flex: 1 },
 
-    header: {
-      height: 56, flexDirection: 'row', alignItems: 'center',
-      justifyContent: 'space-between', paddingHorizontal: t.layout.screenPaddingH,
-      borderBottomWidth: 1, borderBottomColor: t.colors.borderSubtle,
-    },
-    backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-    backText: { ...t.typography.titleLarge },
-    headerDate: { ...t.typography.labelMedium },
+  header: {
+    height: 56, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', paddingHorizontal: layout.screenPaddingH,
+    borderBottomWidth: 1, borderBottomColor: colors.accentSand + '40',
+  },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  backText: { fontSize: 22, color: colors.textPrimary },
+  headerDate: {
+    fontFamily: fontFamily.serifItalic, fontSize: 14, color: colors.textSecondary,
+  },
+  moreText: { fontSize: 22, color: colors.textSecondary },
 
-    loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-    // Emotion header
-    emotionHeader: {
-      flexDirection: 'row', alignItems: 'center',
-      paddingHorizontal: CANVAS_PADDING_H, paddingVertical: 12,
-      borderRadius: t.borderRadius.lg, marginTop: t.spacing.xl, gap: 10,
-    },
-    emotionLabel: { fontSize: 16, fontWeight: '700' },
-    emotionTags: { fontSize: 12, marginTop: 2 },
+  // Emotion header
+  emotionHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: CANVAS_PADDING_H, paddingVertical: 12,
+    borderRadius: borderRadius.sm, marginTop: spacing.xl, gap: 10,
+    borderWidth: 1,
+  },
+  emotionLabel: { fontSize: 16, fontFamily: fontFamily.sansMedium },
+  emotionTags: { fontSize: 12, fontFamily: fontFamily.sans, marginTop: 2 },
 
-    meta: { ...t.typography.caption, marginTop: t.spacing.sm },
+  meta: { fontSize: 12, fontFamily: fontFamily.sans, color: colors.textTertiary, marginTop: spacing.sm },
 
-    // Conversation
-    conversationSection: { marginTop: t.spacing['3xl'] },
-    dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    dividerLine: { flex: 1, height: 1 },
-    aiLabel: {
-      flexDirection: 'row', alignItems: 'center',
-      paddingHorizontal: 12, paddingVertical: 6,
-      borderRadius: t.borderRadius.full,
-    },
-    aiLabelText: { ...t.typography.labelSmall },
+  // Conversation
+  conversationSection: { marginTop: spacing['3xl'] },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dividerLine: { flex: 1, height: 1 },
+  aiLabel: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.accentPrimaryLight + '40',
+  },
+  aiDot: {
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: colors.accentPrimary, marginRight: 6,
+  },
+  aiLabelText: { fontSize: 12, fontFamily: fontFamily.sansMedium, color: colors.accentPrimary },
 
-    // Input
-    inputBar: { paddingTop: 12, paddingHorizontal: t.layout.screenPaddingH, borderTopWidth: 1 },
-    inputRow: {
-      flexDirection: 'row', alignItems: 'flex-end',
-      paddingHorizontal: 16, paddingVertical: 8,
-      borderRadius: t.borderRadius['2xl'], minHeight: 44,
-    },
-    messageInput: { ...t.typography.bodyMedium, flex: 1, maxHeight: 100, paddingVertical: 4 },
-    sendBtn: {
-      width: 32, height: 32, borderRadius: 16,
-      alignItems: 'center', justifyContent: 'center', marginLeft: 8,
-    },
-  });
-}
+  // Input
+  inputBar: {
+    paddingTop: 12, paddingHorizontal: layout.screenPaddingH,
+    borderTopWidth: 1, backgroundColor: colors.glassWhite,
+  },
+  inputRow: {
+    flexDirection: 'row', alignItems: 'flex-end',
+    paddingHorizontal: 16, paddingVertical: 8,
+    borderRadius: borderRadius['2xl'], minHeight: 44,
+    backgroundColor: colors.bgIvory,
+  },
+  messageInput: {
+    fontSize: 15, fontFamily: fontFamily.sans,
+    flex: 1, maxHeight: 100, paddingVertical: 4,
+  },
+  sendBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center', marginLeft: 8,
+  },
+});
