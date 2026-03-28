@@ -1,32 +1,40 @@
 /**
- * EmotionCalendar V3 — Monthly calendar with emotion colors
+ * EmotionCalendar V3 — Monthly emotion archive with scrapbook aesthetic
  *
- * - Calendar grid (7 columns)
- * - Emotion color dots per day
- * - Month navigation
- * - Bottom: emotion distribution bar
+ * - Paper texture background with lined overlay
+ * - Blob-shaped emotion cells (not circles)
+ * - Editorial serif month titles
+ * - Scrapbook card emotion distribution
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-  View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { useThemeV2 } from '../design-system-v2';
-import type { Theme } from '../design-system-v2';
+import {
+  colors, typography, fontFamily, shadows, spacing, borderRadius, layout,
+  PaperBackground,
+} from '../design-system-v3';
 import { calendarApi } from '../api/client';
-import type { CalendarDayEntry, EmotionKey } from '../types';
+import type { CalendarDayEntry } from '../types';
 import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
 
 const DAY_HEADERS = ['일', '월', '화', '수', '목', '금', '토'];
 
+const blobRadii = [
+  { borderTopLeftRadius: 16, borderTopRightRadius: 22, borderBottomRightRadius: 18, borderBottomLeftRadius: 24 },
+  { borderTopLeftRadius: 22, borderTopRightRadius: 16, borderBottomRightRadius: 24, borderBottomLeftRadius: 18 },
+  { borderTopLeftRadius: 20, borderTopRightRadius: 24, borderBottomRightRadius: 16, borderBottomLeftRadius: 22 },
+  { borderTopLeftRadius: 24, borderTopRightRadius: 18, borderBottomRightRadius: 22, borderBottomLeftRadius: 16 },
+  { borderTopLeftRadius: 18, borderTopRightRadius: 22, borderBottomRightRadius: 20, borderBottomLeftRadius: 24 },
+];
+
 export default function EmotionCalendarV3() {
-  const { theme } = useThemeV2();
   const insets = useSafeAreaInsets();
   const nav = useNavigation<any>();
-  const s = makeStyles(theme);
 
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -85,31 +93,31 @@ export default function EmotionCalendarV3() {
   };
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
+    <PaperBackground variant="lined" color="warm" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => nav.goBack()} style={s.backBtn}>
-          <Text style={s.backText}>←</Text>
+          <Text style={s.backText}>{'\u2190'}</Text>
         </TouchableOpacity>
-        <Text style={s.headerTitle}>감정 캘린더</Text>
+        <Text style={s.headerTitle}>감정 아카이브</Text>
         <View style={{ width: 44 }} />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentPrimary} />}
       >
         {/* Month Navigation */}
         <View style={s.monthNav}>
           <TouchableOpacity onPress={() => changeMonth(-1)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Text style={s.navArrow}>{'<'}</Text>
+            <Text style={s.navArrow}>{'\u2039'}</Text>
           </TouchableOpacity>
           <Text style={s.monthTitle}>
             {year}년 {month}월
           </Text>
           <TouchableOpacity onPress={() => changeMonth(1)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Text style={s.navArrow}>{'>'}</Text>
+            <Text style={s.navArrow}>{'\u203A'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -138,6 +146,7 @@ export default function EmotionCalendarV3() {
             const emotionColor = entry?.primaryEmotionCode
               ? EMOTION_COLORS[entry.primaryEmotionCode]
               : null;
+            const blob = blobRadii[day % 5];
 
             return (
               <TouchableOpacity
@@ -148,7 +157,9 @@ export default function EmotionCalendarV3() {
               >
                 <View style={[
                   s.calDot,
-                  !emotionColor && { backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.colors.border },
+                  emotionColor
+                    ? { ...blob, backgroundColor: emotionColor + '30' }
+                    : { backgroundColor: 'transparent' },
                   isToday && s.calDotToday,
                 ]}>
                   {emotionColor && entry?.primaryEmotionCode ? (
@@ -156,8 +167,7 @@ export default function EmotionCalendarV3() {
                   ) : (
                     <Text style={[
                       s.calDayNum,
-                      { color: theme.colors.textTertiary },
-                      isToday && { color: theme.colors.primary },
+                      isToday && { color: colors.accentPrimary },
                     ]}>
                       {day}
                     </Text>
@@ -165,8 +175,8 @@ export default function EmotionCalendarV3() {
                 </View>
                 <Text style={[
                   s.calDayNumBelow,
-                  { color: emotionColor ? theme.colors.textSecondary : theme.colors.textTertiary },
-                  isToday && { color: theme.colors.primary, fontWeight: '700' as const },
+                  emotionColor ? { color: colors.textSecondary } : { color: colors.textTertiary },
+                  isToday && { color: colors.accentPrimary, fontWeight: '700' as const },
                 ]}>
                   {day}
                 </Text>
@@ -175,37 +185,22 @@ export default function EmotionCalendarV3() {
           })}
         </View>
 
-        {/* Emotion Distribution Bar */}
+        {/* Emotion Distribution — Scrapbook Card */}
         {totalEntries > 0 && (
-          <View style={s.distSection}>
+          <View style={s.distCard}>
             <Text style={s.sectionLabel}>이번 달 감정 분포</Text>
 
-            {/* Bar */}
-            <View style={s.distBar}>
-              {EMOTION_KEYS.map((key) => {
-                const count = emotionCounts[key] || 0;
-                if (count === 0) return null;
-                const pct = (count / totalEntries) * 100;
-                return (
-                  <View
-                    key={key}
-                    style={[s.distBarSegment, {
-                      backgroundColor: EMOTION_COLORS[key],
-                      width: `${pct}%` as any,
-                    }]}
-                  />
-                );
-              })}
-            </View>
-
-            {/* Legend */}
+            {/* Blob legend items */}
             <View style={s.distLegend}>
               {EMOTION_KEYS.map((key) => {
                 const count = emotionCounts[key] || 0;
                 if (count === 0) return null;
+                const blobShape = blobRadii[EMOTION_KEYS.indexOf(key) % 5];
                 return (
                   <View key={key} style={s.legendItem}>
-                    <EmotionStickerView emotionKey={key} size="tiny" />
+                    <View style={[s.legendBlob, blobShape, { backgroundColor: EMOTION_COLORS[key] + '40' }]}>
+                      <EmotionStickerView emotionKey={key} size="tiny" />
+                    </View>
                     <Text style={s.legendText}>{EMOTION_LABELS[key]}</Text>
                     <Text style={s.legendCount}>{count}</Text>
                   </View>
@@ -217,73 +212,159 @@ export default function EmotionCalendarV3() {
 
         <View style={{ height: 48 }} />
       </ScrollView>
-    </View>
+    </PaperBackground>
   );
 }
 
-function makeStyles(t: Theme) {
-  return StyleSheet.create({
-    root: { flex: 1, backgroundColor: t.colors.background },
-    header: {
-      height: 56, flexDirection: 'row', alignItems: 'center',
-      justifyContent: 'space-between', paddingHorizontal: t.layout.screenPaddingH,
-      borderBottomWidth: 1, borderBottomColor: t.colors.borderSubtle,
-    },
-    backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-    backText: { ...t.typography.titleLarge, color: t.colors.textPrimary },
-    headerTitle: { ...t.typography.titleSmall, fontWeight: '600', color: t.colors.textPrimary },
+const s = StyleSheet.create({
+  header: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: layout.screenPaddingH,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.textTertiary + '30',
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backText: {
+    fontFamily: fontFamily.sans,
+    fontSize: 22,
+    color: colors.textPrimary,
+  },
+  headerTitle: {
+    fontFamily: fontFamily.serifItalic,
+    fontSize: 18,
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
+  },
 
-    scroll: { paddingHorizontal: t.spacing['2xl'], paddingBottom: 120 },
+  scroll: {
+    paddingHorizontal: spacing['2xl'],
+    paddingBottom: 120,
+  },
 
-    // Month nav
-    monthNav: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      gap: t.spacing['3xl'], marginTop: t.spacing['2xl'], marginBottom: t.spacing.xl,
-    },
-    monthTitle: { ...t.typography.titleLarge, color: t.colors.textPrimary, fontWeight: '700' },
-    navArrow: { fontSize: 20, color: t.colors.textTertiary, fontWeight: '500' },
+  // Month nav
+  monthNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing['3xl'],
+    marginTop: spacing['2xl'],
+    marginBottom: spacing.xl,
+  },
+  monthTitle: {
+    fontFamily: fontFamily.serifItalic,
+    fontSize: 24,
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  navArrow: {
+    fontFamily: fontFamily.sans,
+    fontSize: 24,
+    color: colors.textSecondary,
+  },
 
-    // Day headers
-    dayHeaderRow: { flexDirection: 'row', marginBottom: t.spacing.sm },
-    dayHeaderCell: { width: '14.28%' as any, alignItems: 'center' },
-    dayHeaderText: { ...t.typography.caption, color: t.colors.textTertiary, fontSize: 11 },
+  // Day headers
+  dayHeaderRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.sm,
+  },
+  dayHeaderCell: {
+    width: '14.28%' as any,
+    alignItems: 'center',
+  },
+  dayHeaderText: {
+    fontFamily: fontFamily.sans,
+    fontSize: 11,
+    color: colors.textTertiary,
+    letterSpacing: 0.3,
+  },
 
-    // Calendar grid
-    calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-    calCell: { width: '14.28%' as any, height: 58, alignItems: 'center', justifyContent: 'center', paddingTop: 2 },
-    calDot: {
-      width: 36, height: 36, borderRadius: 18,
-      alignItems: 'center', justifyContent: 'center',
-    },
-    calDotToday: {
-      borderWidth: 2, borderColor: t.colors.primary,
-    },
-    calDayNum: { fontSize: 12, fontWeight: '500' },
-    calDayNumBelow: { fontSize: 9, marginTop: 1, fontWeight: '400' },
+  // Calendar grid
+  calGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calCell: {
+    width: '14.28%' as any,
+    height: 62,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 2,
+  },
+  calDot: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calDotToday: {
+    borderWidth: 2,
+    borderColor: colors.accentPrimary,
+  },
+  calDayNum: {
+    fontFamily: fontFamily.sans,
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textTertiary,
+  },
+  calDayNumBelow: {
+    fontFamily: fontFamily.sans,
+    fontSize: 9,
+    marginTop: 1,
+  },
 
-    // Distribution
-    distSection: { marginTop: t.spacing['3xl'] },
-    sectionLabel: {
-      ...t.typography.labelSmall, fontWeight: '600',
-      color: t.colors.textTertiary, letterSpacing: 1,
-      textTransform: 'uppercase' as const, textAlign: 'center' as const,
-      marginBottom: t.spacing.xl,
-    },
+  // Distribution card
+  distCard: {
+    marginTop: spacing['3xl'],
+    backgroundColor: colors.bgIvory,
+    borderRadius: borderRadius.sm,
+    padding: spacing.xl,
+    ...shadows.crisp,
+  },
+  sectionLabel: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textTertiary,
+    letterSpacing: 1,
+    textTransform: 'uppercase' as const,
+    textAlign: 'center' as const,
+    marginBottom: spacing.lg,
+  },
 
-    distBar: {
-      flexDirection: 'row', height: 12, borderRadius: 6, overflow: 'hidden',
-      backgroundColor: t.colors.surfaceSecondary,
-    },
-    distBarSegment: { height: 12 },
-
-    distLegend: {
-      flexDirection: 'row', flexWrap: 'wrap',
-      justifyContent: 'center', gap: t.spacing.lg,
-      marginTop: t.spacing.xl,
-    },
-    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    legendDot: { width: 8, height: 8, borderRadius: 4 },
-    legendText: { ...t.typography.caption, color: t.colors.textSecondary },
-    legendCount: { ...t.typography.caption, color: t.colors.textTertiary, fontWeight: '600' },
-  });
-}
+  distLegend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.lg,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendBlob: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  legendText: {
+    fontFamily: fontFamily.sans,
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  legendCount: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 11,
+    color: colors.textTertiary,
+    fontWeight: '600',
+  },
+});

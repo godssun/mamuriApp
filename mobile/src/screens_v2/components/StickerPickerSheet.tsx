@@ -1,23 +1,34 @@
 /**
- * StickerPickerSheet — Bottom sheet for selecting decorative stickers
+ * StickerPickerSheet — Scrapbook sticker drawer
  *
- * - Modal-based bottom sheet
- * - Tab bar: 감정 / 무드
- * - 4-column grid with PNG sticker images
- * - Selection callback
+ * Glass-effect bottom sheet with category pill tabs.
+ * "페이지를 꾸미기 위해 서랍을 여는 느낌"
+ *
+ * v3 design system: GlassBottomSheet, PillTabs, blob styles, paper tokens.
+ * No react-native-svg dependency.
  */
 
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Dimensions,
-  Image, ImageSourcePropType,
+  Image, ImageSourcePropType, Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useThemeV2 } from '../../design-system-v2';
+import {
+  colors,
+  fontFamily,
+  typography,
+  shadows,
+  spacing,
+  borderRadius,
+  layout,
+} from '../../design-system-v3';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const COL_COUNT = 4;
-const ITEM_SIZE = (SCREEN_W - 48 - (COL_COUNT - 1) * 12) / COL_COUNT;
+const GRID_PAD = spacing['2xl'] * 2;
+const GRID_GAP = spacing.lg;
+const ITEM_SIZE = (SCREEN_W - GRID_PAD - (COL_COUNT - 1) * GRID_GAP) / COL_COUNT;
 
 interface StickerItem {
   code: string;
@@ -34,7 +45,7 @@ interface StickerPickerSheetProps {
 const STICKER_TABS: { key: string; label: string; stickers: StickerItem[] }[] = [
   {
     key: 'emotion',
-    label: '감정',
+    label: '감정 & 에셋',
     stickers: [
       { code: 'e_joy', source: require('../../../assets/stickers/emotion/joy.png'), label: '좋아요' },
       { code: 'e_calm', source: require('../../../assets/stickers/emotion/calm.png'), label: '괜찮아요' },
@@ -63,12 +74,20 @@ const STICKER_TABS: { key: string; label: string; stickers: StickerItem[] }[] = 
   },
 ];
 
-export function StickerPickerSheet({ visible, onClose, onSelect }: StickerPickerSheetProps) {
-  const { theme } = useThemeV2();
-  const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState('emotion');
+// Blob-like border radii for sticker cells — organic, hand-placed feel
+const blobRadii = [
+  { borderTopLeftRadius: 14, borderTopRightRadius: 18, borderBottomRightRadius: 16, borderBottomLeftRadius: 20 },
+  { borderTopLeftRadius: 18, borderTopRightRadius: 14, borderBottomRightRadius: 20, borderBottomLeftRadius: 16 },
+  { borderTopLeftRadius: 16, borderTopRightRadius: 20, borderBottomRightRadius: 14, borderBottomLeftRadius: 18 },
+  { borderTopLeftRadius: 20, borderTopRightRadius: 16, borderBottomRightRadius: 18, borderBottomLeftRadius: 14 },
+];
 
-  const currentTab = STICKER_TABS.find(t => t.key === activeTab) || STICKER_TABS[0];
+export function StickerPickerSheet({ visible, onClose, onSelect }: StickerPickerSheetProps) {
+  const insets = useSafeAreaInsets();
+  const [activeTabIndex, setActiveTabIndex] = useState(0);
+
+  const currentTab = STICKER_TABS[activeTabIndex];
+  const tabLabels = STICKER_TABS.map(t => t.label);
 
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -78,72 +97,73 @@ export function StickerPickerSheet({ visible, onClose, onSelect }: StickerPicker
         onPress={onClose}
       >
         <View
-          style={[styles.sheet, {
-            backgroundColor: theme.colors.surface,
-            paddingBottom: insets.bottom + 16,
-          }]}
+          style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}
           onStartShouldSetResponder={() => true}
         >
-          {/* Handle bar */}
+          {/* Drag Handle */}
           <View style={styles.handleBar}>
-            <View style={[styles.handle, { backgroundColor: theme.colors.border }]} />
+            <View style={styles.handle} />
           </View>
 
-          {/* Tabs */}
-          <View style={styles.tabRow}>
-            {STICKER_TABS.map((tab) => {
-              const isActive = activeTab === tab.key;
-              return (
-                <TouchableOpacity
-                  key={tab.key}
-                  style={[
-                    styles.tab,
-                    {
-                      backgroundColor: isActive ? theme.colors.primarySubtle : 'transparent',
-                      borderRadius: theme.borderRadius.full,
-                    },
-                  ]}
-                  onPress={() => setActiveTab(tab.key)}
-                >
-                  <Text style={[
-                    styles.tabText,
-                    {
-                      color: isActive ? theme.colors.primary : theme.colors.textSecondary,
-                      fontWeight: isActive ? '700' : '400',
-                    },
-                  ]}>
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          {/* Category Pill Tabs */}
+          <View style={styles.tabContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tabRow}
+            >
+              {tabLabels.map((label, index) => {
+                const isActive = index === activeTabIndex;
+                return (
+                  <TouchableOpacity
+                    key={label}
+                    style={[styles.pill, isActive && styles.pillActive]}
+                    onPress={() => setActiveTabIndex(index)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
 
-          {/* Grid */}
-          <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Sticker Grid */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
             <View style={styles.grid}>
-              {currentTab.stickers.map((sticker) => (
+              {currentTab.stickers.map((sticker, index) => (
                 <TouchableOpacity
                   key={sticker.code}
-                  style={[styles.stickerItem, {
-                    width: ITEM_SIZE,
-                    height: ITEM_SIZE,
-                    backgroundColor: theme.colors.surfaceSecondary,
-                    borderRadius: theme.borderRadius.lg,
-                  }]}
-                  onPress={() => {
-                    onSelect({ code: sticker.code, category: currentTab.key });
-                  }}
+                  style={[
+                    styles.stickerCell,
+                    blobRadii[index % blobRadii.length],
+                    { width: ITEM_SIZE, height: ITEM_SIZE },
+                  ]}
+                  onPress={() => onSelect({ code: sticker.code, category: currentTab.key })}
                   activeOpacity={0.6}
                 >
-                  <Image source={sticker.source} style={styles.stickerImage} resizeMode="contain" />
-                  <Text style={[styles.stickerLabel, { color: theme.colors.textTertiary }]}>
-                    {sticker.label}
-                  </Text>
+                  <Image
+                    source={sticker.source}
+                    style={styles.stickerImage}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.stickerLabel}>{sticker.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </ScrollView>
+
+          {/* Close Button */}
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.8}>
+              <Text style={styles.closeBtnText}>서랍 닫기</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </TouchableOpacity>
     </Modal>
@@ -151,54 +171,118 @@ export function StickerPickerSheet({ visible, onClose, onSelect }: StickerPicker
 }
 
 const styles = StyleSheet.create({
+  // Overlay — dim with warm tint
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlayDim,
   },
+
+  // Sheet — glass effect
   sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '60%',
-    paddingHorizontal: 24,
+    backgroundColor: colors.glassWhite,
+    borderTopLeftRadius: borderRadius['3xl'],
+    borderTopRightRadius: borderRadius['3xl'],
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.glassBorderSubtle,
+    borderRightWidth: 1,
+    borderRightColor: colors.glassBorderSubtle,
+    maxHeight: '65%',
+    ...shadows.float,
   },
+
+  // Drag Handle
   handleBar: {
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
+    width: layout.dragHandleWidth,
+    height: layout.dragHandleHeight,
+    backgroundColor: 'rgba(138, 122, 113, 0.3)',
+    borderRadius: borderRadius.xxs,
+  },
+
+  // Pill Tabs
+  tabContainer: {
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.lg,
   },
   tabRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
+    gap: spacing.sm,
   },
-  tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  pill: {
+    paddingHorizontal: layout.pillPaddingH,
+    paddingVertical: layout.pillPaddingV,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
-  tabText: {
-    fontSize: 14,
+  pillActive: {
+    backgroundColor: colors.pillActiveBg,
+    borderColor: 'rgba(0, 0, 0, 0.02)',
+    ...shadows.crisp,
+  },
+  pillText: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 13,
+    color: colors.pillInactiveText,
+  },
+  pillTextActive: {
+    color: colors.pillActiveText,
+  },
+
+  // Grid
+  scrollContent: {
+    paddingHorizontal: spacing['2xl'],
+    paddingBottom: spacing.xl,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: GRID_GAP,
   },
-  stickerItem: {
+  stickerCell: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    padding: spacing.xs,
   },
   stickerImage: {
-    width: ITEM_SIZE * 0.55,
-    height: ITEM_SIZE * 0.55,
+    width: ITEM_SIZE * 0.5,
+    height: ITEM_SIZE * 0.5,
   },
   stickerLabel: {
+    fontFamily: fontFamily.sans,
     fontSize: 10,
-    marginTop: 4,
+    color: colors.textSecondary,
+    marginTop: 3,
+  },
+
+  // Footer
+  footer: {
+    paddingHorizontal: spacing['2xl'],
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+    alignItems: 'center',
+  },
+  closeBtn: {
+    backgroundColor: colors.buttonBgDark,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: borderRadius.xl,
+    width: '100%',
+    maxWidth: 200,
+    alignItems: 'center',
+    ...shadows.crisp,
+  },
+  closeBtnText: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 14,
+    color: colors.buttonTextLight,
   },
 });
