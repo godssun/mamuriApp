@@ -1,23 +1,21 @@
 /**
- * Design System v2 — Button Component
+ * Button v3 — Warm scrapbook-tone action button
  *
- * Variants: primary, secondary, ghost, danger
+ * Variants: primary (sage), secondary (outline), ghost, danger
  * Sizes: sm, md, lg
  * Features: press animation, loading state, icon support
+ *
+ * v3 design system tokens. No react-native-svg.
  */
 
 import React, { useRef, useCallback } from 'react';
 import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  Animated,
-  ActivityIndicator,
-  ViewStyle,
-  TextStyle,
-  View,
+  TouchableOpacity, Text, StyleSheet, Animated,
+  ActivityIndicator, ViewStyle, TextStyle, View,
 } from 'react-native';
-import { useThemeV2 } from '../../design-system-v2';
+import {
+  colors, fontFamily, shadows, spacing, borderRadius, feedback,
+} from '../../design-system-v3';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -36,41 +34,28 @@ interface ButtonProps {
 }
 
 export function Button({
-  label,
-  onPress,
-  variant = 'primary',
-  size = 'md',
-  disabled = false,
-  loading = false,
-  icon,
-  iconPosition = 'left',
-  fullWidth = false,
-  style,
+  label, onPress, variant = 'primary', size = 'md',
+  disabled = false, loading = false, icon, iconPosition = 'left',
+  fullWidth = false, style,
 }: ButtonProps) {
-  const { theme } = useThemeV2();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {
-      toValue: theme.feedback.pressScale,
-      ...theme.springs.snappy,
-      useNativeDriver: true,
+      toValue: feedback.pressScale, tension: 300, friction: 10, useNativeDriver: true,
     }).start();
-  }, [scaleAnim, theme]);
+  }, []);
 
   const handlePressOut = useCallback(() => {
     Animated.spring(scaleAnim, {
-      toValue: 1,
-      ...theme.springs.gentle,
-      useNativeDriver: true,
+      toValue: 1, tension: 200, friction: 12, useNativeDriver: true,
     }).start();
-  }, [scaleAnim, theme]);
+  }, []);
 
-  const containerStyle = getContainerStyle(theme, variant, size, disabled, fullWidth);
-  const textStyle = getTextStyle(theme, variant, size, disabled);
+  const containerStyle = getContainerStyle(variant, size, disabled, fullWidth);
+  const textStyle = getTextStyle(variant, size, disabled);
   const loaderColor = variant === 'primary' || variant === 'danger'
-    ? theme.colors.onPrimary
-    : theme.colors.primary;
+    ? colors.surfacePure : colors.accentPrimary;
 
   return (
     <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
@@ -86,13 +71,9 @@ export function Button({
           <ActivityIndicator color={loaderColor} size="small" />
         ) : (
           <View style={styles.content}>
-            {icon && iconPosition === 'left' && (
-              <View style={styles.iconLeft}>{icon}</View>
-            )}
+            {icon && iconPosition === 'left' && <View style={styles.iconLeft}>{icon}</View>}
             <Text style={textStyle}>{label}</Text>
-            {icon && iconPosition === 'right' && (
-              <View style={styles.iconRight}>{icon}</View>
-            )}
+            {icon && iconPosition === 'right' && <View style={styles.iconRight}>{icon}</View>}
           </View>
         )}
       </TouchableOpacity>
@@ -101,84 +82,56 @@ export function Button({
 }
 
 function getContainerStyle(
-  theme: any,
-  variant: ButtonVariant,
-  size: ButtonSize,
-  disabled: boolean,
-  fullWidth: boolean,
+  variant: ButtonVariant, size: ButtonSize, disabled: boolean, fullWidth: boolean,
 ): ViewStyle {
   const base: ViewStyle = {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: theme.borderRadius.md,
+    alignItems: 'center', justifyContent: 'center',
+    borderRadius: borderRadius.lg,
     ...(fullWidth ? { width: '100%' } : {}),
   };
 
-  // Size
   const sizes: Record<ButtonSize, ViewStyle> = {
-    sm: {
-      height: theme.layout.buttonHeightSm,
-      paddingHorizontal: theme.spacing.lg,
-    },
-    md: {
-      height: theme.layout.buttonHeight,
-      paddingHorizontal: theme.spacing.xl,
-    },
-    lg: {
-      height: 56,
-      paddingHorizontal: theme.spacing['2xl'],
-    },
+    sm: { height: 40, paddingHorizontal: spacing.lg },
+    md: { height: 52, paddingHorizontal: spacing.xl },
+    lg: { height: 56, paddingHorizontal: spacing['2xl'] },
   };
 
-  // Variant
   const variants: Record<ButtonVariant, ViewStyle> = {
     primary: {
-      backgroundColor: disabled ? theme.colors.primaryLight : theme.colors.primary,
-      ...(!disabled ? theme.primaryShadow : {}),
+      backgroundColor: disabled ? colors.accentPrimaryLight : colors.accentPrimary,
+      ...(disabled ? {} : shadows.crisp),
     },
     secondary: {
-      backgroundColor: theme.colors.primarySubtle,
+      backgroundColor: colors.bgIvory,
       borderWidth: 1,
-      borderColor: disabled ? theme.colors.border : theme.colors.primaryLight,
+      borderColor: disabled ? colors.accentSand + '40' : colors.accentPrimary,
     },
-    ghost: {
-      backgroundColor: 'transparent',
-    },
+    ghost: { backgroundColor: 'transparent' },
     danger: {
-      backgroundColor: disabled ? theme.colors.errorSubtle : theme.colors.error,
+      backgroundColor: disabled ? '#F0E0E0' : '#E05454',
     },
   };
 
   return { ...base, ...sizes[size], ...variants[variant] };
 }
 
-function getTextStyle(
-  theme: any,
-  variant: ButtonVariant,
-  size: ButtonSize,
-  disabled: boolean,
-): TextStyle {
-  const base = size === 'sm' ? theme.typography.labelMedium : theme.typography.labelLarge;
+function getTextStyle(variant: ButtonVariant, size: ButtonSize, disabled: boolean): TextStyle {
+  const base: TextStyle = size === 'sm'
+    ? { fontFamily: fontFamily.sansMedium, fontSize: 13, fontWeight: '500' }
+    : { fontFamily: fontFamily.sansMedium, fontSize: 15, fontWeight: '600' };
 
-  const colors: Record<ButtonVariant, string> = {
-    primary: disabled ? 'rgba(255,255,255,0.6)' : theme.colors.onPrimary,
-    secondary: disabled ? theme.colors.textDisabled : theme.colors.primary,
-    ghost: disabled ? theme.colors.textDisabled : theme.colors.primary,
-    danger: disabled ? 'rgba(255,255,255,0.6)' : theme.colors.onPrimary,
+  const textColors: Record<ButtonVariant, string> = {
+    primary: disabled ? 'rgba(255,255,255,0.6)' : colors.surfacePure,
+    secondary: disabled ? colors.textTertiary : colors.accentPrimary,
+    ghost: disabled ? colors.textTertiary : colors.accentPrimary,
+    danger: disabled ? 'rgba(255,255,255,0.6)' : colors.surfacePure,
   };
 
-  return { ...base, color: colors[variant] };
+  return { ...base, color: textColors[variant] };
 }
 
 const styles = StyleSheet.create({
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconLeft: {
-    marginRight: 8,
-  },
-  iconRight: {
-    marginLeft: 8,
-  },
+  content: { flexDirection: 'row', alignItems: 'center' },
+  iconLeft: { marginRight: 8 },
+  iconRight: { marginLeft: 8 },
 });

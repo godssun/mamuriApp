@@ -1,5 +1,5 @@
 /**
- * Design System v2 — Date Strip Component
+ * Design System v3 — Date Strip Component
  *
  * Horizontal scrollable month view with date cells.
  * Inspired by Apple Fitness rings / Day One / GitHub contributions.
@@ -7,9 +7,9 @@
  * Features:
  * - Month/year header with prev/next navigation
  * - Horizontal date cells with diary activity circles
- * - Filled circle for dates with diary entries (warm rose)
+ * - Filled circle for dates with diary entries (warm terra)
  * - Today ring highlight (primary outline, bold)
- * - Sunday red coloring
+ * - Sunday rose coloring
  * - Selected date solid primary circle
  */
 
@@ -22,7 +22,7 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import { useThemeV2 } from '../../design-system-v2';
+import { colors, fontFamily, layout } from '../../design-system-v3';
 import { getShortWeekday, formatYearMonth } from '../../utils/dateFormat';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -56,13 +56,16 @@ function isSameDay(a: Date, b: Date): boolean {
     && a.getDate() === b.getDate();
 }
 
+// Diary activity circle colors
+const diaryCircleBg = colors.accentTerra + '15';
+const diaryCircleBgStrong = colors.accentTerra + '22';
+
 export function DateStrip({
   selectedDate,
   onDateSelect,
   datesWithDiaries,
   onMonthChange,
 }: DateStripProps) {
-  const { theme, isDark } = useThemeV2();
   const scrollRef = useRef<ScrollView>(null);
 
   const year = selectedDate.getFullYear();
@@ -103,18 +106,10 @@ export function DateStrip({
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
   const canGoNext = !isCurrentMonth;
 
-  // Diary activity circle colors
-  const diaryCircleBg = isDark
-    ? 'rgba(255, 141, 132, 0.16)'
-    : 'rgba(240, 112, 106, 0.12)';
-  const diaryCircleBgStrong = isDark
-    ? 'rgba(255, 141, 132, 0.22)'
-    : 'rgba(240, 112, 106, 0.18)';
-
   return (
     <View style={styles.container}>
       {/* Month header */}
-      <View style={[styles.monthHeader, { paddingHorizontal: theme.layout.screenPaddingH }]}>
+      <View style={[styles.monthHeader, { paddingHorizontal: layout.screenPaddingH }]}>
         <TouchableOpacity
           onPress={handlePrevMonth}
           style={styles.monthArrow}
@@ -122,15 +117,15 @@ export function DateStrip({
         >
           <Text style={[
             styles.arrowText,
-            { color: theme.colors.textSecondary },
+            { color: colors.textSecondary },
           ]}>
             ‹
           </Text>
         </TouchableOpacity>
 
         <Text style={[
-          theme.typography.titleMedium,
-          { color: theme.colors.textPrimary },
+          styles.monthTitle,
+          { color: colors.textPrimary },
         ]}>
           {formatYearMonth(year, month)}
         </Text>
@@ -143,7 +138,7 @@ export function DateStrip({
         >
           <Text style={[
             styles.arrowText,
-            { color: canGoNext ? theme.colors.textSecondary : theme.colors.textDisabled },
+            { color: canGoNext ? colors.textSecondary : (colors.textTertiary + '80') },
           ]}>
             ›
           </Text>
@@ -175,7 +170,7 @@ export function DateStrip({
 
           // Circle background: selected > diary > transparent
           const circleBg = isSelected
-            ? theme.colors.primary
+            ? colors.accentPrimary
             : hasDiary
               ? isToday ? diaryCircleBgStrong : diaryCircleBg
               : 'transparent';
@@ -199,12 +194,12 @@ export function DateStrip({
                 styles.dayLabel,
                 {
                   color: isSelected
-                    ? theme.colors.primary
+                    ? colors.accentPrimary
                     : isFuture
-                      ? theme.colors.textDisabled
+                      ? (colors.textTertiary + '80')
                       : isSunday
-                        ? theme.colors.secondary
-                        : theme.colors.textTertiary,
+                        ? colors.accentRose
+                        : colors.textTertiary,
                   fontWeight: isSunday && !isFuture ? '600' : '500',
                 },
               ]}>
@@ -220,7 +215,7 @@ export function DateStrip({
                   borderRadius: circleSize / 2,
                   backgroundColor: circleBg,
                   borderWidth: showRing ? 2 : 0,
-                  borderColor: showRing ? theme.colors.primary : 'transparent',
+                  borderColor: showRing ? colors.accentPrimary : 'transparent',
                 },
               ]}>
                 <Text style={[
@@ -229,12 +224,12 @@ export function DateStrip({
                     color: isSelected
                       ? '#FFFFFF'
                       : isFuture
-                        ? theme.colors.textDisabled
+                        ? (colors.textTertiary + '80')
                         : isToday
-                          ? theme.colors.primary
+                          ? colors.accentPrimary
                           : isSunday
-                            ? isDark ? theme.colors.secondary : '#D95A55'
-                            : theme.colors.textPrimary,
+                            ? '#D95A55'
+                            : colors.textPrimary,
                     fontWeight: isSelected || isToday ? '700' : hasDiary ? '600' : '400',
                   },
                 ]}>
@@ -271,6 +266,11 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     lineHeight: 32,
   },
+  monthTitle: {
+    fontFamily: fontFamily.serifItalic,
+    fontSize: 16,
+    lineHeight: 22,
+  },
   scrollContent: {
     paddingVertical: 4,
   },
@@ -281,6 +281,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   dayLabel: {
+    fontFamily: fontFamily.sans,
     fontSize: 10,
     fontWeight: '500',
     letterSpacing: 0.3,
@@ -290,6 +291,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dateNumber: {
+    fontFamily: fontFamily.sans,
     fontSize: 15,
     lineHeight: 20,
   },
