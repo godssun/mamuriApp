@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useThemeV2 } from '../design-system-v2';
 import type { Theme } from '../design-system-v2';
-import { calendarApi, diaryApi } from '../api/client';
+import { calendarApi } from '../api/client';
 import type { CalendarDayEntry, EmotionKey } from '../types';
 import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
@@ -74,9 +74,12 @@ export default function EmotionCalendarV3() {
   const handleDayPress = (dateStr: string) => {
     const entry = dayMap.get(dateStr);
     if (entry && entry.diaryCount > 0) {
-      nav.navigate('DiaryList', {
-        screen: 'DiaryListHome',
-        params: { filterDate: dateStr },
+      nav.navigate('MainTabs', {
+        screen: 'DiaryList',
+        params: {
+          screen: 'DiaryListHome',
+          params: { filterDate: dateStr },
+        },
       });
     }
   };

@@ -109,7 +109,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
               y: p.positionY != null ? p.positionY * canvasW : 20 + i * (photoH + 16),
               width: photoW,
               height: photoH,
-              rotation: 0,
+              rotation: p.rotation || 0,
               zIndex: p.zIndex ?? i,
               photoUri: uri,
             });
@@ -233,17 +233,41 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
     setSelectedObjectId(null);
   }, []);
 
-  const handleBringToFront = useCallback((id: string) => {
+  const handleRotate = useCallback((id: string, deg: number) => {
+    setObjects(prev => prev.map(o => o.id === id ? { ...o, rotation: deg } : o));
+  }, []);
+
+  const handleBringForward = useCallback((id: string) => {
     setObjects(prev => {
-      const maxZ = Math.max(...prev.map(o => o.zIndex), 0);
-      return prev.map(o => o.id === id ? { ...o, zIndex: maxZ + 1 } : o);
+      const target = prev.find(o => o.id === id);
+      if (!target) return prev;
+      const above = prev
+        .filter(o => o.id !== id && o.zIndex > target.zIndex)
+        .sort((a, b) => a.zIndex - b.zIndex);
+      if (above.length === 0) return prev;
+      const swapWith = above[0];
+      return prev.map(o => {
+        if (o.id === id) return { ...o, zIndex: swapWith.zIndex };
+        if (o.id === swapWith.id) return { ...o, zIndex: target.zIndex };
+        return o;
+      });
     });
   }, []);
 
-  const handleSendToBack = useCallback((id: string) => {
+  const handleSendBackward = useCallback((id: string) => {
     setObjects(prev => {
-      const minZ = Math.min(...prev.map(o => o.zIndex), 0);
-      return prev.map(o => o.id === id ? { ...o, zIndex: minZ - 1 } : o);
+      const target = prev.find(o => o.id === id);
+      if (!target) return prev;
+      const below = prev
+        .filter(o => o.id !== id && o.zIndex < target.zIndex)
+        .sort((a, b) => b.zIndex - a.zIndex);
+      if (below.length === 0) return prev;
+      const swapWith = below[0];
+      return prev.map(o => {
+        if (o.id === id) return { ...o, zIndex: swapWith.zIndex };
+        if (o.id === swapWith.id) return { ...o, zIndex: target.zIndex };
+        return o;
+      });
     });
   }, []);
 
@@ -285,6 +309,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
                 displayWidth: Math.round(photo.width),
                 displayHeight: Math.round(photo.height),
                 zIndex: photo.zIndex,
+                rotation: photo.rotation || 0,
               });
             }
           } catch (e: any) {
@@ -413,34 +438,30 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
           </Animated.View>
 
           {/* ═══ Canvas (shared renderer) ═══ */}
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => setSelectedObjectId(null)}
-          >
-            <DiaryPageRenderer
-              title={title}
-              content={content}
-              theme={selectedTheme}
-              objects={objects}
-              editable={true}
-              onTitleChange={setTitle}
-              onContentChange={setContent}
-              onObjectMove={handleMove}
-              onObjectResize={handleResize}
-              onObjectDelete={handleDelete}
-              onObjectBringToFront={handleBringToFront}
-              onObjectSendToBack={handleSendToBack}
-              onObjectSelect={setSelectedObjectId}
-              selectedObjectId={selectedObjectId}
-              onCanvasMeasure={(w, h) => setCanvasSize({ width: w, height: h })}
-              textColor={textColor}
-              subtleColor={subtleColor}
-              borderColor={borderColor}
-              bgColor={bgColor}
-              autoFocus={!isEditMode}
-              textInputRef={textInputRef}
-            />
-          </TouchableOpacity>
+          <DiaryPageRenderer
+            title={title}
+            content={content}
+            theme={selectedTheme}
+            objects={objects}
+            editable={true}
+            onTitleChange={setTitle}
+            onContentChange={setContent}
+            onObjectMove={handleMove}
+            onObjectResize={handleResize}
+            onObjectRotate={handleRotate}
+            onObjectDelete={handleDelete}
+            onObjectBringForward={handleBringForward}
+            onObjectSendBackward={handleSendBackward}
+            onObjectSelect={setSelectedObjectId}
+            selectedObjectId={selectedObjectId}
+            onCanvasMeasure={(w, h) => setCanvasSize({ width: w, height: h })}
+            textColor={textColor}
+            subtleColor={subtleColor}
+            borderColor={borderColor}
+            bgColor={bgColor}
+            autoFocus={!isEditMode}
+            textInputRef={textInputRef}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
 

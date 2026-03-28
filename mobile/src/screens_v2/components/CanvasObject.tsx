@@ -1,18 +1,22 @@
 /**
- * CanvasObject — Unified draggable/resizable canvas object for photos and stickers
+ * CanvasObject — Unified draggable/resizable/rotatable canvas object
  *
- * - PanResponder for drag handling
- * - Tap to select: blue dashed border + 4 corner resize handles + action bar
- * - Bottom-right handle drag to resize (aspect ratio preserved)
- * - Supports photo and sticker types
- * - editable=false for read-only rendering (detail view)
- * - zIndex style applied per object
+ * Dual-layer architecture (editable mode):
+ *   Visual layer: renders at object's real zIndex (below text layer)
+ *   Touch layer:  renders at zIndex+200 (above text layer), transparent,
+ *                 handles drag/resize/rotate gestures + shows selection UI
+ *
+ * This allows text to be visually ON TOP of objects while objects remain
+ * fully interactive. Both layers share the same Animated values so they
+ * move in perfect sync.
+ *
+ * Read-only mode: single layer, no interaction.
  */
 
 import React, { useRef, useMemo } from 'react';
 import {
   Animated, PanResponder, Image, View, TouchableOpacity,
-  StyleSheet, Alert, ImageSourcePropType,
+  StyleSheet, ImageSourcePropType, Text,
 } from 'react-native';
 
 export type CanvasObjectType = 'photo' | 'sticker';
@@ -38,15 +42,19 @@ interface CanvasObjectProps {
   onSelect: (id: string) => void;
   onMove: (id: string, x: number, y: number) => void;
   onResize: (id: string, w: number, h: number) => void;
+  onRotate: (id: string, deg: number) => void;
   onDelete: (id: string) => void;
-  onBringToFront?: (id: string) => void;
-  onSendToBack?: (id: string) => void;
+  onBringForward?: (id: string) => void;
+  onSendBackward?: (id: string) => void;
 }
 
 const HANDLE_SIZE = 12;
 const HANDLE_HIT = 28;
 const MIN_SIZE = 30;
 const MAX_SIZE = 400;
+const ROTATION_HANDLE_DISTANCE = 24;
+const ROTATION_STEP = 15;
+const TOUCH_LAYER_Z_BOOST = 200; // above textLayer (zIndex 100)
 
 export function CanvasObject({
   data,
@@ -55,28 +63,30 @@ export function CanvasObject({
   onSelect,
   onMove,
   onResize,
+  onRotate,
   onDelete,
-  onBringToFront,
-  onSendToBack,
+  onBringForward,
+  onSendBackward,
 }: CanvasObjectProps) {
   const { id, type, x, y, width, height, rotation, zIndex } = data;
   const aspectRatio = useRef(width / (height || 1)).current;
 
   const pan = useRef(new Animated.ValueXY({ x, y })).current;
-  const scale = useRef(new Animated.Value(1)).current;
+  const liftScale = useRef(new Animated.Value(1)).current;
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resizeStart = useRef({ w: width, h: height });
+  const rotateStart = useRef({ rotation });
 
-  // Sync pan position when data changes externally
+  // Sync position when data changes
   const lastDataPos = useRef({ x, y });
   if (lastDataPos.current.x !== x || lastDataPos.current.y !== y) {
     pan.setValue({ x, y });
     lastDataPos.current = { x, y };
   }
 
+  // ── Drag ──
   const panResponder = useMemo(() => {
     if (!editable) return null;
-
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gs) =>
@@ -84,103 +94,74 @@ export function CanvasObject({
       onPanResponderGrant: () => {
         onSelect(id);
         pan.extractOffset();
-        Animated.spring(scale, {
-          toValue: 1.08,
-          friction: 5,
-          useNativeDriver: true,
-        }).start();
-        longPressTimer.current = setTimeout(() => {
-          Alert.alert(
-            type === 'photo' ? '사진 삭제' : '스티커 삭제',
-            '이 항목을 삭제할까요?',
-            [
-              { text: '취소', style: 'cancel' },
-              { text: '삭제', style: 'destructive', onPress: () => onDelete(id) },
-            ],
-          );
-        }, 600);
+        Animated.spring(liftScale, { toValue: 1.05, friction: 6, useNativeDriver: true }).start();
+        longPressTimer.current = setTimeout(() => onDelete(id), 800);
       },
-      onPanResponderMove: (_evt, gs) => {
+      onPanResponderMove: (_e, gs) => {
         if (longPressTimer.current && (Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5)) {
           clearTimeout(longPressTimer.current);
           longPressTimer.current = null;
         }
-        Animated.event(
-          [null, { dx: pan.x, dy: pan.y }],
-          { useNativeDriver: false },
-        )(_evt, gs);
+        Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false })(_e, gs);
       },
       onPanResponderRelease: () => {
-        if (longPressTimer.current) {
-          clearTimeout(longPressTimer.current);
-          longPressTimer.current = null;
-        }
-        Animated.spring(scale, {
-          toValue: 1,
-          friction: 5,
-          useNativeDriver: true,
-        }).start();
+        if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+        Animated.spring(liftScale, { toValue: 1, friction: 6, useNativeDriver: true }).start();
         pan.flattenOffset();
-        const finalX = (pan.x as any)._value ?? x;
-        const finalY = (pan.y as any)._value ?? y;
-        onMove(id, finalX, finalY);
+        onMove(id, (pan.x as any)._value ?? x, (pan.y as any)._value ?? y);
       },
     });
-  }, [editable, id, onMove, onDelete, onSelect, type]);
+  }, [editable, id, onMove, onDelete, onSelect]);
 
+  // ── Resize (bottom-right) ──
   const resizePanResponder = useMemo(() => {
     if (!editable) return null;
-
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        resizeStart.current = { w: width, h: height };
-      },
-      onPanResponderMove: (_evt, gs) => {
+      onPanResponderGrant: () => { resizeStart.current = { w: width, h: height }; },
+      onPanResponderMove: (_e, gs) => {
         const delta = (gs.dx + gs.dy) / 2;
         const newW = Math.max(MIN_SIZE, Math.min(MAX_SIZE, resizeStart.current.w + delta));
-        const newH = type === 'sticker'
-          ? newW
-          : Math.max(MIN_SIZE, Math.min(MAX_SIZE, newW / aspectRatio));
+        const newH = type === 'sticker' ? newW : Math.max(MIN_SIZE, Math.min(MAX_SIZE, newW / aspectRatio));
         onResize(id, Math.round(newW), Math.round(newH));
       },
       onPanResponderRelease: () => {},
     });
   }, [editable, id, width, height, type, aspectRatio]);
 
-  const imageSource = type === 'photo'
-    ? { uri: data.photoUri }
-    : data.stickerSource;
+  // ── Rotation (top-center) ──
+  const rotatePanResponder = useMemo(() => {
+    if (!editable) return null;
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => { rotateStart.current = { rotation }; },
+      onPanResponderMove: (_e, gs) => {
+        const deltaDeg = gs.dx * 0.5;
+        const raw = rotateStart.current.rotation + deltaDeg;
+        const snapped = Math.round(raw / 15) * 15;
+        onRotate(id, Math.round(Math.abs(raw - snapped) < 3 ? snapped : raw));
+      },
+      onPanResponderRelease: () => {},
+    });
+  }, [editable, id, rotation]);
 
+  const imageSource = type === 'photo' ? { uri: data.photoUri } : data.stickerSource;
   if (!imageSource) return null;
 
-  const animatedStyle = {
-    transform: [
-      { translateX: pan.x },
-      { translateY: pan.y },
-      ...(editable ? [{ scale }] : []),
-      ...(rotation ? [{ rotate: `${rotation}deg` }] : []),
-    ],
-  };
+  const rotationTransform = rotation ? [{ rotate: `${rotation}deg` }] : [];
 
-  // Read-only mode
+  // ══════════════════════════════════════
+  // READ-ONLY MODE — single layer
+  // ══════════════════════════════════════
   if (!editable) {
     return (
       <Animated.View
-        style={[
-          styles.container,
-          {
-            width,
-            height,
-            zIndex,
-            transform: [
-              { translateX: pan.x },
-              { translateY: pan.y },
-              ...(rotation ? [{ rotate: `${rotation}deg` }] : []),
-            ],
-          },
-        ]}
+        style={[styles.container, {
+          width, height, zIndex,
+          transform: [{ translateX: x }, { translateY: y }, ...rotationTransform],
+        }]}
       >
         <Image
           source={imageSource}
@@ -191,157 +172,144 @@ export function CanvasObject({
     );
   }
 
+  // ══════════════════════════════════════
+  // EDITABLE MODE — dual layer
+  // ══════════════════════════════════════
+  const sharedTransform = [
+    { translateX: pan.x },
+    { translateY: pan.y },
+    ...rotationTransform,
+  ];
+
   return (
-    <Animated.View
-      style={[styles.container, { width, height, zIndex: zIndex + 10 }, animatedStyle]}
-      {...panResponder?.panHandlers}
-    >
-      <Image
-        source={imageSource}
-        style={{ width, height, borderRadius: type === 'photo' ? 8 : 0 }}
-        resizeMode={type === 'photo' ? 'cover' : 'contain'}
-      />
+    <>
+      {/* ── Visual layer: renders image at real zIndex (below text) ── */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.container, {
+          width, height, zIndex,
+          transform: [...sharedTransform, { scale: liftScale }],
+        }]}
+      >
+        <Image
+          source={imageSource}
+          style={{ width, height, borderRadius: type === 'photo' ? 8 : 0 }}
+          resizeMode={type === 'photo' ? 'cover' : 'contain'}
+        />
+      </Animated.View>
 
-      {/* Selection UI */}
-      {selected && (
-        <>
-          {/* Dashed border */}
-          <View
-            style={[
-              styles.selectionBorder,
-              { width: width + 4, height: height + 4 },
-            ]}
-            pointerEvents="box-none"
-          >
-            {/* Corner handles */}
-            <View style={[styles.handle, styles.handleTL]} />
-            <View style={[styles.handle, styles.handleTR]} />
-            <View style={[styles.handle, styles.handleBL]} />
-            {/* Bottom-right: draggable resize */}
+      {/* ── Touch layer: above text, transparent, handles gestures ── */}
+      <Animated.View
+        style={[styles.container, {
+          width, height,
+          zIndex: zIndex + TOUCH_LAYER_Z_BOOST,
+          transform: [...sharedTransform, { scale: liftScale }],
+        }]}
+        {...panResponder?.panHandlers}
+      >
+        {/* Invisible hit area */}
+        <View style={{ width, height, backgroundColor: 'transparent' }} />
+
+        {/* Selection UI */}
+        {selected && (
+          <>
+            {/* Dashed border */}
             <View
-              style={[styles.handleHit, styles.handleBR]}
-              {...resizePanResponder?.panHandlers}
+              style={[styles.selectionBorder, { width: width + 4, height: height + 4 }]}
+              pointerEvents="box-none"
             >
-              <View style={styles.handle} />
-            </View>
-          </View>
-
-          {/* Action bar */}
-          <View style={styles.actionBar}>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => onDelete(id)}
-            >
-              <View style={styles.actionIcon}>
-                <View style={{ width: 12, height: 1.5, backgroundColor: '#FF4444', borderRadius: 1 }} />
+              <View style={[styles.handle, styles.handleTL]} />
+              <View style={[styles.handle, styles.handleTR]} />
+              <View style={[styles.handle, styles.handleBL]} />
+              <View style={[styles.handleHit, styles.handleBR]} {...resizePanResponder?.panHandlers}>
+                <View style={[styles.handle, { borderColor: '#4CAF50' }]} />
               </View>
-            </TouchableOpacity>
-            {onBringToFront && (
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => onBringToFront(id)}
-              >
-                <View style={styles.actionIcon}>
-                  <View style={{ width: 8, height: 8, borderWidth: 1.5, borderColor: '#4A90D9', borderRadius: 2 }} />
-                  <View style={{ position: 'absolute', top: 2, left: 2, width: 8, height: 8, borderWidth: 1.5, borderColor: '#4A90D9', borderRadius: 2, backgroundColor: '#FFF' }} />
-                </View>
+            </View>
+
+            {/* Rotation handle (top-center) */}
+            <View style={[styles.rotationLine, {
+              left: width / 2 - 0.5,
+              top: -(ROTATION_HANDLE_DISTANCE + HANDLE_SIZE / 2),
+              height: ROTATION_HANDLE_DISTANCE,
+            }]} />
+            <View
+              style={[styles.handleHit, {
+                position: 'absolute',
+                top: -(ROTATION_HANDLE_DISTANCE + HANDLE_HIT / 2 + HANDLE_SIZE / 2),
+                left: width / 2 - HANDLE_HIT / 2,
+              }]}
+              {...rotatePanResponder?.panHandlers}
+            >
+              <View style={[styles.handle, styles.rotationHandle]} />
+            </View>
+
+            {/* Action bar */}
+            <View style={styles.actionBar}>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => onDelete(id)}>
+                <Text style={styles.deleteText}>-</Text>
               </TouchableOpacity>
-            )}
-            {onSendToBack && (
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => onSendToBack(id)}
-              >
-                <View style={styles.actionIcon}>
-                  <View style={{ position: 'absolute', top: 2, left: 2, width: 8, height: 8, borderWidth: 1.5, borderColor: '#999', borderRadius: 2, backgroundColor: '#FFF' }} />
-                  <View style={{ width: 8, height: 8, borderWidth: 1.5, borderColor: '#999', borderRadius: 2 }} />
-                </View>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => onRotate(id, rotation - ROTATION_STEP)}>
+                <Text style={styles.actionSmall}>{'↺'}</Text>
               </TouchableOpacity>
-            )}
-          </View>
-        </>
-      )}
-    </Animated.View>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => onRotate(id, rotation + ROTATION_STEP)}>
+                <Text style={styles.actionSmall}>{'↻'}</Text>
+              </TouchableOpacity>
+              {onSendBackward && (
+                <TouchableOpacity style={styles.actionBtn} onPress={() => onSendBackward(id)}>
+                  <View style={styles.actionIcon}>
+                    <View style={styles.layerBack1} />
+                    <View style={styles.layerBack2} />
+                  </View>
+                </TouchableOpacity>
+              )}
+              {onBringForward && (
+                <TouchableOpacity style={styles.actionBtn} onPress={() => onBringForward(id)}>
+                  <View style={styles.actionIcon}>
+                    <View style={styles.layerFront1} />
+                    <View style={styles.layerFront2} />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+          </>
+        )}
+      </Animated.View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-  },
+  container: { position: 'absolute', top: 0, left: 0 },
   selectionBorder: {
-    position: 'absolute',
-    top: -2,
-    left: -2,
-    borderWidth: 1.5,
-    borderColor: '#4A90D9',
-    borderRadius: 4,
-    borderStyle: 'dashed',
+    position: 'absolute', top: -2, left: -2,
+    borderWidth: 1.5, borderColor: '#4A90D9', borderRadius: 4, borderStyle: 'dashed',
   },
   handle: {
-    width: HANDLE_SIZE,
-    height: HANDLE_SIZE,
-    borderRadius: HANDLE_SIZE / 2,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#4A90D9',
+    width: HANDLE_SIZE, height: HANDLE_SIZE, borderRadius: HANDLE_SIZE / 2,
+    backgroundColor: '#FFF', borderWidth: 1.5, borderColor: '#4A90D9',
   },
-  handleHit: {
-    width: HANDLE_HIT,
-    height: HANDLE_HIT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  handleTL: {
-    position: 'absolute',
-    top: -(HANDLE_SIZE / 2),
-    left: -(HANDLE_SIZE / 2),
-  },
-  handleTR: {
-    position: 'absolute',
-    top: -(HANDLE_SIZE / 2),
-    right: -(HANDLE_SIZE / 2),
-  },
-  handleBL: {
-    position: 'absolute',
-    bottom: -(HANDLE_SIZE / 2),
-    left: -(HANDLE_SIZE / 2),
-  },
-  handleBR: {
-    position: 'absolute',
-    bottom: -(HANDLE_HIT / 2),
-    right: -(HANDLE_HIT / 2),
-  },
+  handleHit: { width: HANDLE_HIT, height: HANDLE_HIT, alignItems: 'center', justifyContent: 'center' },
+  handleTL: { position: 'absolute', top: -(HANDLE_SIZE / 2), left: -(HANDLE_SIZE / 2) },
+  handleTR: { position: 'absolute', top: -(HANDLE_SIZE / 2), right: -(HANDLE_SIZE / 2) },
+  handleBL: { position: 'absolute', bottom: -(HANDLE_SIZE / 2), left: -(HANDLE_SIZE / 2) },
+  handleBR: { position: 'absolute', bottom: -(HANDLE_HIT / 2), right: -(HANDLE_HIT / 2) },
+  rotationLine: { position: 'absolute', width: 1, backgroundColor: '#4A90D9' },
+  rotationHandle: { borderColor: '#FF9800', backgroundColor: '#FFF8E1' },
   actionBar: {
-    position: 'absolute',
-    bottom: -36,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
+    position: 'absolute', bottom: -36, left: -10, right: -10,
+    flexDirection: 'row', justifyContent: 'center', gap: 6,
   },
   actionBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E0E0E0',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
   },
-  actionIcon: {
-    width: 14,
-    height: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  deleteText: { fontSize: 16, fontWeight: '700', color: '#FF4444', lineHeight: 18 },
+  actionSmall: { fontSize: 14, color: '#666', lineHeight: 16 },
+  actionIcon: { width: 14, height: 14, alignItems: 'center', justifyContent: 'center' },
+  layerBack1: { position: 'absolute', top: 2, left: 2, width: 7, height: 7, borderWidth: 1.5, borderColor: '#999', borderRadius: 1, backgroundColor: '#FFF' },
+  layerBack2: { width: 7, height: 7, borderWidth: 1.5, borderColor: '#999', borderRadius: 1 },
+  layerFront1: { width: 7, height: 7, borderWidth: 1.5, borderColor: '#4A90D9', borderRadius: 1 },
+  layerFront2: { position: 'absolute', top: 2, left: 2, width: 7, height: 7, borderWidth: 1.5, borderColor: '#4A90D9', borderRadius: 1, backgroundColor: '#FFF' },
 });

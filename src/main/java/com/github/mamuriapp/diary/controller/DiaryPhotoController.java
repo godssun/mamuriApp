@@ -59,7 +59,7 @@ public class DiaryPhotoController {
                 diaryId, photoId, userId,
                 request.getPositionX(), request.getPositionY(),
                 request.getDisplayWidth(), request.getDisplayHeight(),
-                request.getZIndex());
+                request.getZIndex(), request.getRotation());
         return ApiResponse.success(response);
     }
 

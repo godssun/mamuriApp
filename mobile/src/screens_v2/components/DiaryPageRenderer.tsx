@@ -38,8 +38,9 @@ export interface DiaryPageRendererProps {
   onObjectMove?: (id: string, x: number, y: number) => void;
   onObjectResize?: (id: string, w: number, h: number) => void;
   onObjectDelete?: (id: string) => void;
-  onObjectBringToFront?: (id: string) => void;
-  onObjectSendToBack?: (id: string) => void;
+  onObjectRotate?: (id: string, deg: number) => void;
+  onObjectBringForward?: (id: string) => void;
+  onObjectSendBackward?: (id: string) => void;
   onObjectSelect?: (id: string | null) => void;
   selectedObjectId?: string | null;
 
@@ -114,8 +115,9 @@ export function DiaryPageRenderer({
   onObjectMove,
   onObjectResize,
   onObjectDelete,
-  onObjectBringToFront,
-  onObjectSendToBack,
+  onObjectRotate,
+  onObjectBringForward,
+  onObjectSendBackward,
   onObjectSelect,
   selectedObjectId,
   onCanvasMeasure,
@@ -140,12 +142,18 @@ export function DiaryPageRenderer({
     <View
       style={[styles.pageContainer, bgColor ? { backgroundColor: bgColor } : undefined]}
       onLayout={handleLayout}
+      onStartShouldSetResponder={() => {
+        if (editable && selectedObjectId) {
+          onObjectSelect?.(null);
+        }
+        return false; // don't claim the responder — let children handle their own touches
+      }}
     >
       {/* Layer 0: Background pattern */}
       <NotebookBackground theme={theme} height={canvasHeight} />
 
-      {/* Layer 1: Text (always on top via zIndex) */}
-      <View style={styles.textLayer} pointerEvents={editable ? 'auto' : 'none'}>
+      {/* Layer 1: Text — box-none lets touches pass through empty areas to objects below */}
+      <View style={styles.textLayer} pointerEvents="box-none">
         {editable ? (
           <>
             <TextInput
@@ -192,9 +200,10 @@ export function DiaryPageRenderer({
           onSelect={editable ? (id) => onObjectSelect?.(id) : noop}
           onMove={editable ? (id, x, y) => onObjectMove?.(id, x, y) : noop}
           onResize={editable ? (id, w, h) => onObjectResize?.(id, w, h) : noop}
+          onRotate={editable ? (id, deg) => onObjectRotate?.(id, deg) : noop}
           onDelete={editable ? (id) => onObjectDelete?.(id) : noop}
-          onBringToFront={editable ? (id) => onObjectBringToFront?.(id) : undefined}
-          onSendToBack={editable ? (id) => onObjectSendToBack?.(id) : undefined}
+          onBringForward={editable ? (id) => onObjectBringForward?.(id) : undefined}
+          onSendBackward={editable ? (id) => onObjectSendBackward?.(id) : undefined}
         />
       ))}
     </View>

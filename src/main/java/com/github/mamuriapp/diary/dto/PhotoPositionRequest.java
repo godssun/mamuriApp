@@ -15,4 +15,5 @@ public class PhotoPositionRequest {
     private Integer displayWidth;
     private Integer displayHeight;
     private Integer zIndex;
+    private Double rotation;
 }

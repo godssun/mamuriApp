@@ -313,7 +313,7 @@ export interface DiaryDecorationPlacement {
 }
 
 export type DiaryStackParamListV3 = {
-  DiaryListHome: undefined;
+  DiaryListHome: { filterDate?: string } | undefined;
   EmotionPicker: { preselectedEmotion?: EmotionKey; returnTo?: string };
   WriteDiary: { editDiaryId?: number; selectedEmotion?: EmotionKey; selectedStickerId?: number; secondaryTags?: string[] };
   DiaryDetail: { diaryId: number };

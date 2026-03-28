@@ -637,7 +637,7 @@ export const diaryPhotoApi = {
 
   async updatePosition(photoId: number, diaryId: number, data: {
     positionX: number; positionY: number;
-    displayWidth: number; displayHeight: number; zIndex: number;
+    displayWidth: number; displayHeight: number; zIndex: number; rotation: number;
   }): Promise<any> {
     return request<any>(`/diaries/${diaryId}/photos/${photoId}/position`, {
       method: 'PUT',
@@ -648,7 +648,7 @@ export const diaryPhotoApi = {
 
 // 일기 데코레이션 API
 export const diaryDecorationApi = {
-  async save(diaryId: number, decorations: { assetType: string; positionX: number; positionY: number; scale: number; rotation: number }[]): Promise<void> {
+  async save(diaryId: number, decorations: { assetType: string; positionX: number; positionY: number; scale: number; rotation: number; zIndex: number }[]): Promise<void> {
     // 백엔드는 { decorations: [...] } 래퍼를 기대함
     await request<void>(`/diaries/${diaryId}/decorations`, {
       method: 'PUT',

@@ -63,6 +63,9 @@ public class DiaryPhoto {
     @Column(name = "z_index")
     private Integer zIndex = 0;
 
+    @Column(name = "rotation")
+    private Double rotation = 0.0;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -82,11 +85,12 @@ public class DiaryPhoto {
 
     public void updatePosition(Double positionX, Double positionY,
                                Integer displayWidth, Integer displayHeight,
-                               Integer zIndex) {
+                               Integer zIndex, Double rotation) {
         this.positionX = positionX;
         this.positionY = positionY;
         this.displayWidth = displayWidth;
         this.displayHeight = displayHeight;
         this.zIndex = zIndex;
+        this.rotation = rotation != null ? rotation : 0.0;
     }
 }

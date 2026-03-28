@@ -97,7 +97,7 @@ public class DiaryPhotoService {
     public DiaryPhotoResponse updatePosition(Long diaryId, Long photoId, Long userId,
                                               Double positionX, Double positionY,
                                               Integer displayWidth, Integer displayHeight,
-                                              Integer zIndex) {
+                                              Integer zIndex, Double rotation) {
         DiaryPhoto photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DIARY_NOT_FOUND));
 
@@ -105,7 +105,7 @@ public class DiaryPhotoService {
             throw new CustomException(ErrorCode.DIARY_NOT_FOUND);
         }
 
-        photo.updatePosition(positionX, positionY, displayWidth, displayHeight, zIndex);
+        photo.updatePosition(positionX, positionY, displayWidth, displayHeight, zIndex, rotation);
         return DiaryPhotoResponse.from(photo, storageService.getPublicUrl(photo.getStorageKey()));
     }
 

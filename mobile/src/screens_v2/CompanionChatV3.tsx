@@ -155,7 +155,14 @@ export default function CompanionChatV3() {
           onPress={() => mainNav.navigate('Settings')}
           style={s.settingsBtn}
         >
-          <View style={s.settingsIcon} />
+          <View style={s.gearIcon}>
+            {/* Gear center */}
+            <View style={s.gearCenter} />
+            {/* Gear teeth: 6 small rectangles rotated around center */}
+            {[0, 60, 120, 180, 240, 300].map((deg) => (
+              <View key={deg} style={[s.gearTooth, { transform: [{ rotate: `${deg}deg` }, { translateY: -7 }] }]} />
+            ))}
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -204,19 +211,7 @@ export default function CompanionChatV3() {
         </View>
       )}
 
-      {/* Memories Section */}
-      {memories.length > 0 && (
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>기억하고 있는 것들</Text>
-          <View style={s.memoryPills}>
-            {memories.slice(0, 6).map((mem: any) => (
-              <View key={mem.id} style={s.memoryPill}>
-                <Text style={s.memoryPillText} numberOfLines={1}>{mem.content || mem.summary}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
+      {/* Memories Section — hidden from user (internal AI context only) */}
 
       {/* Stats */}
       <View style={s.statsCard}>
@@ -351,9 +346,17 @@ function makeStyles(t: Theme) {
       backgroundColor: t.colors.surfaceSecondary,
       alignItems: 'center', justifyContent: 'center',
     },
-    settingsIcon: {
-      width: 16, height: 16, borderRadius: 8,
+    gearIcon: {
+      width: 18, height: 18, alignItems: 'center', justifyContent: 'center',
+    },
+    gearCenter: {
+      width: 8, height: 8, borderRadius: 4,
       borderWidth: 1.5, borderColor: t.colors.textSecondary,
+    },
+    gearTooth: {
+      position: 'absolute',
+      width: 3, height: 4, borderRadius: 1,
+      backgroundColor: t.colors.textSecondary,
     },
 
     // Character Card

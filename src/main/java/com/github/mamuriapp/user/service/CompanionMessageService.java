@@ -97,7 +97,7 @@ public class CompanionMessageService {
         if (user.getCurrentStreak() >= 7) {
             return new CompanionMessage(
                     "STREAK_CELEBRATE",
-                    user.getCurrentStreak() + "일 연속 작성 중이에요! 대단해요 🔥",
+                    user.getCurrentStreak() + "일 연속 작성 중이에요! 대단해요!",
                     "오늘도 이야기 들려주세요.",
                     "proud"
             );
@@ -146,7 +146,7 @@ public class CompanionMessageService {
     }
 
     private CompanionMessage defaultMessage() {
-        return new CompanionMessage("DEFAULT", "오늘도 이야기 들려주세요 💚", null, "happy");
+        return new CompanionMessage("DEFAULT", "오늘도 이야기 들려주세요.", null, "happy");
     }
 
     private List<CompanionMessage> getTimeBasedMessages() {
@@ -157,24 +157,24 @@ public class CompanionMessageService {
     }
 
     private static final List<CompanionMessage> MORNING_MESSAGES = List.of(
-            new CompanionMessage("MORNING", "좋은 아침이에요! ☀️", "오늘 하루 계획이 있나요?", "happy"),
+            new CompanionMessage("MORNING", "좋은 아침이에요!", "오늘 하루 계획이 있나요?", "happy"),
             new CompanionMessage("MORNING", "잘 주무셨어요?", "오늘도 좋은 하루 보내세요.", "curious"),
             new CompanionMessage("MORNING", "새로운 하루가 시작됐어요!", "오늘은 어떤 하루가 될까요?", "happy")
     );
 
     private static final List<CompanionMessage> AFTERNOON_MESSAGES = List.of(
-            new CompanionMessage("AFTERNOON", "오후도 힘내요! 🌤", "오늘 중간 기분은 어떤가요?", "happy"),
+            new CompanionMessage("AFTERNOON", "오후도 힘내요!", "오늘 중간 기분은 어떤가요?", "happy"),
             new CompanionMessage("AFTERNOON", "점심은 맛있게 드셨나요?", "남은 하루도 파이팅이에요.", "curious")
     );
 
     private static final List<CompanionMessage> EVENING_MESSAGES = List.of(
-            new CompanionMessage("EVENING", "오늘 하루 수고 많으셨어요 🌙", "오늘 하루는 어떠셨어요?", "happy"),
+            new CompanionMessage("EVENING", "오늘 하루 수고 많으셨어요.", "오늘 하루는 어떠셨어요?", "happy"),
             new CompanionMessage("EVENING", "하루를 마무리할 시간이에요.", "오늘 기억에 남는 일이 있나요?", "curious"),
             new CompanionMessage("EVENING", "편안한 저녁이에요.", "오늘 기분을 기록해볼까요?", "happy")
     );
 
     private static final List<CompanionMessage> AFTER_WRITE_MESSAGES = List.of(
-            new CompanionMessage("AFTER_WRITE", "오늘 일기 잘 읽었어요! 💚", "내일도 이야기 들려주세요.", "proud"),
+            new CompanionMessage("AFTER_WRITE", "오늘 일기 잘 읽었어요!", "내일도 이야기 들려주세요.", "proud"),
             new CompanionMessage("AFTER_WRITE", "이야기 들려줘서 고마워요.", "오늘도 수고 많으셨어요.", "happy")
     );
 

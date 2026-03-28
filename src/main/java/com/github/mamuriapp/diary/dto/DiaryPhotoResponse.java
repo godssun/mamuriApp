@@ -26,6 +26,7 @@ public class DiaryPhotoResponse {
     private Integer displayWidth;
     private Integer displayHeight;
     private Integer zIndex;
+    private Double rotation;
     private LocalDateTime createdAt;
 
     public static DiaryPhotoResponse from(DiaryPhoto photo, String publicUrl) {
@@ -41,6 +42,7 @@ public class DiaryPhotoResponse {
                 .displayWidth(photo.getDisplayWidth())
                 .displayHeight(photo.getDisplayHeight())
                 .zIndex(photo.getZIndex())
+                .rotation(photo.getRotation())
                 .createdAt(photo.getCreatedAt())
                 .build();
     }

@@ -176,7 +176,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
         y: (p.positionY ?? 0.05) * canvasW,
         width: photoW,
         height: photoH,
-        rotation: 0,
+        rotation: p.rotation || 0,
         zIndex: p.zIndex ?? i,
         photoUri: resolvePhotoUrl(p),
       };

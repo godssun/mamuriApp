@@ -52,14 +52,26 @@ function getGreeting(): string {
   return i18n.t('diary.greetingEvening');
 }
 
-export function DiaryListScreenV2({ navigation }: Props) {
+export function DiaryListScreenV2({ navigation, route }: Props) {
   const { theme, isDark } = useThemeV2();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const headerAnim = useRef(new Animated.Value(0)).current;
   const listAnim = useRef(new Animated.Value(0)).current;
 
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  // filterDate param from calendar navigation
+  const filterDate = route.params?.filterDate;
+  const initialDate = filterDate ? new Date(filterDate + 'T00:00:00') : new Date();
+  const [selectedDate, setSelectedDate] = useState(initialDate);
+
+  // Update selectedDate when filterDate param changes (e.g. from calendar)
+  useEffect(() => {
+    if (filterDate) {
+      setSelectedDate(new Date(filterDate + 'T00:00:00'));
+      // Clear the param so re-entering the tab resets to today
+      navigation.setParams({ filterDate: undefined } as any);
+    }
+  }, [filterDate]);
   const [diaries, setDiaries] = useState<DiaryV3[]>([]);
   const [datesWithDiaries, setDatesWithDiaries] = useState<Set<string>>(new Set());
   const [streak, setStreak] = useState<StreakResponse | null>(null);

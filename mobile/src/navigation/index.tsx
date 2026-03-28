@@ -96,16 +96,25 @@ function MainTabsNavigator() {
         name="DiaryList"
         component={DiaryNavigator}
         options={{ title: '일기' }}
-      />
-      <MainTab.Screen
-        name="Companion"
-        component={CompanionChatV3}
-        options={{ title: tabLabel }}
+        listeners={({ navigation: tabNav }) => ({
+          tabPress: () => {
+            // Reset diary stack to list when tab is pressed
+            (tabNav as any).navigate('DiaryList', {
+              screen: 'DiaryListHome',
+              params: { filterDate: undefined },
+            });
+          },
+        })}
       />
       <MainTab.Screen
         name="Reflect"
         component={ReflectionStoryV3}
         options={{ title: '돌아보기' }}
+      />
+      <MainTab.Screen
+        name="Companion"
+        component={CompanionChatV3}
+        options={{ title: tabLabel }}
       />
     </MainTab.Navigator>
   );
