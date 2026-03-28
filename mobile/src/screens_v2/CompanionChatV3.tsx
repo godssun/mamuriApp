@@ -16,8 +16,8 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useThemeV2 } from '../design-system-v2';
-import type { Theme } from '../design-system-v2';
+import { colors, fontFamily, shadows, spacing, borderRadius, layout } from '../design-system-v3';
+import { PaperBackground } from '../design-system-v3/components/PaperBackground';
 import { companionApi, settingsApi, memoryApi, ApiError } from '../api/client';
 import type { CompanionProfile, CompanionSettings, UserSettings, MainStackParamList } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -45,8 +45,6 @@ const SPEECH_STYLE_OPTIONS = [
 export default function CompanionChatV3() {
   const mainNav = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { setCompanionName } = useAuth();
-  const { theme } = useThemeV2();
-  const s = makeStyles(theme);
 
   const [profile, setProfile] = useState<CompanionProfile | null>(null);
   const [companionSettings, setCompanionSettings] = useState<CompanionSettings | null>(null);
@@ -130,7 +128,7 @@ export default function CompanionChatV3() {
   if (isLoading) {
     return (
       <View style={s.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
     );
   }
@@ -147,302 +145,311 @@ export default function CompanionChatV3() {
   const relationshipStage = Math.min(7, Math.ceil(profile.level / 2));
 
   return (
-    <ScrollView style={s.root} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={s.header}>
-        <Text style={s.headerTitle}>{profile.aiName}</Text>
-        <TouchableOpacity
-          onPress={() => mainNav.navigate('Settings')}
-          style={s.settingsBtn}
-        >
-          <View style={s.gearIcon}>
-            {/* Gear center */}
-            <View style={s.gearCenter} />
-            {/* Gear teeth: 6 small rectangles rotated around center */}
-            {[0, 60, 120, 180, 240, 300].map((deg) => (
-              <View key={deg} style={[s.gearTooth, { transform: [{ rotate: `${deg}deg` }, { translateY: -7 }] }]} />
-            ))}
-          </View>
-        </TouchableOpacity>
-      </View>
+    <PaperBackground variant="plain" color="cream">
+      <ScrollView style={s.root} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={s.header}>
+          <Text style={s.headerTitle}>{profile.aiName}</Text>
+          <TouchableOpacity
+            onPress={() => mainNav.navigate('Settings')}
+            style={s.settingsBtn}
+          >
+            <View style={s.gearIcon}>
+              <View style={s.gearCenter} />
+              {[0, 60, 120, 180, 240, 300].map((deg) => (
+                <View key={deg} style={[s.gearTooth, { transform: [{ rotate: `${deg}deg` }, { translateY: -7 }] }]} />
+              ))}
+            </View>
+          </TouchableOpacity>
+        </View>
 
-      {/* Character Card */}
-      <View style={s.characterCard}>
-        {getAvatarImageUri(companionSettings?.avatar) ? (
-          <Image source={{ uri: getAvatarImageUri(companionSettings?.avatar)! }} style={s.avatar} />
-        ) : (
-          <View style={s.avatarPlaceholder}>
-            <Text style={s.avatarText}>{profile.aiName.charAt(0)}</Text>
+        {/* Character Card */}
+        <View style={s.characterCard}>
+          {getAvatarImageUri(companionSettings?.avatar) ? (
+            <Image source={{ uri: getAvatarImageUri(companionSettings?.avatar)! }} style={s.avatar} />
+          ) : (
+            <View style={s.avatarPlaceholder}>
+              <Text style={s.avatarText}>{profile.aiName.charAt(0)}</Text>
+            </View>
+          )}
+
+          <TouchableOpacity style={s.nameRow} onPress={() => { setNewName(profile.aiName); setShowNameModal(true); }}>
+            <Text style={s.charName}>{profile.aiName}</Text>
+            <Text style={s.changeText}>변경</Text>
+          </TouchableOpacity>
+
+          {/* Relationship Progress */}
+          <View style={s.progressSection}>
+            <RelationshipProgressBar
+              currentStage={relationshipStage}
+              currentLevel={profile.level}
+              maxLevel={profile.maxLevel ? profile.level : profile.level + 1}
+            />
+          </View>
+
+          {/* Level info */}
+          <View style={s.levelRow}>
+            <View style={s.levelBadge}>
+              <Text style={s.levelBadgeText}>Lv.{profile.level}</Text>
+            </View>
+            {!profile.maxLevel && (
+              <Text style={s.levelProgress}>
+                다음 레벨까지 {profile.nextLevelDiaryCount - profile.diaryCount}일기
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Companion Message */}
+        {msg && (
+          <View style={s.msgCard}>
+            <Text style={s.msgText}>"{msg.message}"</Text>
+            {msg.subMessage && <Text style={s.msgSub}>{msg.subMessage}</Text>}
           </View>
         )}
 
-        <TouchableOpacity style={s.nameRow} onPress={() => { setNewName(profile.aiName); setShowNameModal(true); }}>
-          <Text style={s.charName}>{profile.aiName}</Text>
-          <Text style={s.changeText}>변경</Text>
+        {/* Memories Section — hidden from user (internal AI context only) */}
+
+        {/* Stats */}
+        <View style={s.statsCard}>
+          <View style={s.statItem}>
+            <Text style={s.statNum}>{profile.diaryCount}</Text>
+            <Text style={s.statLabel}>함께한 기록</Text>
+          </View>
+          <View style={s.statDivider} />
+          <View style={s.statItem}>
+            <Text style={s.statNum}>{relationshipStage}</Text>
+            <Text style={s.statLabel}>관계 단계</Text>
+          </View>
+        </View>
+
+        {/* AI Settings Accordion */}
+        <TouchableOpacity style={s.accordionHeader} onPress={toggleAiSettings} activeOpacity={0.7}>
+          <Text style={s.accordionTitle}>AI 설정</Text>
+          <Text style={s.accordionArrow}>{showAiSettings ? '⌃' : '⌄'}</Text>
         </TouchableOpacity>
 
-        {/* Relationship Progress */}
-        <View style={s.progressSection}>
-          <RelationshipProgressBar
-            currentStage={relationshipStage}
-            currentLevel={profile.level}
-            maxLevel={profile.maxLevel ? profile.level : profile.level + 1}
-          />
-        </View>
-
-        {/* Level info */}
-        <View style={s.levelRow}>
-          <View style={s.levelBadge}>
-            <Text style={s.levelBadgeText}>Lv.{profile.level}</Text>
-          </View>
-          {!profile.maxLevel && (
-            <Text style={s.levelProgress}>
-              다음 레벨까지 {profile.nextLevelDiaryCount - profile.diaryCount}일기
-            </Text>
-          )}
-        </View>
-      </View>
-
-      {/* Companion Message */}
-      {msg && (
-        <View style={s.msgCard}>
-          <Text style={s.msgText}>"{msg.message}"</Text>
-          {msg.subMessage && <Text style={s.msgSub}>{msg.subMessage}</Text>}
-        </View>
-      )}
-
-      {/* Memories Section — hidden from user (internal AI context only) */}
-
-      {/* Stats */}
-      <View style={s.statsCard}>
-        <View style={s.statItem}>
-          <Text style={s.statNum}>{profile.diaryCount}</Text>
-          <Text style={s.statLabel}>함께한 기록</Text>
-        </View>
-        <View style={[s.statDivider, { backgroundColor: theme.colors.border }]} />
-        <View style={s.statItem}>
-          <Text style={s.statNum}>{relationshipStage}</Text>
-          <Text style={s.statLabel}>관계 단계</Text>
-        </View>
-      </View>
-
-      {/* AI Settings Accordion */}
-      <TouchableOpacity style={s.accordionHeader} onPress={toggleAiSettings} activeOpacity={0.7}>
-        <Text style={s.accordionTitle}>AI 설정</Text>
-        <Text style={s.accordionArrow}>{showAiSettings ? '⌃' : '⌄'}</Text>
-      </TouchableOpacity>
-
-      {showAiSettings && (
-        <View style={s.settingsBody}>
-          {/* AI Toggle */}
-          <View style={s.settingRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.settingLabel}>AI 코멘트</Text>
-              <Text style={s.settingDesc}>일기에 AI 코멘트를 받을지 설정</Text>
-            </View>
-            <Switch
-              value={settings?.aiEnabled ?? true}
-              onValueChange={(v) => updateSettings({ aiEnabled: v })}
-              trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
-              thumbColor={settings?.aiEnabled ? theme.colors.primary : theme.colors.surfaceTertiary}
-            />
-          </View>
-
-          {/* Tone */}
-          <View style={s.settingGroup}>
-            <Text style={s.settingLabel}>말투 톤</Text>
-            <View style={s.optionList}>
-              {AI_TONE_OPTIONS.map((opt) => {
-                const isSelected = companionSettings?.aiTone === opt.value;
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[s.optionItem, {
-                      borderColor: isSelected ? theme.colors.primary : theme.colors.border,
-                      backgroundColor: isSelected ? theme.colors.primarySubtle : theme.colors.surface,
-                    }]}
-                    onPress={() => updateCompanionSettings({ aiTone: opt.value })}
-                    disabled={isSavingCompanion}
-                  >
-                    <Text style={[s.optionLabel, { color: isSelected ? theme.colors.primary : theme.colors.textPrimary }]}>{opt.label}</Text>
-                    <Text style={[s.optionDesc, { color: isSelected ? theme.colors.primary : theme.colors.textSecondary }]}>{opt.desc}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Speech style */}
-          <View style={s.settingGroup}>
-            <Text style={s.settingLabel}>말투 스타일</Text>
-            <View style={s.optionList}>
-              {SPEECH_STYLE_OPTIONS.map((opt) => {
-                const isSelected = companionSettings?.speechStyle === opt.value;
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[s.optionItem, {
-                      borderColor: isSelected ? theme.colors.primary : theme.colors.border,
-                      backgroundColor: isSelected ? theme.colors.primarySubtle : theme.colors.surface,
-                    }]}
-                    onPress={() => updateCompanionSettings({ speechStyle: opt.value })}
-                    disabled={isSavingCompanion}
-                  >
-                    <Text style={[s.optionLabel, { color: isSelected ? theme.colors.primary : theme.colors.textPrimary }]}>{opt.label}</Text>
-                    <Text style={[s.optionDesc, { color: isSelected ? theme.colors.primary : theme.colors.textSecondary }]}>{opt.desc}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        </View>
-      )}
-
-      <View style={{ height: 48 }} />
-
-      {/* Name Change Modal */}
-      <Modal visible={showNameModal} transparent animationType="fade">
-        <View style={s.modalOverlay}>
-          <View style={s.nameModal}>
-            <Text style={s.modalTitle}>이름 변경</Text>
-            <Input
-              value={newName}
-              onChangeText={setNewName}
-              placeholder="새 이름 입력"
-              maxLength={20}
-              autoFocus
-              containerStyle={{ marginBottom: 20 }}
-            />
-            <View style={s.modalBtns}>
+        {showAiSettings && (
+          <View style={s.settingsBody}>
+            {/* AI Toggle */}
+            <View style={s.settingRow}>
               <View style={{ flex: 1 }}>
-                <Button label="취소" variant="secondary" onPress={() => setShowNameModal(false)} fullWidth />
+                <Text style={s.settingLabel}>AI 코멘트</Text>
+                <Text style={s.settingDesc}>일기에 AI 코멘트를 받을지 설정</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Button label="저장" variant="primary" onPress={handleSaveName} loading={isSavingName} fullWidth />
+              <Switch
+                value={settings?.aiEnabled ?? true}
+                onValueChange={(v) => updateSettings({ aiEnabled: v })}
+                trackColor={{ false: colors.accentSand + '40', true: colors.accentPrimaryLight }}
+                thumbColor={settings?.aiEnabled ? colors.accentPrimary : colors.textTertiary}
+              />
+            </View>
+
+            {/* Tone */}
+            <View style={s.settingGroup}>
+              <Text style={s.settingLabel}>말투 톤</Text>
+              <View style={s.optionList}>
+                {AI_TONE_OPTIONS.map((opt) => {
+                  const isSelected = companionSettings?.aiTone === opt.value;
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[s.optionItem, {
+                        borderColor: isSelected ? colors.accentPrimary : colors.accentSand + '40',
+                        backgroundColor: isSelected ? colors.accentPrimaryLight + '20' : colors.surfaceCard,
+                      }]}
+                      onPress={() => updateCompanionSettings({ aiTone: opt.value })}
+                      disabled={isSavingCompanion}
+                    >
+                      <Text style={[s.optionLabel, { color: isSelected ? colors.accentPrimary : colors.textPrimary }]}>{opt.label}</Text>
+                      <Text style={[s.optionDesc, { color: isSelected ? colors.accentPrimary : colors.textSecondary }]}>{opt.desc}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Speech style */}
+            <View style={s.settingGroup}>
+              <Text style={s.settingLabel}>말투 스타일</Text>
+              <View style={s.optionList}>
+                {SPEECH_STYLE_OPTIONS.map((opt) => {
+                  const isSelected = companionSettings?.speechStyle === opt.value;
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[s.optionItem, {
+                        borderColor: isSelected ? colors.accentPrimary : colors.accentSand + '40',
+                        backgroundColor: isSelected ? colors.accentPrimaryLight + '20' : colors.surfaceCard,
+                      }]}
+                      onPress={() => updateCompanionSettings({ speechStyle: opt.value })}
+                      disabled={isSavingCompanion}
+                    >
+                      <Text style={[s.optionLabel, { color: isSelected ? colors.accentPrimary : colors.textPrimary }]}>{opt.label}</Text>
+                      <Text style={[s.optionDesc, { color: isSelected ? colors.accentPrimary : colors.textSecondary }]}>{opt.desc}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           </View>
-        </View>
-      </Modal>
-    </ScrollView>
+        )}
+
+        <View style={{ height: 48 }} />
+
+        {/* Name Change Modal */}
+        <Modal visible={showNameModal} transparent animationType="fade">
+          <View style={s.modalOverlay}>
+            <View style={s.nameModal}>
+              <Text style={s.modalTitle}>이름 변경</Text>
+              <Input
+                value={newName}
+                onChangeText={setNewName}
+                placeholder="새 이름 입력"
+                maxLength={20}
+                autoFocus
+                containerStyle={{ marginBottom: 20 }}
+              />
+              <View style={s.modalBtns}>
+                <View style={{ flex: 1 }}>
+                  <Button label="취소" variant="secondary" onPress={() => setShowNameModal(false)} fullWidth />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button label="저장" variant="primary" onPress={handleSaveName} loading={isSavingName} fullWidth />
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </ScrollView>
+    </PaperBackground>
   );
 }
 
-function makeStyles(t: Theme) {
-  return StyleSheet.create({
-    root: { flex: 1, backgroundColor: t.colors.background },
-    scroll: { paddingHorizontal: t.layout.screenPaddingH, paddingTop: 60, paddingBottom: 120 },
-    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: t.colors.background },
-    errorText: { ...t.typography.bodyMedium, color: t.colors.textSecondary, marginBottom: 16 },
+const s = StyleSheet.create({
+  root: { flex: 1 },
+  scroll: { paddingHorizontal: layout.screenPaddingH, paddingTop: 60, paddingBottom: 120 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bgCream },
+  errorText: { fontFamily: fontFamily.sans, fontSize: 13.5, color: colors.textSecondary, marginBottom: 16 },
 
-    // Header
-    header: {
-      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-      marginBottom: t.spacing.xl,
-    },
-    headerTitle: { ...t.typography.headlineLarge, color: t.colors.textPrimary },
-    settingsBtn: {
-      width: 36, height: 36, borderRadius: 18,
-      backgroundColor: t.colors.surfaceSecondary,
-      alignItems: 'center', justifyContent: 'center',
-    },
-    gearIcon: {
-      width: 18, height: 18, alignItems: 'center', justifyContent: 'center',
-    },
-    gearCenter: {
-      width: 8, height: 8, borderRadius: 4,
-      borderWidth: 1.5, borderColor: t.colors.textSecondary,
-    },
-    gearTooth: {
-      position: 'absolute',
-      width: 3, height: 4, borderRadius: 1,
-      backgroundColor: t.colors.textSecondary,
-    },
+  // Header
+  header: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  headerTitle: {
+    fontFamily: fontFamily.serifItalic, fontSize: 26, lineHeight: 36,
+    letterSpacing: -0.52, color: colors.textPrimary,
+  },
+  settingsBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.bgIvory,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  gearIcon: {
+    width: 18, height: 18, alignItems: 'center', justifyContent: 'center',
+  },
+  gearCenter: {
+    width: 8, height: 8, borderRadius: 4,
+    borderWidth: 1.5, borderColor: colors.textSecondary,
+  },
+  gearTooth: {
+    position: 'absolute',
+    width: 3, height: 4, borderRadius: 1,
+    backgroundColor: colors.textSecondary,
+  },
 
-    // Character Card
-    characterCard: {
-      backgroundColor: t.colors.surface, borderRadius: t.borderRadius.xl,
-      padding: 28, alignItems: 'center', marginBottom: t.spacing.xl,
-      ...t.shadows.md,
-    },
-    avatar: { width: 80, height: 80, borderRadius: 40, marginBottom: 16 },
-    avatarPlaceholder: {
-      width: 80, height: 80, borderRadius: 40,
-      backgroundColor: t.colors.primarySubtle,
-      justifyContent: 'center', alignItems: 'center', marginBottom: 16,
-    },
-    avatarText: { fontSize: 32, fontWeight: '700', color: t.colors.primary },
-    nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-    charName: { ...t.typography.headlineMedium, color: t.colors.textPrimary },
-    changeText: { ...t.typography.labelSmall, color: t.colors.primary },
+  // Character Card
+  characterCard: {
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.sm,
+    padding: 28, alignItems: 'center', marginBottom: spacing.xl,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
+    ...shadows.soft,
+  },
+  avatar: { width: 80, height: 80, borderRadius: 40, marginBottom: 16 },
+  avatarPlaceholder: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: colors.accentPrimaryLight + '40',
+    justifyContent: 'center', alignItems: 'center', marginBottom: 16,
+  },
+  avatarText: { fontSize: 32, fontFamily: fontFamily.serifItalic, color: colors.accentPrimary },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  charName: {
+    fontFamily: fontFamily.serifItalic, fontSize: 22, lineHeight: 31,
+    letterSpacing: -0.44, color: colors.textPrimary,
+  },
+  changeText: { fontFamily: fontFamily.sansMedium, fontSize: 11, color: colors.accentPrimary },
 
-    progressSection: { width: '100%', marginTop: t.spacing.lg, marginBottom: t.spacing.md },
+  progressSection: { width: '100%', marginTop: spacing.lg, marginBottom: spacing.md },
 
-    levelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    levelBadge: {
-      backgroundColor: t.colors.primarySubtle,
-      paddingHorizontal: 10, paddingVertical: 4,
-      borderRadius: t.borderRadius.full,
-    },
-    levelBadgeText: { fontSize: 12, fontWeight: '700', color: t.colors.primary },
-    levelProgress: { ...t.typography.caption, color: t.colors.textTertiary },
+  levelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  levelBadge: {
+    backgroundColor: colors.accentPrimaryLight + '30',
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: borderRadius.full,
+  },
+  levelBadgeText: { fontSize: 12, fontFamily: fontFamily.sansMedium, color: colors.accentPrimary },
+  levelProgress: { fontFamily: fontFamily.sans, fontSize: 11, color: colors.textTertiary },
 
-    // Message
-    msgCard: {
-      backgroundColor: t.colors.primarySubtle, borderRadius: t.borderRadius.xl,
-      padding: t.spacing.xl, marginBottom: t.spacing.xl,
-    },
-    msgText: { ...t.typography.bodyMedium, color: t.colors.textPrimary, fontStyle: 'italic', lineHeight: 22 },
-    msgSub: { ...t.typography.caption, color: t.colors.textTertiary, marginTop: 8 },
+  // Message
+  msgCard: {
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.sm,
+    padding: spacing.xl, marginBottom: spacing.xl,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
+  },
+  msgText: {
+    fontFamily: fontFamily.script, fontSize: 22, lineHeight: 28,
+    color: colors.textPrimary, fontStyle: 'italic',
+  },
+  msgSub: { fontFamily: fontFamily.sans, fontSize: 11, color: colors.textTertiary, marginTop: 8 },
 
-    // Memories
-    section: { marginBottom: t.spacing.xl },
-    sectionTitle: { ...t.typography.titleSmall, fontWeight: '600', color: t.colors.textPrimary, marginBottom: t.spacing.md },
-    memoryPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    memoryPill: {
-      backgroundColor: t.colors.surfaceSecondary,
-      paddingHorizontal: 14, paddingVertical: 8,
-      borderRadius: t.borderRadius.full, maxWidth: '48%',
-    },
-    memoryPillText: { ...t.typography.bodySmall, color: t.colors.textSecondary },
+  // Stats
+  statsCard: {
+    flexDirection: 'row', backgroundColor: colors.bgIvory,
+    borderRadius: borderRadius.sm, padding: spacing.xl,
+    marginBottom: spacing.xl,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
+    ...shadows.crisp,
+  },
+  statItem: { flex: 1, alignItems: 'center' },
+  statNum: {
+    fontSize: 28, fontFamily: fontFamily.serifItalic,
+    color: colors.accentPrimary, letterSpacing: -1,
+  },
+  statLabel: { fontFamily: fontFamily.sans, fontSize: 11, color: colors.textTertiary, marginTop: 4 },
+  statDivider: { width: 1, marginHorizontal: spacing.lg, backgroundColor: colors.accentSand + '30' },
 
-    // Stats
-    statsCard: {
-      flexDirection: 'row', backgroundColor: t.colors.surface,
-      borderRadius: t.borderRadius.lg, padding: t.spacing.xl,
-      marginBottom: t.spacing.xl, ...t.shadows.sm,
-    },
-    statItem: { flex: 1, alignItems: 'center' },
-    statNum: { fontSize: 28, fontWeight: '200', color: t.colors.primary, letterSpacing: -1 },
-    statLabel: { ...t.typography.caption, color: t.colors.textTertiary, marginTop: 4 },
-    statDivider: { width: 1, marginHorizontal: t.spacing.lg },
+  // Accordion
+  accordionHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  accordionTitle: {
+    fontFamily: fontFamily.serifItalic, fontSize: 18, lineHeight: 25,
+    color: colors.textPrimary,
+  },
+  accordionArrow: { fontSize: 16, color: colors.textTertiary },
 
-    // Accordion
-    accordionHeader: {
-      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-      marginBottom: t.spacing.md,
-    },
-    accordionTitle: { ...t.typography.titleLarge, color: t.colors.textPrimary },
-    accordionArrow: { fontSize: 16, color: t.colors.textTertiary },
+  settingsBody: { gap: spacing.md },
+  settingRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', padding: 16,
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.md,
+  },
+  settingLabel: { fontFamily: fontFamily.sansMedium, fontSize: 16, color: colors.textPrimary, marginBottom: 2 },
+  settingDesc: { fontFamily: fontFamily.sans, fontSize: 12, color: colors.textSecondary },
+  settingGroup: { backgroundColor: colors.bgIvory, borderRadius: borderRadius.md, padding: 16 },
+  optionList: { gap: 8, marginTop: 8 },
+  optionItem: { padding: 14, borderWidth: 1, borderRadius: borderRadius.sm },
+  optionLabel: { fontFamily: fontFamily.sansMedium, fontSize: 16 },
+  optionDesc: { fontFamily: fontFamily.sans, fontSize: 12 },
 
-    settingsBody: { gap: t.spacing.md },
-    settingRow: {
-      flexDirection: 'row', justifyContent: 'space-between',
-      alignItems: 'center', padding: 16,
-      backgroundColor: t.colors.surface, borderRadius: t.borderRadius.md,
-    },
-    settingLabel: { ...t.typography.titleSmall, color: t.colors.textPrimary, marginBottom: 2 },
-    settingDesc: { ...t.typography.bodySmall, color: t.colors.textSecondary },
-    settingGroup: { backgroundColor: t.colors.surface, borderRadius: t.borderRadius.md, padding: 16 },
-    optionList: { gap: 8, marginTop: 8 },
-    optionItem: { padding: 14, borderWidth: 1, borderRadius: t.borderRadius.sm },
-    optionLabel: { ...t.typography.titleSmall },
-    optionDesc: { ...t.typography.bodySmall },
-
-    // Modal
-    modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: t.colors.overlay, padding: 24 },
-    nameModal: { backgroundColor: t.colors.surface, borderRadius: t.borderRadius.xl, padding: 24, width: '100%', maxWidth: 320 },
-    modalTitle: { ...t.typography.titleLarge, fontWeight: '700', color: t.colors.textPrimary, textAlign: 'center', marginBottom: t.spacing.xl },
-    modalBtns: { flexDirection: 'row', gap: 12 },
-  });
-}
+  // Modal
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.overlayDim, padding: 24 },
+  nameModal: { backgroundColor: colors.bgIvory, borderRadius: borderRadius.sm, padding: 24, width: '100%', maxWidth: 320 },
+  modalTitle: {
+    fontFamily: fontFamily.serifItalic, fontSize: 18, lineHeight: 25,
+    color: colors.textPrimary, textAlign: 'center', marginBottom: spacing.xl,
+  },
+  modalBtns: { flexDirection: 'row', gap: 12 },
+});
