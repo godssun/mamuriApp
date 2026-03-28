@@ -1,22 +1,26 @@
 /**
- * DiaryPageDetail V3 — Immersive diary detail with canvas rendering
+ * DiaryPageDetail V3 — Scrapbook diary record view
  *
- * - Emotion sticker header
- * - 2-layer canvas: background pattern + text + objects (CanvasObject read-only)
- * - AI conversation area
+ * "기록 조각을 열었더니, 한 장의 감정 페이지가 펼쳐지는 느낌"
+ *
+ * Paper-textured background, serif editorial hierarchy,
+ * emotion as quiet page element, polaroid-framed photos,
+ * warm conversation cards, soft input bar.
+ *
+ * v3 design system: PaperBackground, tokens, scrapbook composition.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Animated, TextInput, ActivityIndicator, Alert, Image, Dimensions, Platform,
+  Animated, TextInput, ActivityIndicator, Alert, Dimensions, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors, fontFamily, shadows, spacing, borderRadius, layout } from '../design-system-v3';
 import { PaperBackground } from '../design-system-v3/components/PaperBackground';
-import { diaryApiV3, diaryApi, conversationApi, ApiError } from '../api/client';
+import { diaryApiV3, diaryApi, conversationApi } from '../api/client';
 import type { DiaryV3, ConversationMessage, ConversationLimits, DiaryStackParamListV3, EmotionKey } from '../types';
 import { formatDiaryDate, formatTime } from '../utils/dateFormat';
 import { ChatBubble } from './components/ChatBubble';
@@ -45,7 +49,6 @@ const themeColors: Record<string, string> = {
   note: colors.bgIvory,
   grid: colors.bgCream,
 };
-
 
 export default function DiaryPageDetailV3({ navigation, route }: Props) {
   const { diaryId } = route.params;
@@ -136,17 +139,18 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
     ]);
   };
 
+  // ── Loading state ──
   if (loading) {
     return (
-      <PaperBackground variant="plain" color="cream" style={[styles.root, { paddingTop: insets.top }]}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Text style={styles.backText}>←</Text>
+      <PaperBackground variant="plain" color="cream" style={[s.root, { paddingTop: insets.top }]}>
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerSideBtn}>
+            <Text style={s.backArrow}>←</Text>
           </TouchableOpacity>
-          <View style={{ width: 44 }} />
+          <View style={{ flex: 1 }} />
           <View style={{ width: 44 }} />
         </View>
-        <View style={styles.loadingCenter}>
+        <View style={s.loadingCenter}>
           <ActivityIndicator color={colors.accentPrimary} />
         </View>
       </PaperBackground>
@@ -155,7 +159,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
 
   if (!diary) return null;
 
-  // Extract emotion (fallback chain)
+  // ── Data extraction ──
   const emotionCode = (
     diary.emotion?.primarySticker?.category?.code
     || diary.emotion?.primarySticker?.code?.replace(/_default$/, '')?.toUpperCase()
@@ -167,57 +171,47 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
   const bgColor = themeColors[diaryTheme] || colors.bgCream;
   const txtColor = diaryTheme === 'night' ? '#EDEDF0' : colors.textPrimary;
   const canvasW = Dimensions.get('window').width - (CANVAS_PADDING_H * 2);
+  const diaryDate = new Date(diary.diaryDate);
+  const dateLabel = `${diaryDate.getMonth() + 1}월 ${diaryDate.getDate()}일`;
 
   // Convert photos + decorations to CanvasObjectData[]
   const canvasObjects: CanvasObjectData[] = [
-    // Photos — use saved coordinates from photo API
     ...(diary.photos || []).map((p: any, i: number) => {
       const photoW = p.displayWidth || Math.min(canvasW * 0.9, 300);
       const photoH = p.displayHeight || photoW * 0.75;
       return {
-        id: `photo_${p.id}`,
-        type: 'photo' as const,
-        x: (p.positionX ?? 0.1) * canvasW,
-        y: (p.positionY ?? 0.05) * canvasW,
-        width: photoW,
-        height: photoH,
-        rotation: p.rotation || 0,
-        zIndex: p.zIndex ?? i,
+        id: `photo_${p.id}`, type: 'photo' as const,
+        x: (p.positionX ?? 0.1) * canvasW, y: (p.positionY ?? 0.05) * canvasW,
+        width: photoW, height: photoH,
+        rotation: p.rotation || 0, zIndex: p.zIndex ?? i,
         photoUri: resolvePhotoUrl(p),
       };
     }),
-    // Sticker decorations only
-    ...(diary.decorations || [])
-      .map(deco => {
-        const code = deco.assetCode || deco.assetType || '';
-        const stickerSize = Math.round(60 * (deco.scale || 1));
-        return {
-          id: `deco_${deco.id}`,
-          type: 'sticker' as const,
-          x: (deco.positionX || 0) * canvasW,
-          y: (deco.positionY || 0) * canvasW,
-          width: stickerSize,
-          height: stickerSize,
-          rotation: deco.rotation || 0,
-          zIndex: deco.zIndex || 0,
-          stickerCode: code,
-          stickerSource: getStickerSource(code) || undefined,
-        };
-      }),
+    ...(diary.decorations || []).map(deco => {
+      const code = deco.assetCode || deco.assetType || '';
+      const stickerSize = Math.round(60 * (deco.scale || 1));
+      return {
+        id: `deco_${deco.id}`, type: 'sticker' as const,
+        x: (deco.positionX || 0) * canvasW, y: (deco.positionY || 0) * canvasW,
+        width: stickerSize, height: stickerSize,
+        rotation: deco.rotation || 0, zIndex: deco.zIndex || 0,
+        stickerCode: code, stickerSource: getStickerSource(code) || undefined,
+      };
+    }),
   ];
 
   return (
-    <PaperBackground variant="plain" color="cream" style={[styles.root, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={[styles.backText, { color: txtColor }]}>←</Text>
+    <PaperBackground variant="plain" color="cream" style={[s.root, { paddingTop: insets.top }]}>
+      {/* ══ Header — transparent, minimal ══ */}
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerSideBtn}>
+          <Text style={s.backArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerDate, { color: diaryTheme === 'night' ? '#9898AC' : colors.textSecondary }]}>
-          {formatDiaryDate(diary.diaryDate)}
-        </Text>
-        <TouchableOpacity style={styles.backBtn} onPress={handleMorePress}>
-          <Text style={[styles.moreText, { color: diaryTheme === 'night' ? '#9898AC' : colors.textSecondary }]}>⋯</Text>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={s.headerDateLabel}>{formatDiaryDate(diary.diaryDate)}</Text>
+        </View>
+        <TouchableOpacity style={s.headerSideBtn} onPress={handleMorePress}>
+          <Text style={s.moreIcon}>⋯</Text>
         </TouchableOpacity>
       </View>
 
@@ -227,90 +221,90 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ═══ Diary Page (shared renderer) ═══ */}
         <Animated.View style={{
           opacity: contentAnim,
           transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
         }}>
-          {/* Emotion Header */}
-          {emotionCode && (
-            <View style={[styles.emotionHeader, {
-              backgroundColor: (emotionColor || colors.accentPrimary) + '10',
-              borderColor: (emotionColor || colors.accentPrimary) + '20',
-            }]}>
-              <EmotionStickerView emotionKey={emotionCode} size="small" />
-              <View>
-                <Text style={[styles.emotionLabel, { color: emotionColor || colors.accentPrimary }]}>
-                  {EMOTION_LABELS[emotionCode]}
-                </Text>
-                {diary.emotion?.secondaryTags && diary.emotion.secondaryTags.length > 0 && (
-                  <Text style={[styles.emotionTags, { color: (emotionColor || colors.accentPrimary) + 'AA' }]}>
-                    {diary.emotion.secondaryTags.join(' · ')}
+          {/* ══ Page Header — date + emotion composition ══ */}
+          <View style={s.pageHeader}>
+            {/* Large script date — handwritten feel */}
+            <Text style={s.dateScript}>{dateLabel}</Text>
+
+            {/* Emotion as quiet page element */}
+            {emotionCode && (
+              <View style={s.emotionPiece}>
+                <EmotionStickerView emotionKey={emotionCode} size="medium" />
+                <View style={s.emotionTextGroup}>
+                  <Text style={[s.emotionName, { color: emotionColor || colors.textSecondary }]}>
+                    {EMOTION_LABELS[emotionCode]}
                   </Text>
-                )}
+                  {diary.emotion?.secondaryTags && diary.emotion.secondaryTags.length > 0 && (
+                    <Text style={s.emotionTags}>
+                      {diary.emotion.secondaryTags.join(' · ')}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Time */}
+            <Text style={s.timeMeta}>{formatTime(diary.createdAt)}</Text>
+          </View>
+
+          {/* ══ Diary Canvas (shared renderer) ══ */}
+          <View style={s.canvasCard}>
+            <DiaryPageRenderer
+              title={diary.title || ''}
+              content={diary.content || ''}
+              theme={diaryTheme}
+              objects={canvasObjects}
+              editable={false}
+              textColor={txtColor}
+              borderColor={diaryTheme === 'night' ? '#2A2A3A' : colors.accentSand + '20'}
+              bgColor={bgColor}
+            />
+          </View>
+
+          {/* ══ AI Conversation — warm paper cards ══ */}
+          {messages.length > 0 && (
+            <View style={s.conversationWrap}>
+              {/* Section divider */}
+              <View style={s.sectionDivider}>
+                <View style={s.dividerLine} />
+                <View style={s.dividerLabel}>
+                  <View style={s.dividerDot} />
+                  <Text style={s.dividerText}>마무리의 이야기</Text>
+                </View>
+                <View style={s.dividerLine} />
+              </View>
+
+              {/* Messages */}
+              <View style={s.messagesContainer}>
+                {messages.map((msg) => (
+                  <ChatBubble
+                    key={msg.id}
+                    message={msg.content}
+                    sender={msg.role === 'AI' ? 'ai' : 'user'}
+                    timestamp={formatTime(msg.createdAt)}
+                    animated={false}
+                    messageId={msg.role === 'AI' ? msg.id : undefined}
+                    onReport={msg.role === 'AI' ? setReportMessageId : undefined}
+                  />
+                ))}
+                {isAITyping && <ChatBubble message="" sender="ai" isTyping />}
               </View>
             </View>
           )}
-
-          {/* Meta */}
-          <View style={{ paddingHorizontal: CANVAS_PADDING_H }}>
-            <Text style={[styles.meta, { color: diaryTheme === 'night' ? '#686880' : colors.textTertiary }]}>
-              {formatTime(diary.createdAt)}
-            </Text>
-          </View>
-
-          <DiaryPageRenderer
-            title={diary.title || ''}
-            content={diary.content || ''}
-            theme={diaryTheme}
-            objects={canvasObjects}
-            editable={false}
-            textColor={txtColor}
-            borderColor={diaryTheme === 'night' ? '#2A2A3A' : colors.accentSand + '40'}
-            bgColor={bgColor}
-          />
         </Animated.View>
-
-        {/* Conversation */}
-        {messages.length > 0 && (
-          <View style={[styles.conversationSection, { paddingHorizontal: layout.screenPaddingH }]}>
-            <View style={styles.dividerRow}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.accentSand + '30' }]} />
-              <View style={styles.aiLabel}>
-                <View style={styles.aiDot} />
-                <Text style={styles.aiLabelText}>대화</Text>
-              </View>
-              <View style={[styles.dividerLine, { backgroundColor: colors.accentSand + '30' }]} />
-            </View>
-
-            <View style={{ marginTop: spacing.xl }}>
-              {messages.map((msg) => (
-                <ChatBubble
-                  key={msg.id}
-                  message={msg.content}
-                  sender={msg.role === 'AI' ? 'ai' : 'user'}
-                  timestamp={formatTime(msg.createdAt)}
-                  animated={false}
-                  messageId={msg.role === 'AI' ? msg.id : undefined}
-                  onReport={msg.role === 'AI' ? setReportMessageId : undefined}
-                />
-              ))}
-              {isAITyping && <ChatBubble message="" sender="ai" isTyping />}
-            </View>
-          </View>
-        )}
       </ScrollView>
 
-      {/* Input bar */}
-      <View style={[styles.inputBar, {
-        borderTopColor: diaryTheme === 'night' ? '#2A2A3A' : colors.glassBorderSubtle,
-        paddingBottom: insets.bottom + 8,
-      }]}>
-        <View style={styles.inputRow}>
+      {/* ══ Input bar — warm paper tone ══ */}
+      <View style={[s.inputBar, { paddingBottom: insets.bottom + 8 }]}>
+        <View style={s.inputInner}>
           <TextInput
-            style={[styles.messageInput, { color: txtColor }]}
+            style={s.textInput}
             placeholder="이야기를 이어가보세요..."
-            placeholderTextColor={diaryTheme === 'night' ? '#686880' : colors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             value={inputText}
             onChangeText={setInputText}
             multiline
@@ -319,11 +313,15 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
           <TouchableOpacity
             onPress={handleSendMessage}
             disabled={!inputText.trim() || isAITyping}
-            style={[styles.sendBtn, {
-              backgroundColor: inputText.trim() && !isAITyping ? colors.accentPrimary : 'transparent',
-            }]}
+            style={[
+              s.sendBtn,
+              (inputText.trim() && !isAITyping) ? s.sendBtnActive : s.sendBtnInactive,
+            ]}
           >
-            <Text style={{ fontSize: 16, color: inputText.trim() && !isAITyping ? '#FFFFFF' : colors.textTertiary }}>
+            <Text style={[
+              s.sendIcon,
+              { color: (inputText.trim() && !isAITyping) ? colors.surfacePure : colors.textTertiary },
+            ]}>
               ↑
             </Text>
           </TouchableOpacity>
@@ -340,68 +338,134 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   root: { flex: 1 },
 
+  // ── Header ──
   header: {
-    height: 56, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', paddingHorizontal: layout.screenPaddingH,
-    borderBottomWidth: 1, borderBottomColor: colors.accentSand + '40',
+    height: 52, flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: spacing.lg,
   },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  backText: { fontSize: 22, color: colors.textPrimary },
-  headerDate: {
-    fontFamily: fontFamily.serifItalic, fontSize: 14, color: colors.textSecondary,
+  headerSideBtn: {
+    width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
   },
-  moreText: { fontSize: 22, color: colors.textSecondary },
+  backArrow: {
+    fontSize: 22, color: colors.textPrimary, fontFamily: fontFamily.sansLight,
+  },
+  headerDateLabel: {
+    fontFamily: fontFamily.sans,
+    fontSize: 12, color: colors.textTertiary,
+    letterSpacing: 0.3,
+  },
+  moreIcon: { fontSize: 20, color: colors.textTertiary },
 
   loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  // Emotion header
-  emotionHeader: {
+  // ── Page Header — editorial composition ──
+  pageHeader: {
+    paddingHorizontal: spacing['2xl'],
+    paddingTop: spacing['2xl'],
+    paddingBottom: spacing.lg,
+  },
+  dateScript: {
+    fontFamily: fontFamily.script,
+    fontSize: 28, color: colors.textSecondary,
+    transform: [{ rotate: '-1deg' }],
+    marginBottom: spacing.xl,
+  },
+  emotionPiece: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: CANVAS_PADDING_H, paddingVertical: 12,
-    borderRadius: borderRadius.sm, marginTop: spacing.xl, gap: 10,
-    borderWidth: 1,
+    gap: spacing.md,
+    marginBottom: spacing.lg,
   },
-  emotionLabel: { fontSize: 16, fontFamily: fontFamily.sansMedium },
-  emotionTags: { fontSize: 12, fontFamily: fontFamily.sans, marginTop: 2 },
+  emotionTextGroup: { gap: 2 },
+  emotionName: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 15, fontWeight: '600',
+  },
+  emotionTags: {
+    fontFamily: fontFamily.sans,
+    fontSize: 12, color: colors.textTertiary,
+  },
+  timeMeta: {
+    fontFamily: fontFamily.sans,
+    fontSize: 11, color: colors.textTertiary,
+    letterSpacing: 0.2,
+  },
 
-  meta: { fontSize: 12, fontFamily: fontFamily.sans, color: colors.textTertiary, marginTop: spacing.sm },
-
-  // Conversation
-  conversationSection: { marginTop: spacing['3xl'] },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  dividerLine: { flex: 1, height: 1 },
-  aiLabel: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.accentPrimaryLight + '40',
-  },
-  aiDot: {
-    width: 8, height: 8, borderRadius: 4,
-    backgroundColor: colors.accentPrimary, marginRight: 6,
-  },
-  aiLabelText: { fontSize: 12, fontFamily: fontFamily.sansMedium, color: colors.accentPrimary },
-
-  // Input
-  inputBar: {
-    paddingTop: 12, paddingHorizontal: layout.screenPaddingH,
-    borderTopWidth: 1, backgroundColor: colors.glassWhite,
-  },
-  inputRow: {
-    flexDirection: 'row', alignItems: 'flex-end',
-    paddingHorizontal: 16, paddingVertical: 8,
-    borderRadius: borderRadius['2xl'], minHeight: 44,
+  // ── Canvas card — scrapbook page container ──
+  canvasCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
     backgroundColor: colors.bgIvory,
+    borderRadius: borderRadius.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    overflow: 'hidden',
+    ...shadows.soft,
   },
-  messageInput: {
-    fontSize: 15, fontFamily: fontFamily.sans,
+
+  // ── Conversation — warm section ──
+  conversationWrap: {
+    paddingHorizontal: spacing['2xl'],
+    marginTop: spacing['4xl'],
+  },
+  sectionDivider: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: spacing.md, marginBottom: spacing['2xl'],
+  },
+  dividerLine: {
+    flex: 1, height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.accentSand + '40',
+  },
+  dividerLabel: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    backgroundColor: colors.bgIvory,
+    borderRadius: borderRadius.full,
+    ...shadows.crisp,
+    gap: spacing.xs,
+  },
+  dividerDot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: colors.accentPrimary,
+  },
+  dividerText: {
+    fontFamily: fontFamily.sans,
+    fontSize: 11, color: colors.accentPrimary,
+    letterSpacing: 0.3,
+  },
+  messagesContainer: {
+    gap: spacing.sm,
+  },
+
+  // ── Input bar — warm paper ──
+  inputBar: {
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.accentSand + '20',
+    backgroundColor: colors.glassWhite,
+  },
+  inputInner: {
+    flexDirection: 'row', alignItems: 'flex-end',
+    backgroundColor: colors.bgIvory,
+    borderRadius: borderRadius['2xl'],
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.accentSand + '20',
+  },
+  textInput: {
     flex: 1, maxHeight: 100, paddingVertical: 4,
+    fontFamily: fontFamily.sans, fontSize: 15,
+    color: colors.textPrimary,
   },
   sendBtn: {
     width: 32, height: 32, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center', marginLeft: 8,
+    alignItems: 'center', justifyContent: 'center', marginLeft: spacing.sm,
   },
+  sendBtnActive: { backgroundColor: colors.accentPrimary },
+  sendBtnInactive: { backgroundColor: 'transparent' },
+  sendIcon: { fontSize: 16 },
 });
