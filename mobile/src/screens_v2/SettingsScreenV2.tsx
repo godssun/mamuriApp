@@ -1,21 +1,17 @@
 /**
- * Design System v2 — Settings Screen
+ * Settings v3 — Warm scrapbook settings space
  *
- * Profile, appearance, subscription, account, app info.
+ * "앱 안에서 조용히 환경을 정리하는 개인 공간"
+ * Ivory paper cards, serif section headers, sage accents,
+ * warm tone throughout. Not a cold system menu.
+ *
+ * v3 design system tokens.
  */
 
 import React, { useState, useCallback } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  Modal,
-  Image,
-  Platform,
-  Linking,
+  View, Text, TouchableOpacity, StyleSheet, Alert,
+  ActivityIndicator, Modal, Image, Platform, Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -26,7 +22,9 @@ import { changeLanguage, SupportedLanguage } from '../i18n/i18n';
 import { useAuth, getStoredAuthProvider } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { useThemeV2 } from '../design-system-v2';
+import {
+  colors, fontFamily, shadows, spacing, borderRadius, layout,
+} from '../design-system-v3';
 import { companionApi, ApiError } from '../api/client';
 import { CompanionProfile, CompanionSettings, MainStackParamList } from '../types';
 import { getAvatarImageUri } from '../utils/avatar';
@@ -36,8 +34,8 @@ import { Input } from './components/Input';
 import { DeleteAccountModalV2 } from './components/DeleteAccountModalV2';
 
 const THEME_OPTIONS = [
-  { value: 'warm' as const, labelKey: 'settings.themeWarm', bg: '#FFF9F5', border: '#F0F0F0' },
-  { value: 'light' as const, labelKey: 'settings.themeLight', bg: '#FFFFFF', border: '#E5E5E5' },
+  { value: 'warm' as const, labelKey: 'settings.themeWarm', bg: colors.bgWarm, border: colors.accentSand },
+  { value: 'light' as const, labelKey: 'settings.themeLight', bg: colors.surfacePure, border: colors.accentSand + '60' },
   { value: 'dark' as const, labelKey: 'settings.themeDark', bg: '#1A1A2E', border: '#2A2A4E' },
 ];
 
@@ -58,7 +56,6 @@ export function SettingsScreenV2() {
   const { logout, forceLogout } = useAuth();
   const { isPremium } = useSubscription();
   const { theme: v1Theme, updateAppearance } = useTheme();
-  const { theme } = useThemeV2();
   const [companion, setCompanion] = useState<CompanionProfile | null>(null);
   const [companionSettings, setCompanionSettings] = useState<CompanionSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,18 +76,10 @@ export function SettingsScreenV2() {
       setCompanion(companionData);
       setCompanionSettings(companionSettingsData);
       setIsSocialUser(authProvider !== null && authProvider !== 'EMAIL');
-    } catch (error) {
-      console.error('Failed to load settings:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch {} finally { setIsLoading(false); }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData])
-  );
+  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
   const handleLanguageChange = async (lang: SupportedLanguage) => {
     await changeLanguage(lang);
@@ -103,10 +92,7 @@ export function SettingsScreenV2() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8,
     });
     if (result.canceled || !result.assets?.[0]) return;
     setIsUploadingAvatar(true);
@@ -114,37 +100,23 @@ export function SettingsScreenV2() {
       const updated = await companionApi.uploadAvatar(result.assets[0].uri);
       setCompanionSettings(updated);
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : t('settings.photoUploadFailed');
-      Alert.alert(t('common.error'), message);
-    } finally {
-      setIsUploadingAvatar(false);
-    }
+      Alert.alert(t('common.error'), error instanceof ApiError ? error.message : t('settings.photoUploadFailed'));
+    } finally { setIsUploadingAvatar(false); }
   };
 
   const handleRemoveAvatar = () => {
-    Alert.alert(
-      t('settings.deletePhoto'),
-      t('settings.deletePhotoConfirm'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            setIsUploadingAvatar(true);
-            try {
-              const updated = await companionApi.removeAvatar();
-              setCompanionSettings(updated);
-            } catch (error) {
-              const message = error instanceof ApiError ? error.message : t('settings.photoDeleteFailed');
-              Alert.alert(t('common.error'), message);
-            } finally {
-              setIsUploadingAvatar(false);
-            }
-          },
-        },
-      ]
-    );
+    Alert.alert(t('settings.deletePhoto'), t('settings.deletePhotoConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: async () => {
+        setIsUploadingAvatar(true);
+        try {
+          const updated = await companionApi.removeAvatar();
+          setCompanionSettings(updated);
+        } catch (error) {
+          Alert.alert(t('common.error'), error instanceof ApiError ? error.message : t('settings.photoDeleteFailed'));
+        } finally { setIsUploadingAvatar(false); }
+      }},
+    ]);
   };
 
   const handleOpenNameModal = () => {
@@ -154,38 +126,28 @@ export function SettingsScreenV2() {
 
   const handleSaveAiName = async () => {
     const trimmed = newAiName.trim();
-    if (!trimmed) {
-      Alert.alert(t('common.alert'), t('companion.nameRequired'));
-      return;
-    }
+    if (!trimmed) { Alert.alert(t('common.alert'), t('companion.nameRequired')); return; }
     setIsSavingName(true);
     try {
       const updated = await companionApi.updateName({ aiName: trimmed });
       setCompanion(updated);
       setShowNameModal(false);
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : t('companion.nameChangeFailed');
-      Alert.alert(t('common.error'), message);
-    } finally {
-      setIsSavingName(false);
-    }
+      Alert.alert(t('common.error'), error instanceof ApiError ? error.message : t('companion.nameChangeFailed'));
+    } finally { setIsSavingName(false); }
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      t('settings.logout'),
-      t('settings.logoutConfirm'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('settings.logout'), style: 'destructive', onPress: logout },
-      ]
-    );
+    Alert.alert(t('settings.logout'), t('settings.logoutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('settings.logout'), style: 'destructive', onPress: logout },
+    ]);
   };
 
   if (isLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+      <View style={[s.loadingContainer, { backgroundColor: colors.bgCream }]}>
+        <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
     );
   }
@@ -193,190 +155,137 @@ export function SettingsScreenV2() {
   const avatarUrl = getAvatarImageUri(companionSettings?.avatar);
 
   const headerContent = (
-    <View style={[styles.header, { paddingHorizontal: theme.layout.screenPaddingH }]}>
+    <View style={s.header}>
       <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Text style={[theme.typography.bodyMedium, { color: theme.colors.primary }]}>{t('settings.back')}</Text>
+        <Text style={s.backText}>{t('settings.back')}</Text>
       </TouchableOpacity>
-      <Text style={[theme.typography.titleMedium, { color: theme.colors.textPrimary }]}>{t('settings.title')}</Text>
+      <Text style={s.headerTitle}>{t('settings.title')}</Text>
       <View style={{ width: 50 }} />
     </View>
   );
 
   return (
     <ScreenContainer header={headerContent}>
-      {/* 프로필 */}
-      <View style={styles.section}>
-        <Text style={[theme.typography.labelMedium, { color: theme.colors.textTertiary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: theme.spacing.lg }]}>
-          {companion?.aiName ?? '친구'}
-        </Text>
-
-        <View style={[styles.profileCard, { backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.lg }]}>
-          <TouchableOpacity
-            style={[styles.profileAvatarWrap, { backgroundColor: theme.colors.primarySubtle }]}
-            onPress={handlePickAvatar}
-            disabled={isUploadingAvatar}
-          >
+      {/* ── 프로필 ── */}
+      <View style={s.section}>
+        <Text style={s.sectionLabel}>{companion?.aiName ?? '친구'}</Text>
+        <View style={s.profileCard}>
+          <TouchableOpacity style={s.avatarWrap} onPress={handlePickAvatar} disabled={isUploadingAvatar}>
             {isUploadingAvatar ? (
-              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <ActivityIndicator size="small" color={colors.accentPrimary} />
             ) : avatarUrl ? (
-              <Image
-                source={{ uri: avatarUrl }}
-                style={styles.profileAvatarImage}
-                onError={() => setCompanionSettings(prev => prev ? { ...prev, avatar: null } : prev)}
-              />
+              <Image source={{ uri: avatarUrl }} style={s.avatarImage}
+                onError={() => setCompanionSettings(prev => prev ? { ...prev, avatar: null } : prev)} />
             ) : (
-              <Text style={{ fontSize: 28, fontWeight: '700', color: theme.colors.primary }}>
-                {companion?.aiName?.charAt(0) ?? '?'}
-              </Text>
+              <Text style={s.avatarText}>{companion?.aiName?.charAt(0) ?? '?'}</Text>
             )}
           </TouchableOpacity>
 
-          <View style={styles.profileInfo}>
-            <TouchableOpacity style={styles.profileNameRow} onPress={handleOpenNameModal}>
-              <Text style={[theme.typography.titleLarge, { color: theme.colors.textPrimary }]}>
-                {companion?.aiName ?? '마음이'}
-              </Text>
-              <Text style={[theme.typography.labelSmall, { color: theme.colors.primary }]}>{t('companion.change')}</Text>
+          <View style={s.profileInfo}>
+            <TouchableOpacity style={s.nameRow} onPress={handleOpenNameModal}>
+              <Text style={s.profileName}>{companion?.aiName ?? '마음이'}</Text>
+              <Text style={s.changeHint}>{t('companion.change')}</Text>
             </TouchableOpacity>
-            <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>
+            <Text style={s.profileHint}>
               {avatarUrl ? t('settings.photoTapChange') : t('settings.photoTapSet')}
             </Text>
             {avatarUrl && (
               <TouchableOpacity onPress={handleRemoveAvatar} disabled={isUploadingAvatar}>
-                <Text style={[theme.typography.caption, { color: theme.colors.primary, marginTop: theme.spacing.xxs }]}>
-                  {t('settings.resetAvatar')}
-                </Text>
+                <Text style={s.resetLink}>{t('settings.resetAvatar')}</Text>
               </TouchableOpacity>
             )}
           </View>
         </View>
       </View>
 
-      {/* 외관 섹션 */}
-      <View style={styles.section}>
-        <Text style={[theme.typography.labelMedium, { color: theme.colors.textTertiary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: theme.spacing.lg }]}>
-          {t('settings.appearance')}
-        </Text>
+      {/* ── 외관 ── */}
+      <View style={s.section}>
+        <Text style={s.sectionLabel}>{t('settings.appearance')}</Text>
 
         {/* 배경 테마 */}
-        <View style={[styles.settingRow, { backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.md, marginBottom: theme.spacing.md }]}>
-          <View style={styles.settingRowLeft}>
-            <Text style={[theme.typography.titleSmall, { color: theme.colors.textPrimary, marginBottom: theme.spacing.xs }]}>{t('settings.backgroundTheme')}</Text>
-            <View style={[styles.themePreviewRow, { gap: theme.spacing.md, marginTop: theme.spacing.md }]}>
-              {THEME_OPTIONS.map((opt) => {
-                const isSelected = v1Theme.colors.background === opt.bg;
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[
-                      styles.themeCircle,
-                      { backgroundColor: opt.bg, borderColor: isSelected ? theme.colors.primary : opt.border },
-                      isSelected && { borderWidth: 2.5 },
-                    ]}
-                    onPress={() => updateAppearance({ backgroundTheme: opt.value })}
-                  >
-                    {isSelected && (
-                      <View style={[styles.themeCheckDot, {
-                        backgroundColor: opt.value === 'dark' ? '#E8E8E8' : theme.colors.primary,
-                      }]} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+        <View style={s.settingCard}>
+          <Text style={s.settingTitle}>{t('settings.backgroundTheme')}</Text>
+          <View style={s.themeRow}>
+            {THEME_OPTIONS.map((opt) => {
+              const isSelected = v1Theme.colors.background === opt.bg;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[s.themeCircle, {
+                    backgroundColor: opt.bg,
+                    borderColor: isSelected ? colors.accentPrimary : opt.border,
+                    borderWidth: isSelected ? 2.5 : 1.5,
+                  }]}
+                  onPress={() => updateAppearance({ backgroundTheme: opt.value })}
+                >
+                  {isSelected && (
+                    <View style={[s.themeCheck, {
+                      backgroundColor: opt.value === 'dark' ? '#E8E8E8' : colors.accentPrimary,
+                    }]} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         {/* 글자 크기 */}
-        <View style={[styles.settingRow, { backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.md, marginBottom: theme.spacing.md }]}>
-          <View style={styles.settingRowLeft}>
-            <Text style={[theme.typography.titleSmall, { color: theme.colors.textPrimary, marginBottom: theme.spacing.xs }]}>{t('settings.fontSize')}</Text>
-            <View style={[styles.optionRow, { gap: theme.spacing.sm, marginTop: theme.spacing.md }]}>
-              {FONT_SIZE_OPTIONS.map((opt) => {
-                const currentSize = v1Theme.fontScale === 0.9 ? 'small' : v1Theme.fontScale === 1.15 ? 'large' : 'medium';
-                const isSelected = currentSize === opt.value;
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[
-                      styles.fontSizeCard,
-                      {
-                        borderColor: isSelected ? theme.colors.primary : theme.colors.border,
-                        backgroundColor: isSelected ? theme.colors.primarySubtle : theme.colors.surface,
-                        borderRadius: theme.borderRadius.md,
-                      },
-                    ]}
-                    onPress={() => updateAppearance({ fontSize: opt.value })}
-                  >
-                    <Text style={[theme.typography.caption, { color: isSelected ? theme.colors.primary : theme.colors.textSecondary }]}>
-                      {t(opt.labelKey)}
-                    </Text>
-                    <Text style={{
-                      fontSize: Math.round(16 * opt.scale),
-                      color: theme.colors.textPrimary,
-                      fontFamily: v1Theme.fontFamily,
-                    }}>
-                      {t('settings.previewSample')}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+        <View style={s.settingCard}>
+          <Text style={s.settingTitle}>{t('settings.fontSize')}</Text>
+          <View style={s.optionRow}>
+            {FONT_SIZE_OPTIONS.map((opt) => {
+              const currentSize = v1Theme.fontScale === 0.9 ? 'small' : v1Theme.fontScale === 1.15 ? 'large' : 'medium';
+              const sel = currentSize === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[s.optionCard, sel ? s.optionSelected : s.optionDefault]}
+                  onPress={() => updateAppearance({ fontSize: opt.value })}
+                >
+                  <Text style={[s.optionCaption, sel && { color: colors.accentPrimary }]}>
+                    {t(opt.labelKey)}
+                  </Text>
+                  <Text style={[s.optionPreview, { fontSize: Math.round(16 * opt.scale), fontFamily: v1Theme.fontFamily }]}>
+                    {t('settings.previewSample')}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         {/* 글자 폰트 */}
-        <View style={[styles.settingRow, { backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.md, marginBottom: theme.spacing.md }]}>
-          <View style={styles.settingRowLeft}>
-            <Text style={[theme.typography.titleSmall, { color: theme.colors.textPrimary, marginBottom: theme.spacing.xs }]}>{t('settings.fontFamily')}</Text>
-            <View style={[styles.optionRow, { gap: theme.spacing.sm, marginTop: theme.spacing.md }]}>
-              {FONT_FAMILY_OPTIONS.map((opt) => {
-                const isSelected = (v1Theme.fontFamily === undefined && opt.value === 'system')
-                  || (v1Theme.fontFamily === 'serif' && opt.value === 'serif');
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[
-                      styles.fontFamilyCard,
-                      {
-                        borderColor: isSelected ? theme.colors.primary : theme.colors.border,
-                        backgroundColor: isSelected ? theme.colors.primarySubtle : theme.colors.surface,
-                        borderRadius: theme.borderRadius.md,
-                      },
-                    ]}
-                    onPress={() => updateAppearance({ fontFamily: opt.value })}
-                  >
-                    <Text style={[theme.typography.caption, { color: isSelected ? theme.colors.primary : theme.colors.textSecondary }]}>
-                      {t(opt.labelKey)}
-                    </Text>
-                    <Text style={{
-                      fontSize: 15,
-                      fontFamily: opt.font,
-                      color: theme.colors.textPrimary,
-                    }}>
-                      {t('settings.previewText')}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+        <View style={s.settingCard}>
+          <Text style={s.settingTitle}>{t('settings.fontFamily')}</Text>
+          <View style={s.optionRow}>
+            {FONT_FAMILY_OPTIONS.map((opt) => {
+              const sel = (v1Theme.fontFamily === undefined && opt.value === 'system')
+                || (v1Theme.fontFamily === 'serif' && opt.value === 'serif');
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[s.optionCard, sel ? s.optionSelected : s.optionDefault]}
+                  onPress={() => updateAppearance({ fontFamily: opt.value })}
+                >
+                  <Text style={[s.optionCaption, sel && { color: colors.accentPrimary }]}>
+                    {t(opt.labelKey)}
+                  </Text>
+                  <Text style={[s.optionPreview, { fontFamily: opt.font }]}>
+                    {t('settings.previewText')}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         {/* 미리보기 */}
-        <View style={[styles.previewCard, {
-          backgroundColor: theme.colors.surface,
-          borderRadius: theme.borderRadius.md,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
-        }]}>
-          <Text style={[theme.typography.caption, { color: theme.colors.textTertiary, marginBottom: theme.spacing.sm }]}>
-            {t('settings.preview')}
-          </Text>
+        <View style={s.previewCard}>
+          <Text style={s.previewLabel}>{t('settings.preview')}</Text>
           <Text style={{
             fontSize: Math.round(16 * v1Theme.fontScale),
             fontFamily: v1Theme.fontFamily,
-            color: theme.colors.textPrimary,
+            color: colors.textPrimary,
             lineHeight: Math.round(26 * v1Theme.fontScale),
           }}>
             {t('settings.previewLong')}
@@ -384,12 +293,10 @@ export function SettingsScreenV2() {
         </View>
       </View>
 
-      {/* 언어 */}
-      <View style={styles.section}>
-        <Text style={[theme.typography.labelMedium, { color: theme.colors.textTertiary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: theme.spacing.lg }]}>
-          {t('settings.language')}
-        </Text>
-        <View style={[{ backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.md, overflow: 'hidden' }]}>
+      {/* ── 언어 ── */}
+      <View style={s.section}>
+        <Text style={s.sectionLabel}>{t('settings.language')}</Text>
+        <View style={s.listCard}>
           {([
             { code: 'ko' as const, label: '한국어' },
             { code: 'en' as const, label: 'English' },
@@ -398,90 +305,63 @@ export function SettingsScreenV2() {
           ]).map((lang, index) => (
             <TouchableOpacity
               key={lang.code}
-              style={[styles.settingRow, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.border }]}
+              style={[s.listRow, index > 0 && s.listRowBorder]}
               onPress={() => handleLanguageChange(lang.code)}
             >
-              <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, flex: 1 }]}>
-                {lang.label}
-              </Text>
+              <Text style={s.listRowText}>{lang.label}</Text>
               {i18n.language === lang.code && (
-                <Text style={{ color: theme.colors.primary, fontSize: 18 }}>✓</Text>
+                <Text style={s.checkmark}>✓</Text>
               )}
             </TouchableOpacity>
           ))}
         </View>
       </View>
 
-      {/* 계정 섹션 */}
-      <View style={styles.section}>
-        <Text style={[theme.typography.labelMedium, { color: theme.colors.textTertiary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: theme.spacing.lg }]}>
-          {t('settings.account')}
-        </Text>
-        <TouchableOpacity
-          style={[styles.logoutButton, { backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.md }]}
-          onPress={handleLogout}
-        >
-          <Text style={[theme.typography.titleSmall, { color: theme.colors.error }]}>{t('settings.logout')}</Text>
+      {/* ── 계정 ── */}
+      <View style={s.section}>
+        <Text style={s.sectionLabel}>{t('settings.account')}</Text>
+        <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
+          <Text style={s.logoutText}>{t('settings.logout')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={{ paddingVertical: theme.spacing.md, alignItems: 'center', marginTop: theme.spacing.sm }}
+          style={{ paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm }}
           onPress={() => setShowDeleteModal(true)}
         >
-          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>{t('settings.deleteAccount')}</Text>
+          <Text style={s.deleteText}>{t('settings.deleteAccount')}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 앱 정보 */}
-      <View style={styles.section}>
-        <Text style={[theme.typography.labelMedium, { color: theme.colors.textTertiary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: theme.spacing.lg }]}>
-          {t('settings.appInfo')}
-        </Text>
-
-        <View style={[{ backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.md, overflow: 'hidden', marginBottom: theme.spacing.md }]}>
-          <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => Linking.openURL('https://mamuri.app/privacy')}
-          >
-            <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, flex: 1 }]}>
-              {t('settings.privacyPolicy')}
-            </Text>
-            <Text style={{ fontSize: 20, color: theme.colors.textTertiary }}>›</Text>
+      {/* ── 앱 정보 ── */}
+      <View style={s.section}>
+        <Text style={s.sectionLabel}>{t('settings.appInfo')}</Text>
+        <View style={s.listCard}>
+          <TouchableOpacity style={s.listRow} onPress={() => Linking.openURL('https://mamuri.app/privacy')}>
+            <Text style={s.listRowText}>{t('settings.privacyPolicy')}</Text>
+            <Text style={s.chevron}>›</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.settingRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.border }]}
-            onPress={() => Linking.openURL('https://mamuri.app/terms')}
-          >
-            <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, flex: 1 }]}>
-              {t('settings.termsOfService')}
-            </Text>
-            <Text style={{ fontSize: 20, color: theme.colors.textTertiary }}>›</Text>
+          <TouchableOpacity style={[s.listRow, s.listRowBorder]} onPress={() => Linking.openURL('https://mamuri.app/terms')}>
+            <Text style={s.listRowText}>{t('settings.termsOfService')}</Text>
+            <Text style={s.chevron}>›</Text>
           </TouchableOpacity>
         </View>
-
-        <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }]}>
-          {t('settings.appVersion')}
-        </Text>
-        <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary, lineHeight: 20 }]}>
-          {t('settings.aiDisclaimer')}
-        </Text>
+        <Text style={s.versionText}>{t('settings.appVersion')}</Text>
+        <Text style={s.disclaimerText}>{t('settings.aiDisclaimer')}</Text>
       </View>
 
-      {/* AI 이름 변경 모달 */}
+      {/* 이름 변경 모달 */}
       <Modal visible={showNameModal} transparent animationType="fade">
-        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
-          <View style={[styles.nameModal, { backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.xl }]}>
-            <Text style={[theme.typography.titleLarge, { color: theme.colors.textPrimary, textAlign: 'center', marginBottom: theme.spacing.xl }]}>
-              {t('companion.changeName')}
-            </Text>
+        <View style={s.modalOverlay}>
+          <View style={s.nameModal}>
+            <Text style={s.modalTitle}>{t('companion.changeName')}</Text>
             <Input
               value={newAiName}
               onChangeText={setNewAiName}
               placeholder={t('companion.newNamePlaceholder')}
               maxLength={20}
               autoFocus
-              containerStyle={{ marginBottom: theme.spacing.xl }}
+              containerStyle={{ marginBottom: spacing.xl }}
             />
-            <View style={styles.modalButtons}>
+            <View style={s.modalBtns}>
               <View style={{ flex: 1 }}>
                 <Button label={t('common.cancel')} variant="secondary" onPress={() => setShowNameModal(false)} fullWidth />
               </View>
@@ -506,112 +386,168 @@ export function SettingsScreenV2() {
 
 export default SettingsScreenV2;
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+const s = StyleSheet.create({
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  // Header
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: layout.screenPaddingH, paddingBottom: spacing.lg,
   },
-  section: {
-    marginBottom: 32,
+  backText: {
+    fontFamily: fontFamily.sans, fontSize: 15, color: colors.accentPrimary,
   },
+  headerTitle: {
+    fontFamily: fontFamily.serifItalic, fontSize: 18, fontWeight: '400',
+    color: colors.textPrimary,
+  },
+
+  // Section
+  section: { marginBottom: spacing['3xl'] },
+  sectionLabel: {
+    fontFamily: fontFamily.serifItalic, fontSize: 14, fontWeight: '400',
+    color: colors.textTertiary, letterSpacing: 0.5,
+    marginBottom: spacing.lg,
+  },
+
+  // Profile card
   profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 16,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.sm,
+    padding: spacing.lg, gap: spacing.lg,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
+    ...shadows.crisp,
   },
-  profileAvatarWrap: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
+  avatarWrap: {
+    width: 68, height: 68,
+    borderTopLeftRadius: 24, borderTopRightRadius: 30,
+    borderBottomRightRadius: 26, borderBottomLeftRadius: 32,
+    backgroundColor: colors.accentPrimaryLight + '40',
+    justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
   },
-  profileAvatarImage: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+  avatarImage: { width: 68, height: 68, borderRadius: 34 },
+  avatarText: {
+    fontFamily: fontFamily.script, fontSize: 30, color: colors.accentPrimary,
   },
-  profileInfo: {
-    flex: 1,
-    gap: 2,
+  profileInfo: { flex: 1, gap: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  profileName: {
+    fontFamily: fontFamily.serifItalic, fontSize: 18, fontWeight: '400',
+    color: colors.textPrimary,
   },
-  profileNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  changeHint: {
+    fontFamily: fontFamily.sans, fontSize: 11, color: colors.accentPrimary,
   },
-  settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
+  profileHint: {
+    fontFamily: fontFamily.sans, fontSize: 12, color: colors.textSecondary,
   },
-  settingRowLeft: {
-    flex: 1,
+  resetLink: {
+    fontFamily: fontFamily.sans, fontSize: 11, color: colors.accentPrimary,
+    marginTop: 2,
   },
-  themePreviewRow: {
-    flexDirection: 'row',
+
+  // Setting card
+  settingCard: {
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.sm,
+    padding: spacing.lg, marginBottom: spacing.md,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
   },
+  settingTitle: {
+    fontFamily: fontFamily.sansMedium, fontSize: 14, fontWeight: '500',
+    color: colors.textPrimary, marginBottom: spacing.md,
+  },
+  themeRow: { flexDirection: 'row', gap: spacing.md },
   themeCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 40, height: 40, borderRadius: 20,
+    justifyContent: 'center', alignItems: 'center',
   },
-  themeCheckDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  themeCheck: { width: 10, height: 10, borderRadius: 5 },
+
+  optionRow: { flexDirection: 'row', gap: spacing.sm },
+  optionCard: {
+    flex: 1, alignItems: 'center', padding: spacing.md,
+    borderWidth: 1, borderRadius: borderRadius.sm, gap: 6,
   },
-  optionRow: {
-    flexDirection: 'row',
+  optionDefault: {
+    borderColor: colors.accentSand + '40', backgroundColor: colors.surfaceCard,
   },
-  fontSizeCard: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 12,
-    borderWidth: 1,
-    gap: 6,
+  optionSelected: {
+    borderColor: colors.accentPrimary, backgroundColor: colors.accentPrimaryLight + '15',
   },
-  fontFamilyCard: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 12,
-    borderWidth: 1,
-    gap: 4,
+  optionCaption: {
+    fontFamily: fontFamily.sans, fontSize: 11, color: colors.textSecondary,
   },
+  optionPreview: {
+    fontSize: 15, color: colors.textPrimary,
+  },
+
   previewCard: {
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.sm,
+    padding: spacing.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
   },
-  logoutButton: {
-    padding: 16,
-    alignItems: 'center',
+  previewLabel: {
+    fontFamily: fontFamily.sans, fontSize: 11, color: colors.textTertiary,
+    marginBottom: spacing.sm,
   },
+
+  // List card
+  listCard: {
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.sm,
+    overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
+    marginBottom: spacing.md,
+  },
+  listRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', padding: spacing.lg,
+  },
+  listRowBorder: {
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.accentSand + '30',
+  },
+  listRowText: {
+    fontFamily: fontFamily.sans, fontSize: 15, color: colors.textPrimary, flex: 1,
+  },
+  checkmark: { fontSize: 18, color: colors.accentPrimary },
+  chevron: { fontSize: 20, color: colors.textTertiary },
+
+  // Account
+  logoutBtn: {
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.sm,
+    padding: spacing.lg, alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
+  },
+  logoutText: {
+    fontFamily: fontFamily.sansMedium, fontSize: 14, color: '#E05454',
+  },
+  deleteText: {
+    fontFamily: fontFamily.sans, fontSize: 13, color: colors.textTertiary,
+  },
+
+  // App info
+  versionText: {
+    fontFamily: fontFamily.sans, fontSize: 12, color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  disclaimerText: {
+    fontFamily: fontFamily.sans, fontSize: 12, color: colors.textTertiary,
+    lineHeight: 20,
+  },
+
+  // Modal
   modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
+    flex: 1, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.overlayDim, padding: spacing['2xl'],
   },
   nameModal: {
-    padding: 24,
-    width: '100%',
-    maxWidth: 320,
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.sm,
+    padding: spacing['2xl'], width: '100%', maxWidth: 320,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
+    ...shadows.soft,
   },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
+  modalTitle: {
+    fontFamily: fontFamily.serifItalic, fontSize: 20, fontWeight: '400',
+    color: colors.textPrimary, textAlign: 'center',
+    marginBottom: spacing.xl,
   },
+  modalBtns: { flexDirection: 'row', gap: spacing.md },
 });
