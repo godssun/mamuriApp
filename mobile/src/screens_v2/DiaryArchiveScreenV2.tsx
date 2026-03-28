@@ -1,34 +1,32 @@
 /**
- * DiaryArchiveScreen v2 — Diary Archive (monthly grouped)
+ * DiaryArchive v3 — Scrapbook diary archive
  *
- * Companion → "함께한 일기" tap → here
- * Shows all diaries grouped by month with SectionList.
+ * "조용히 쌓여 있는 기록 보관함"
+ * Monthly grouped section list on warm paper surface.
+ * Serif month headers, ivory diary cards, sage accents.
+ *
+ * v3 design system tokens.
  */
 
 import React, { useCallback, useState } from 'react';
 import {
-  View,
-  Text,
-  SectionList,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  RefreshControl,
+  View, Text, SectionList, TouchableOpacity, StyleSheet,
+  ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { useThemeV2 } from '../design-system-v2';
+import {
+  colors, fontFamily, shadows, spacing, borderRadius, layout,
+} from '../design-system-v3';
+import { PaperBackground } from '../design-system-v3/components/PaperBackground';
 import { diaryApi } from '../api/client';
 import { Diary, MainStackParamList } from '../types';
 import { formatDiaryDate, formatYearMonth } from '../utils/dateFormat';
 import { DiaryCard } from './components/Card';
 
-type Section = {
-  title: string;
-  data: Diary[];
-};
+type Section = { title: string; data: Diary[] };
 
 function groupByMonth(diaries: Diary[]): Section[] {
   const map = new Map<string, Diary[]>();
@@ -45,7 +43,6 @@ function groupByMonth(diaries: Diary[]): Section[] {
 export function DiaryArchiveScreenV2() {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { t } = useTranslation();
-  const { theme } = useThemeV2();
   const insets = useSafeAreaInsets();
 
   const [diaries, setDiaries] = useState<Diary[]>([]);
@@ -56,96 +53,64 @@ export function DiaryArchiveScreenV2() {
     try {
       const data = await diaryApi.getList();
       setDiaries(data);
-    } catch (error) {
-      console.error('Failed to load diary archive:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    } catch {} finally { setLoading(false); setRefreshing(false); }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchData();
-    }, [fetchData])
-  );
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchData();
-  };
-
+  useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
+  const handleRefresh = () => { setRefreshing(true); fetchData(); };
   const sections = groupByMonth(diaries);
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={[styles.header, { paddingTop: insets.top, paddingHorizontal: theme.layout.screenPaddingH, borderBottomColor: theme.colors.borderSubtle }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={[theme.typography.titleLarge, { color: theme.colors.textPrimary }]}>←</Text>
+      <PaperBackground variant="plain" color="cream" style={{ paddingTop: insets.top }}>
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+            <Text style={s.backArrow}>←</Text>
           </TouchableOpacity>
-          <Text style={[theme.typography.titleMedium, { color: theme.colors.textPrimary }]}>{t('diary.archive')}</Text>
+          <Text style={s.headerTitle}>{t('diary.archive')}</Text>
           <View style={{ width: 44 }} />
         </View>
-        <View style={styles.loadingCenter}>
-          <ActivityIndicator color={theme.colors.primary} />
+        <View style={s.loadingCenter}>
+          <ActivityIndicator color={colors.accentPrimary} />
         </View>
-      </View>
+      </PaperBackground>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <PaperBackground variant="plain" color="cream" style={{ paddingTop: insets.top }}>
       {/* Header */}
-      <View style={[styles.header, {
-        paddingTop: insets.top,
-        paddingHorizontal: theme.layout.screenPaddingH,
-        borderBottomColor: theme.colors.borderSubtle,
-      }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[theme.typography.titleLarge, { color: theme.colors.textPrimary }]}>←</Text>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+          <Text style={s.backArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={[theme.typography.titleMedium, { color: theme.colors.textPrimary }]}>
-          {t('diary.archive')}
-        </Text>
-        <View style={styles.countBadge}>
-          <Text style={[theme.typography.labelSmall, { color: theme.colors.textSecondary }]}>
+        <Text style={s.headerTitle}>{t('diary.archive')}</Text>
+        <View style={s.countBadge}>
+          <Text style={s.countText}>
             {t('diary.archiveCount', { count: diaries.length })}
           </Text>
         </View>
       </View>
 
       {diaries.length === 0 ? (
-        /* Empty state */
-        <View style={styles.emptyContainer}>
-          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#ECEAE4' }} />
-          <Text style={[theme.typography.titleMedium, { color: theme.colors.textPrimary, marginTop: theme.spacing.lg }]}>
-            {t('diary.archiveEmpty')}
-          </Text>
-          <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary, marginTop: theme.spacing.sm, textAlign: 'center' }]}>
-            {t('diary.archiveEmptyDesc')}
-          </Text>
+        <View style={s.emptyContainer}>
+          <View style={s.emptyPage}>
+            <View style={s.emptyLine} />
+            <View style={[s.emptyLine, { width: '60%' }]} />
+            <View style={[s.emptyLine, { width: '40%' }]} />
+          </View>
+          <Text style={s.emptyTitle}>{t('diary.archiveEmpty')}</Text>
+          <Text style={s.emptyDesc}>{t('diary.archiveEmptyDesc')}</Text>
         </View>
       ) : (
         <SectionList
           sections={sections}
           keyExtractor={(item) => item.id.toString()}
           renderSectionHeader={({ section }) => (
-            <Text style={[
-              theme.typography.titleSmall,
-              {
-                color: theme.colors.textTertiary,
-                paddingHorizontal: theme.layout.screenPaddingH,
-                paddingTop: theme.spacing.xl,
-                paddingBottom: theme.spacing.sm,
-                backgroundColor: theme.colors.background,
-              },
-            ]}>
-              {section.title}
-            </Text>
+            <Text style={s.sectionHeader}>{section.title}</Text>
           )}
           renderItem={({ item }) => (
-            <View style={{ paddingHorizontal: theme.layout.screenPaddingH, marginBottom: theme.spacing.sm }}>
+            <View style={s.cardWrap}>
               <DiaryCard
                 date={formatDiaryDate(item.diaryDate)}
                 title={item.title}
@@ -155,58 +120,59 @@ export function DiaryArchiveScreenV2() {
               />
             </View>
           )}
-          contentContainerStyle={{ paddingBottom: insets.bottom + theme.spacing['3xl'] }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + spacing['3xl'] }}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={theme.colors.primary}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accentPrimary} />
           }
         />
       )}
-    </View>
+    </PaperBackground>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+const s = StyleSheet.create({
+  // Header
   header: {
-    height: 100,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingBottom: 12,
-    borderBottomWidth: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: layout.screenPaddingH,
+    paddingTop: spacing.lg, paddingBottom: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.accentSand + '30',
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  backArrow: { fontFamily: fontFamily.sansLight, fontSize: 22, color: colors.textPrimary },
+  headerTitle: { fontFamily: fontFamily.serifItalic, fontSize: 18, fontWeight: '400', color: colors.textPrimary },
+  countBadge: { width: 44, alignItems: 'center', justifyContent: 'center' },
+  countText: { fontFamily: fontFamily.sans, fontSize: 11, color: colors.textTertiary },
+
+  loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  // Section header — serif month label
+  sectionHeader: {
+    fontFamily: fontFamily.serifItalic, fontSize: 15, fontWeight: '400',
+    color: colors.textTertiary,
+    paddingHorizontal: layout.screenPaddingH,
+    paddingTop: spacing.xl, paddingBottom: spacing.sm,
   },
-  countBadge: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  // Card wrapper
+  cardWrap: {
+    paddingHorizontal: layout.screenPaddingH,
+    marginBottom: spacing.sm,
   },
-  loadingCenter: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+
+  // Empty state
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+  emptyPage: {
+    width: 100, height: 130,
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.xs,
+    padding: spacing.xl, justifyContent: 'center', gap: spacing.md,
+    ...shadows.crisp, borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
+    marginBottom: spacing['2xl'],
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-  },
+  emptyLine: { height: 2, backgroundColor: colors.accentSand + '30', borderRadius: 1, width: '80%' },
+  emptyTitle: { fontFamily: fontFamily.serifItalic, fontSize: 18, color: colors.textPrimary, textAlign: 'center' },
+  emptyDesc: { fontFamily: fontFamily.sans, fontSize: 13, color: colors.textSecondary, marginTop: spacing.sm, textAlign: 'center', lineHeight: 20 },
 });
