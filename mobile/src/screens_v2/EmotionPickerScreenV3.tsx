@@ -1,19 +1,25 @@
 /**
- * EmotionPickerScreen V3 — 2-step emotion selection
+ * EmotionPickerScreen V3 — Scrapbook emotion selection
  *
- * Step 1: 5 primary emotion cards (grid)
- * Step 2: Secondary emotion tag chips
+ * "이제 어떤 감정으로 이 페이지를 시작할지 고르는 순간"
+ *
+ * Step 1: 5 primary emotion cards — warm blob shapes, serif labels
+ * Step 2: Secondary emotion tag chips — on paper surface
  * → Navigate to WriteDiary with selected emotion
+ *
+ * v3 design system tokens. No react-native-svg.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, Image, TouchableOpacity, StyleSheet, Animated, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useThemeV2 } from '../design-system-v2';
-import type { Theme } from '../design-system-v2';
+import {
+  colors, fontFamily, shadows, spacing, borderRadius, layout, duration,
+} from '../design-system-v3';
+import { PaperBackground } from '../design-system-v3/components/PaperBackground';
 import type { EmotionKey } from '../types';
 import {
   EMOTION_COLORS, EMOTION_LABELS,
@@ -23,12 +29,20 @@ import { EmotionStickerView } from './components/EmotionStickerView';
 
 type Step = 'primary' | 'secondary';
 
+// Blob shapes for emotion cards — organic, hand-placed feel
+const cardBlobRadii = [
+  { borderTopLeftRadius: 32, borderTopRightRadius: 40, borderBottomRightRadius: 36, borderBottomLeftRadius: 44 },
+  { borderTopLeftRadius: 40, borderTopRightRadius: 32, borderBottomRightRadius: 44, borderBottomLeftRadius: 36 },
+  { borderTopLeftRadius: 36, borderTopRightRadius: 44, borderBottomRightRadius: 32, borderBottomLeftRadius: 40 },
+  { borderTopLeftRadius: 44, borderTopRightRadius: 36, borderBottomRightRadius: 40, borderBottomLeftRadius: 32 },
+  { borderTopLeftRadius: 38, borderTopRightRadius: 38, borderBottomRightRadius: 44, borderBottomLeftRadius: 34 },
+  { borderTopLeftRadius: 34, borderTopRightRadius: 44, borderBottomRightRadius: 38, borderBottomLeftRadius: 38 },
+];
+
 export default function EmotionPickerScreenV3() {
-  const { theme } = useThemeV2();
   const insets = useSafeAreaInsets();
   const nav = useNavigation<any>();
   const route = useRoute<any>();
-  const s = makeStyles(theme);
 
   const preselected = route.params?.preselectedEmotion as EmotionKey | undefined;
 
@@ -41,15 +55,14 @@ export default function EmotionPickerScreenV3() {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: duration.slow, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: duration.slow, useNativeDriver: true }),
     ]).start();
   }, [step]);
 
   const handleSelectPrimary = (key: EmotionKey) => {
     setSelectedEmotion(key);
     setSelectedTags([]);
-    // Animate transition to step 2
     fadeAnim.setValue(0);
     slideAnim.setValue(20);
     setStep('secondary');
@@ -64,10 +77,7 @@ export default function EmotionPickerScreenV3() {
   const handleConfirm = () => {
     nav.navigate('DiaryList', {
       screen: 'WriteDiary',
-      params: {
-        selectedEmotion,
-        secondaryTags: selectedTags,
-      },
+      params: { selectedEmotion, secondaryTags: selectedTags },
     });
   };
 
@@ -82,11 +92,11 @@ export default function EmotionPickerScreenV3() {
   };
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
+    <PaperBackground variant="plain" color="cream" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={handleBack} style={s.backBtn}>
-          <Text style={s.backText}>←</Text>
+          <Text style={s.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={s.headerTitle}>
           {step === 'primary' ? '지금 기분이 어때요?' : '조금 더 알려주세요'}
@@ -100,42 +110,56 @@ export default function EmotionPickerScreenV3() {
       >
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
           {step === 'primary' ? (
-            /* Step 1: Primary emotion cards */
-            <View style={s.cardGrid}>
-              {EMOTION_KEYS.map((key) => (
+            /* ═══ Step 1: Primary emotion cards — blob shapes ═══ */
+            <>
+              <Text style={s.pageSubtitle}>오늘의 감정을 골라주세요</Text>
+              <View style={s.cardGrid}>
+                {EMOTION_KEYS.map((key, index) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={[
+                      s.emotionCard,
+                      cardBlobRadii[index % cardBlobRadii.length],
+                      { backgroundColor: EMOTION_COLORS[key] + '15' },
+                    ]}
+                    onPress={() => handleSelectPrimary(key)}
+                    activeOpacity={0.7}
+                  >
+                    <EmotionStickerView emotionKey={key} size="large" />
+                    <Text style={[s.emotionName, { color: EMOTION_COLORS[key] }]}>
+                      {EMOTION_LABELS[key]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                {/* "모르겠어요" */}
                 <TouchableOpacity
-                  key={key}
-                  style={[s.emotionCard, { backgroundColor: EMOTION_COLORS[key] + '20' }]}
-                  onPress={() => handleSelectPrimary(key)}
+                  style={[
+                    s.emotionCard,
+                    cardBlobRadii[5],
+                    { backgroundColor: colors.accentSand + '18' },
+                  ]}
+                  onPress={() => handleSelectPrimary('COMPLEX')}
                   activeOpacity={0.7}
                 >
-                  <EmotionStickerView emotionKey={key} size="large" />
-                  <Text style={[s.emotionName, { color: EMOTION_COLORS[key] }]}>
-                    {EMOTION_LABELS[key]}
+                  <View style={s.questionMark}>
+                    <Text style={s.questionText}>?</Text>
+                  </View>
+                  <Text style={[s.emotionName, { color: colors.textTertiary }]}>
+                    모르겠어요
                   </Text>
                 </TouchableOpacity>
-              ))}
-              {/* "모르겠어요" placeholder */}
-              <TouchableOpacity
-                style={[s.emotionCard, { backgroundColor: theme.colors.surfaceSecondary }]}
-                onPress={() => handleSelectPrimary('COMPLEX')}
-                activeOpacity={0.7}
-              >
-                <View style={{ alignItems: 'center', justifyContent: 'center', width: 48, height: 48 }}>
-                  <Text style={{ fontSize: 28, fontWeight: '300', color: theme.colors.textTertiary }}>?</Text>
-                </View>
-                <Text style={[s.emotionName, { color: theme.colors.textTertiary }]}>
-                  모르겠어요
-                </Text>
-              </TouchableOpacity>
-            </View>
+              </View>
+            </>
           ) : (
-            /* Step 2: Secondary tags */
+            /* ═══ Step 2: Secondary tags ═══ */
             <>
               {selectedEmotion && (
                 <View style={s.selectedHeader}>
-                  <View style={[s.selectedBadge, { backgroundColor: EMOTION_COLORS[selectedEmotion] + '20' }]}>
-                    <EmotionStickerView emotionKey={selectedEmotion} size="small" />
+                  <View style={[s.selectedBadge, {
+                    backgroundColor: EMOTION_COLORS[selectedEmotion] + '15',
+                    borderColor: EMOTION_COLORS[selectedEmotion] + '30',
+                  }]}>
+                    <EmotionStickerView emotionKey={selectedEmotion} size="medium" />
                     <Text style={[s.selectedLabel, { color: EMOTION_COLORS[selectedEmotion] }]}>
                       {EMOTION_LABELS[selectedEmotion]}
                     </Text>
@@ -154,13 +178,17 @@ export default function EmotionPickerScreenV3() {
                       key={tag}
                       style={[
                         s.tagChip,
-                        {
-                          backgroundColor: isSelected
-                            ? EMOTION_COLORS[selectedEmotion] + '25'
-                            : theme.colors.surfaceSecondary,
-                          borderWidth: isSelected ? 1.5 : 0,
-                          borderColor: isSelected ? EMOTION_COLORS[selectedEmotion] : 'transparent',
-                        },
+                        isSelected
+                          ? {
+                              backgroundColor: EMOTION_COLORS[selectedEmotion] + '18',
+                              borderWidth: 1.5,
+                              borderColor: EMOTION_COLORS[selectedEmotion] + '50',
+                            }
+                          : {
+                              backgroundColor: colors.bgIvory,
+                              borderWidth: 1,
+                              borderColor: colors.accentSand + '40',
+                            },
                       ]}
                       onPress={() => handleToggleTag(tag)}
                       activeOpacity={0.7}
@@ -170,7 +198,7 @@ export default function EmotionPickerScreenV3() {
                         {
                           color: isSelected
                             ? EMOTION_COLORS[selectedEmotion]
-                            : theme.colors.textSecondary,
+                            : colors.textSecondary,
                           fontWeight: isSelected ? '600' : '400',
                         },
                       ]}>
@@ -197,76 +225,106 @@ export default function EmotionPickerScreenV3() {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </PaperBackground>
   );
 }
 
-function makeStyles(t: Theme) {
-  return StyleSheet.create({
-    root: { flex: 1, backgroundColor: t.colors.background },
-    header: {
-      height: 56, flexDirection: 'row', alignItems: 'center',
-      justifyContent: 'space-between', paddingHorizontal: t.layout.screenPaddingH,
-    },
-    backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-    backText: { ...t.typography.titleLarge, color: t.colors.textPrimary },
-    headerTitle: { ...t.typography.titleSmall, color: t.colors.textPrimary, fontWeight: '600' },
+const s = StyleSheet.create({
+  // Header
+  header: {
+    height: 56, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', paddingHorizontal: layout.screenPaddingH,
+  },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  backArrow: {
+    fontFamily: fontFamily.sansLight, fontSize: 22, color: colors.textPrimary,
+  },
+  headerTitle: {
+    fontFamily: fontFamily.serifItalic, fontSize: 18, fontWeight: '400',
+    color: colors.textPrimary,
+  },
 
-    scroll: { paddingHorizontal: t.spacing['2xl'], paddingBottom: 120 },
+  scroll: { paddingHorizontal: spacing['2xl'], paddingBottom: 120 },
 
-    // Step 1: Card grid
-    cardGrid: {
-      flexDirection: 'row', flexWrap: 'wrap',
-      justifyContent: 'center', gap: t.spacing.md,
-      marginTop: t.spacing['4xl'],
-    },
-    emotionCard: {
-      width: 148, height: 148,
-      borderRadius: t.borderRadius.xl,
-      alignItems: 'center', justifyContent: 'center',
-      gap: t.spacing.sm,
-    },
-    emotionImage: { width: 60, height: 60, resizeMode: 'contain' as const },
-    emotionName: { fontSize: 15, fontWeight: '700', letterSpacing: -0.3 },
+  // Page subtitle
+  pageSubtitle: {
+    fontFamily: fontFamily.sans, fontSize: 14,
+    color: colors.textTertiary, textAlign: 'center',
+    marginTop: spacing['2xl'], marginBottom: spacing['3xl'],
+  },
 
-    // Step 2: Selected header
-    selectedHeader: { alignItems: 'center', marginTop: t.spacing['3xl'], marginBottom: t.spacing['2xl'] },
-    selectedBadge: {
-      flexDirection: 'row', alignItems: 'center',
-      paddingHorizontal: 20, paddingVertical: 12,
-      borderRadius: t.borderRadius.full, gap: 8,
-    },
-    selectedIcon: { fontSize: 24 },
-    selectedLabel: { fontSize: 16, fontWeight: '700' },
+  // Step 1: Card grid — blob shapes
+  cardGrid: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    justifyContent: 'center', gap: spacing.lg,
+  },
+  emotionCard: {
+    width: 148, height: 148,
+    alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  emotionName: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 15, fontWeight: '600', letterSpacing: -0.3,
+  },
+  questionMark: {
+    width: 48, height: 48, alignItems: 'center', justifyContent: 'center',
+  },
+  questionText: {
+    fontFamily: fontFamily.script, fontSize: 36, color: colors.textTertiary,
+  },
 
-    tagPrompt: {
-      ...t.typography.headlineMedium, color: t.colors.textPrimary,
-      textAlign: 'center', marginBottom: t.spacing.sm,
-    },
-    tagSub: {
-      ...t.typography.bodySmall, color: t.colors.textTertiary,
-      textAlign: 'center', marginBottom: t.spacing['2xl'],
-    },
+  // Step 2: Selected header
+  selectedHeader: {
+    alignItems: 'center', marginTop: spacing['3xl'], marginBottom: spacing['2xl'],
+  },
+  selectedBadge: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
+    borderRadius: borderRadius.full, borderWidth: 1, gap: spacing.sm,
+    ...shadows.crisp,
+  },
+  selectedLabel: {
+    fontFamily: fontFamily.sansMedium, fontSize: 16, fontWeight: '600',
+  },
 
-    tagWrap: {
-      flexDirection: 'row', flexWrap: 'wrap',
-      justifyContent: 'center', gap: t.spacing.sm,
-    },
-    tagChip: {
-      paddingHorizontal: 18, paddingVertical: 10,
-      borderRadius: t.borderRadius.full,
-    },
-    tagText: { fontSize: 14 },
+  // Tag prompt
+  tagPrompt: {
+    fontFamily: fontFamily.serifItalic, fontSize: 22, fontWeight: '400',
+    color: colors.textPrimary, textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  tagSub: {
+    fontFamily: fontFamily.sans, fontSize: 13,
+    color: colors.textTertiary, textAlign: 'center',
+    marginBottom: spacing['2xl'],
+  },
 
-    // Bottom CTA
-    bottomBar: {
-      paddingHorizontal: t.spacing['2xl'], paddingTop: t.spacing.lg,
-      backgroundColor: t.colors.background,
-    },
-    ctaButton: {
-      height: 54, borderRadius: t.borderRadius.lg,
-      alignItems: 'center', justifyContent: 'center',
-    },
-    ctaText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.3 },
-  });
-}
+  // Tags
+  tagWrap: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    justifyContent: 'center', gap: spacing.sm,
+  },
+  tagChip: {
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
+    borderRadius: borderRadius.full,
+  },
+  tagText: {
+    fontFamily: fontFamily.sans, fontSize: 14,
+  },
+
+  // Bottom CTA
+  bottomBar: {
+    paddingHorizontal: spacing['2xl'], paddingTop: spacing.lg,
+    backgroundColor: colors.bgCream,
+  },
+  ctaButton: {
+    height: 54, borderRadius: borderRadius['2xl'],
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ctaText: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 16, fontWeight: '600', color: colors.surfacePure,
+    letterSpacing: -0.3,
+  },
+});
