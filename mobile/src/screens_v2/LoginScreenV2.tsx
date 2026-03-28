@@ -1,45 +1,35 @@
 /**
- * LoginScreen v2 — Premium AI Companion Style
+ * LoginScreen v3 — Warm scrapbook entrance
  *
- * Design: Minimal, warm, trust-building
- * - Centered layout with generous whitespace
- * - Indigo primary gradient feel
- * - Soft elevation on input cards
- * - Animated entrance
+ * "Welcome 다음에 자연스럽게 이어지는 조용한 입구"
+ * Paper-textured background, serif app name,
+ * cream form cards, sage accents — not a SaaS login.
+ *
+ * v3 design system tokens. No react-native-svg.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-  Alert,
-  Dimensions,
-  Platform,
-  Linking,
+  View, Text, Image, TouchableOpacity, StyleSheet, Animated,
+  Alert, Platform, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n/i18n';
 import { changeLanguage, SupportedLanguage } from '../i18n/i18n';
-import { useThemeV2 } from '../design-system-v2';
+import {
+  colors, fontFamily, shadows, spacing, borderRadius, layout, duration,
+} from '../design-system-v3';
+import { PaperBackground } from '../design-system-v3/components/PaperBackground';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './components/Button';
 import { Input } from './components/Input';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList, SocialProvider } from '../types';
 import {
-  signInWithGoogle,
-  signInWithApple,
-  isCancelledError,
-  isSocialAuthAvailable,
+  signInWithGoogle, signInWithApple, isCancelledError, isSocialAuthAvailable,
 } from '../services/socialAuth';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const LANGUAGES: { code: SupportedLanguage; label: string }[] = [
   { code: 'ko', label: '한국어' },
@@ -51,7 +41,6 @@ const LANGUAGES: { code: SupportedLanguage; label: string }[] = [
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export function LoginScreenV2({ navigation }: Props) {
-  const { theme } = useThemeV2();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { login, socialLogin } = useAuth();
@@ -61,34 +50,20 @@ export function LoginScreenV2({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
 
-  // Entrance animations
   const logoAnim = useRef(new Animated.Value(0)).current;
   const formAnim = useRef(new Animated.Value(0)).current;
   const footerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.stagger(150, [
-      Animated.spring(logoAnim, {
-        toValue: 1,
-        ...theme.springs.gentle,
-        useNativeDriver: true,
-      }),
-      Animated.spring(formAnim, {
-        toValue: 1,
-        ...theme.springs.gentle,
-        useNativeDriver: true,
-      }),
-      Animated.spring(footerAnim, {
-        toValue: 1,
-        ...theme.springs.soft,
-        useNativeDriver: true,
-      }),
+      Animated.spring(logoAnim, { toValue: 1, tension: 50, friction: 8, useNativeDriver: true }),
+      Animated.spring(formAnim, { toValue: 1, tension: 50, friction: 8, useNativeDriver: true }),
+      Animated.spring(footerAnim, { toValue: 1, tension: 40, friction: 10, useNativeDriver: true }),
     ]).start();
   }, []);
 
   const handleSocialLogin = async (signInFn: () => Promise<{ token: string; provider: SocialProvider }>) => {
-    const provider = signInFn === signInWithGoogle ? 'GOOGLE' as const
-      : 'APPLE' as const;
+    const provider = signInFn === signInWithGoogle ? 'GOOGLE' as const : 'APPLE' as const;
     setSocialLoading(provider);
     try {
       const result = await signInFn();
@@ -97,17 +72,9 @@ export function LoginScreenV2({ navigation }: Props) {
         navigation.navigate('SocialNickname', { provider: result.provider, token: result.token });
       }
     } catch (error: unknown) {
-      if (isCancelledError(error)) {
-        // 사용자 취소 → 조용히 무시
-        return;
-      }
-      Alert.alert(
-        t('common.error'),
-        (error instanceof Error ? error.message : null) || t('auth.socialLoginFailed')
-      );
-    } finally {
-      setSocialLoading(null);
-    }
+      if (isCancelledError(error)) return;
+      Alert.alert(t('common.error'), (error instanceof Error ? error.message : null) || t('auth.socialLoginFailed'));
+    } finally { setSocialLoading(null); }
   };
 
   const handleLogin = async () => {
@@ -118,306 +85,219 @@ export function LoginScreenV2({ navigation }: Props) {
     setLoading(true);
     try {
       await login({ email: email.trim(), password });
-      // 성공 시 RootStack의 isAuthenticated 체크가 자동으로 Main으로 이동
     } catch (error: any) {
       Alert.alert(t('auth.loginFailed'), error?.message || t('auth.loginFailedMessage'));
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
-    <View style={[styles.container, {
-      backgroundColor: theme.colors.background,
-      paddingTop: insets.top,
-      paddingBottom: insets.bottom,
-    }]}>
-      {/* Language Selector */}
-      <View style={[styles.languageRow, { paddingHorizontal: theme.layout.screenPaddingH, paddingTop: theme.spacing.sm }]}>
-        {LANGUAGES.map((lang) => {
-          const isActive = i18n.language === lang.code;
-          return (
-            <TouchableOpacity
-              key={lang.code}
-              style={[
-                styles.languageChip,
-                {
-                  backgroundColor: isActive ? theme.colors.primarySubtle : 'transparent',
-                  borderRadius: theme.borderRadius.full,
-                  paddingHorizontal: theme.spacing.md,
-                  paddingVertical: theme.spacing.xxs,
-                },
-              ]}
-              onPress={() => changeLanguage(lang.code)}
-            >
-              <Text style={[
-                theme.typography.caption,
-                {
-                  color: isActive ? theme.colors.primary : theme.colors.textTertiary,
-                  fontWeight: isActive ? '600' : '400',
-                },
-              ]}>
-                {lang.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+    <PaperBackground variant="plain" color="cream">
+      <View style={[s.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        {/* Language Selector — subtle pills */}
+        <View style={s.languageRow}>
+          {LANGUAGES.map((lang) => {
+            const isActive = i18n.language === lang.code;
+            return (
+              <TouchableOpacity
+                key={lang.code}
+                style={[s.langChip, isActive && s.langChipActive]}
+                onPress={() => changeLanguage(lang.code)}
+              >
+                <Text style={[s.langText, isActive && s.langTextActive]}>
+                  {lang.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-      {/* Logo & Welcome */}
-      <Animated.View style={[
-        styles.logoSection,
-        {
-          opacity: logoAnim,
-          transform: [{
-            translateY: logoAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [20, 0],
-            }),
-          }],
-        },
-      ]}>
-        {/* App icon */}
-        <Image
-          source={require('../../assets/splash-icon.png')}
-          style={{ width: 80, height: 80, resizeMode: 'contain' }}
-        />
-
-        <Text style={[
-          theme.typography.displayMedium,
-          { color: theme.colors.textPrimary, marginTop: theme.spacing.lg },
-        ]}>
-          {t('auth.appName')}
-        </Text>
-
-        <Text style={[
-          theme.typography.bodyMedium,
+        {/* Logo & Welcome */}
+        <Animated.View style={[
+          s.logoSection,
           {
-            color: theme.colors.textSecondary,
-            marginTop: theme.spacing.sm,
-            textAlign: 'center',
+            opacity: logoAnim,
+            transform: [{ translateY: logoAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
           },
         ]}>
-          {t('auth.welcome')}
-        </Text>
-      </Animated.View>
+          <Image source={require('../../assets/splash-icon.png')} style={s.appIcon} />
+          <Text style={s.appName}>{t('auth.appName')}</Text>
+          <Text style={s.welcomeText}>{t('auth.welcome')}</Text>
+        </Animated.View>
 
-      {/* Form */}
-      <Animated.View style={[
-        styles.formSection,
-        {
-          paddingHorizontal: theme.layout.screenPaddingH,
-          opacity: formAnim,
-          transform: [{
-            translateY: formAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [30, 0],
-            }),
-          }],
-        },
-      ]}>
-        <Input
-          label={t('auth.email')}
-          placeholder={t('auth.emailPlaceholder')}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          containerStyle={{ marginBottom: theme.spacing.lg }}
-        />
+        {/* Form */}
+        <Animated.View style={[
+          s.formSection,
+          {
+            opacity: formAnim,
+            transform: [{ translateY: formAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
+          },
+        ]}>
+          <Input
+            label={t('auth.email')}
+            placeholder={t('auth.emailPlaceholder')}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            containerStyle={{ marginBottom: spacing.lg }}
+          />
 
-        <Input
-          label={t('auth.password')}
-          placeholder={t('auth.passwordPlaceholder')}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-          rightIcon={
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Text style={[
-                theme.typography.labelSmall,
-                { color: theme.colors.textTertiary },
-              ]}>
-                {showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
-              </Text>
-            </TouchableOpacity>
-          }
-          containerStyle={{ marginBottom: theme.spacing['2xl'] }}
-        />
-
-        <Button
-          label={t('auth.login')}
-          onPress={handleLogin}
-          loading={loading}
-          fullWidth
-          size="lg"
-        />
-
-        <TouchableOpacity style={[styles.forgotButton, { marginTop: theme.spacing.lg }]}>
-          <Text style={[
-            theme.typography.bodySmall,
-            { color: theme.colors.textTertiary },
-          ]}>
-            {t('auth.forgotPassword')}
-          </Text>
-        </TouchableOpacity>
-      </Animated.View>
-
-      {/* Footer */}
-      <Animated.View style={[
-        styles.footer,
-        {
-          paddingBottom: theme.spacing['3xl'],
-          opacity: footerAnim,
-        },
-      ]}>
-        {isSocialAuthAvailable() && (
-          <>
-            <View style={styles.dividerRow}>
-              <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
-              <Text style={[
-                theme.typography.caption,
-                { color: theme.colors.textTertiary, marginHorizontal: theme.spacing.md },
-              ]}>
-                {t('auth.or')}
-              </Text>
-              <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
-            </View>
-
-            {/* 소셜 로그인 버튼 */}
-            <View style={[styles.socialButtons, { marginTop: theme.spacing.xl, gap: theme.spacing.sm }]}>
-              {/* Google */}
-              <TouchableOpacity
-                style={[styles.socialButton, {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.borderRadius.lg,
-                }]}
-                onPress={() => handleSocialLogin(signInWithGoogle)}
-                disabled={socialLoading !== null}
-              >
-                <View style={styles.socialButtonContent}>
-                  <AntDesign name="google" size={18} color="#4285F4" />
-                  <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary, marginLeft: 8 }]}>
-                    {socialLoading === 'GOOGLE' ? '...' : t('auth.socialGoogle')}
-                  </Text>
-                </View>
+          <Input
+            label={t('auth.password')}
+            placeholder={t('auth.passwordPlaceholder')}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            rightIcon={
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Text style={s.showPwText}>
+                  {showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+                </Text>
               </TouchableOpacity>
+            }
+            containerStyle={{ marginBottom: spacing['2xl'] }}
+          />
 
-              {/* Apple (iOS only) */}
-              {Platform.OS === 'ios' && (
+          <Button label={t('auth.login')} onPress={handleLogin} loading={loading} fullWidth size="lg" />
+
+          <TouchableOpacity style={s.forgotBtn}>
+            <Text style={s.forgotText}>{t('auth.forgotPassword')}</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Footer */}
+        <Animated.View style={[s.footer, { opacity: footerAnim }]}>
+          {isSocialAuthAvailable() && (
+            <>
+              <View style={s.dividerRow}>
+                <View style={s.dividerLine} />
+                <Text style={s.dividerText}>{t('auth.or')}</Text>
+                <View style={s.dividerLine} />
+              </View>
+
+              <View style={s.socialBtns}>
                 <TouchableOpacity
-                  style={[styles.socialButton, {
-                    backgroundColor: theme.colors.textPrimary,
-                    borderColor: theme.colors.textPrimary,
-                    borderRadius: theme.borderRadius.lg,
-                  }]}
-                  onPress={() => handleSocialLogin(signInWithApple)}
+                  style={s.socialBtn}
+                  onPress={() => handleSocialLogin(signInWithGoogle)}
                   disabled={socialLoading !== null}
                 >
-                  <View style={styles.socialButtonContent}>
-                    <Ionicons name="logo-apple" size={20} color={theme.colors.background} />
-                    <Text style={[theme.typography.labelLarge, { color: theme.colors.background, marginLeft: 8 }]}>
+                  <AntDesign name="google" size={18} color="#4285F4" />
+                  <Text style={s.socialBtnText}>
+                    {socialLoading === 'GOOGLE' ? '...' : t('auth.socialGoogle')}
+                  </Text>
+                </TouchableOpacity>
+
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity
+                    style={s.socialBtnDark}
+                    onPress={() => handleSocialLogin(signInWithApple)}
+                    disabled={socialLoading !== null}
+                  >
+                    <Ionicons name="logo-apple" size={20} color={colors.surfacePure} />
+                    <Text style={s.socialBtnDarkText}>
                       {socialLoading === 'APPLE' ? '...' : t('auth.socialApple')}
                     </Text>
-                  </View>
-                </TouchableOpacity>
-              )}
+                  </TouchableOpacity>
+                )}
+              </View>
+            </>
+          )}
 
-            </View>
-          </>
-        )}
-
-        <TouchableOpacity
-          style={[styles.signupRow, { marginTop: theme.spacing.xl }]}
-          onPress={() => navigation.navigate('Signup')}
-        >
-          <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary }]}>
-            {t('auth.noAccount')}{' '}
-          </Text>
-          <Text style={[theme.typography.labelLarge, { color: theme.colors.primary }]}>
-            {t('auth.signup')}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={[styles.legalRow, { marginTop: theme.spacing.lg }]}>
-          <TouchableOpacity onPress={() => Linking.openURL('https://mamuri.app/privacy')}>
-            <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>
-              {t('auth.privacyPolicy')}
-            </Text>
+          <TouchableOpacity style={s.signupRow} onPress={() => navigation.navigate('Signup')}>
+            <Text style={s.signupHint}>{t('auth.noAccount')} </Text>
+            <Text style={s.signupLink}>{t('auth.signup')}</Text>
           </TouchableOpacity>
-          <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}> · </Text>
-          <TouchableOpacity onPress={() => Linking.openURL('https://mamuri.app/terms')}>
-            <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>
-              {t('auth.termsOfService')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
-    </View>
+
+          <View style={s.legalRow}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://mamuri.app/privacy')}>
+              <Text style={s.legalText}>{t('auth.privacyPolicy')}</Text>
+            </TouchableOpacity>
+            <Text style={s.legalText}> · </Text>
+            <TouchableOpacity onPress={() => Linking.openURL('https://mamuri.app/terms')}>
+              <Text style={s.legalText}>{t('auth.termsOfService')}</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
+    </PaperBackground>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
+const s = StyleSheet.create({
+  container: { flex: 1, justifyContent: 'space-between' },
+
+  // Language
   languageRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: 4,
+    flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center',
+    gap: 4, paddingHorizontal: layout.screenPaddingH, paddingTop: spacing.sm,
   },
-  languageChip: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  langChip: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.full,
   },
-  logoSection: {
-    alignItems: 'center',
-    paddingTop: 60,
+  langChipActive: { backgroundColor: colors.accentPrimaryLight + '30' },
+  langText: {
+    fontFamily: fontFamily.sans, fontSize: 11,
+    color: colors.textTertiary,
   },
-  formSection: {
-    width: '100%',
+  langTextActive: { color: colors.accentPrimary, fontWeight: '600' },
+
+  // Logo
+  logoSection: { alignItems: 'center', paddingTop: 60 },
+  appIcon: { width: 80, height: 80, resizeMode: 'contain' },
+  appName: {
+    fontFamily: fontFamily.serifItalic,
+    fontSize: 28, fontWeight: '400',
+    color: colors.textPrimary, marginTop: spacing.lg,
   },
-  forgotButton: {
-    alignItems: 'center',
+  welcomeText: {
+    fontFamily: fontFamily.sans,
+    fontSize: 14, color: colors.textSecondary,
+    marginTop: spacing.sm, textAlign: 'center',
   },
-  footer: {
-    alignItems: 'center',
-    paddingHorizontal: 24,
+
+  // Form
+  formSection: { paddingHorizontal: layout.screenPaddingH },
+  showPwText: {
+    fontFamily: fontFamily.sans, fontSize: 11, color: colors.textTertiary,
   },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
+  forgotBtn: { alignItems: 'center', marginTop: spacing.lg },
+  forgotText: {
+    fontFamily: fontFamily.sans, fontSize: 13, color: colors.textTertiary,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
+
+  // Footer
+  footer: { alignItems: 'center', paddingHorizontal: spacing['2xl'], paddingBottom: spacing['3xl'] },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', width: '100%' },
+  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.accentSand + '40' },
+  dividerText: {
+    fontFamily: fontFamily.sans, fontSize: 11,
+    color: colors.textTertiary, marginHorizontal: spacing.md,
   },
-  socialButtons: {
-    width: '100%',
+
+  socialBtns: { width: '100%', marginTop: spacing.xl, gap: spacing.sm },
+  socialBtn: {
+    height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.bgIvory, borderWidth: 1, borderColor: colors.accentSand + '40',
+    borderRadius: borderRadius.lg, gap: 8,
   },
-  socialButton: {
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
+  socialBtnText: {
+    fontFamily: fontFamily.sansMedium, fontSize: 15, color: colors.textPrimary,
   },
-  socialButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  socialBtnDark: {
+    height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.textPrimary,
+    borderRadius: borderRadius.lg, gap: 8,
   },
-  signupRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  socialBtnDarkText: {
+    fontFamily: fontFamily.sansMedium, fontSize: 15, color: colors.surfacePure,
   },
-  legalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+
+  signupRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xl },
+  signupHint: { fontFamily: fontFamily.sans, fontSize: 14, color: colors.textSecondary },
+  signupLink: { fontFamily: fontFamily.sansMedium, fontSize: 14, color: colors.accentPrimary },
+
+  legalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.lg },
+  legalText: { fontFamily: fontFamily.sans, fontSize: 11, color: colors.textTertiary },
 });
