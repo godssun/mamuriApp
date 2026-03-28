@@ -1,5 +1,5 @@
 /**
- * ReflectionStory V3 — Redesigned reflection screen
+ * ReflectionStory V3 — Redesigned reflection screen (v3 design system)
  *
  * - Mini emotion calendar (current month)
  * - Weekly story cards (AI summary + emotion strip)
@@ -8,22 +8,29 @@
 
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useThemeV2 } from '../design-system-v2';
-import type { Theme } from '../design-system-v2';
+import { colors, fontFamily, shadows, spacing, borderRadius } from '../design-system-v3';
+import { PaperBackground } from '../design-system-v3/components/PaperBackground';
 import { emotionApi, calendarApi, reportApi2 } from '../api/client';
 import type { CalendarDayEntry, EmotionKey } from '../types';
 import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
 
+// Organic blob border radii for emotion day cells
+const blobRadii = [
+  { borderTopLeftRadius: 8, borderTopRightRadius: 10, borderBottomRightRadius: 9, borderBottomLeftRadius: 11 },
+  { borderTopLeftRadius: 10, borderTopRightRadius: 8, borderBottomRightRadius: 11, borderBottomLeftRadius: 9 },
+  { borderTopLeftRadius: 9, borderTopRightRadius: 11, borderBottomRightRadius: 8, borderBottomLeftRadius: 10 },
+  { borderTopLeftRadius: 11, borderTopRightRadius: 9, borderBottomRightRadius: 10, borderBottomLeftRadius: 8 },
+  { borderTopLeftRadius: 10, borderTopRightRadius: 10, borderBottomRightRadius: 8, borderBottomLeftRadius: 11 },
+];
+
 export default function ReflectionStoryV3() {
-  const { theme } = useThemeV2();
   const insets = useSafeAreaInsets();
   const nav = useNavigation<any>();
-  const s = makeStyles(theme);
 
   const now = new Date();
   const [refreshing, setRefreshing] = useState(false);
@@ -60,11 +67,11 @@ export default function ReflectionStoryV3() {
   const weeklyDist = weekly?.emotionDistribution || {};
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
+    <PaperBackground variant="lined" color="warm" style={{ flex: 1, paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentPrimary} />}
       >
         <View style={{ height: 24 }} />
         <Text style={s.pageTitle}>돌아보기</Text>
@@ -99,23 +106,25 @@ export default function ReflectionStoryV3() {
               const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               const entry = dayMap.get(dateStr);
               const isToday = dateStr === todayStr;
-              const emotionColor = entry?.primaryEmotionCode
-                ? EMOTION_COLORS[entry.primaryEmotionCode]
-                : null;
+              const hasEmotion = !!entry?.primaryEmotionCode;
 
               return (
                 <View key={day} style={s.calCell}>
-                  {emotionColor && entry?.primaryEmotionCode ? (
-                    <EmotionStickerView
-                      emotionKey={entry.primaryEmotionCode}
-                      size="tiny"
-                      style={isToday ? { borderWidth: 1, borderColor: theme.colors.primary, borderRadius: 10 } : undefined}
-                    />
-                  ) : (
+                  {hasEmotion ? (
                     <View style={[
                       s.calDot,
-                      { backgroundColor: theme.colors.surfaceSecondary },
-                      isToday && { borderWidth: 1.5, borderColor: theme.colors.primary },
+                      blobRadii[day % 5],
+                      isToday && { borderWidth: 1.5, borderColor: colors.accentPrimary },
+                    ]}>
+                      <EmotionStickerView
+                        emotionKey={entry.primaryEmotionCode}
+                        size="tiny"
+                      />
+                    </View>
+                  ) : (
+                    <View style={[
+                      s.calDotEmpty,
+                      isToday && { borderWidth: 1.5, borderColor: colors.accentPrimary },
                     ]} />
                   )}
                 </View>
@@ -139,7 +148,7 @@ export default function ReflectionStoryV3() {
                     size="mini"
                   />
                 ) : (
-                  <View key={i} style={[s.stripDot, { backgroundColor: theme.colors.border }]} />
+                  <View key={i} style={s.stripDot} />
                 );
               })}
             </View>
@@ -208,101 +217,185 @@ export default function ReflectionStoryV3() {
 
         <View style={{ height: 48 }} />
       </ScrollView>
-    </View>
+    </PaperBackground>
   );
 }
 
-function makeStyles(t: Theme) {
-  return StyleSheet.create({
-    root: { flex: 1, backgroundColor: t.colors.background },
-    scroll: { paddingHorizontal: t.spacing['2xl'], paddingBottom: 120 },
+const s = StyleSheet.create({
+  scroll: { paddingHorizontal: spacing['2xl'], paddingBottom: 120 },
 
-    pageTitle: {
-      ...t.typography.headlineLarge, fontWeight: '700',
-      color: t.colors.textPrimary, textAlign: 'center',
-      marginBottom: t.spacing['3xl'], letterSpacing: -0.5,
-    },
+  pageTitle: {
+    fontFamily: fontFamily.serifItalic,
+    fontSize: 24,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: spacing['3xl'],
+    letterSpacing: -0.5,
+  },
 
-    // Mini Calendar Card
-    calendarCard: {
-      backgroundColor: t.colors.surface, borderRadius: t.borderRadius.xl,
-      padding: t.spacing.xl, marginBottom: t.spacing['2xl'],
-      ...t.shadows.sm,
-    },
-    calHeader: {
-      flexDirection: 'row', justifyContent: 'space-between',
-      alignItems: 'center', marginBottom: t.spacing.lg,
-    },
-    calTitle: { ...t.typography.titleSmall, fontWeight: '700', color: t.colors.textPrimary },
-    calLink: { ...t.typography.caption, color: t.colors.primary, fontWeight: '600' },
+  // Mini Calendar Card
+  calendarCard: {
+    backgroundColor: colors.bgIvory,
+    borderRadius: borderRadius.sm,
+    padding: spacing.xl,
+    marginBottom: spacing['2xl'],
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+    ...shadows.crisp,
+  },
+  calHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  calTitle: {
+    fontFamily: fontFamily.serifItalic,
+    fontSize: 18,
+    color: colors.textPrimary,
+  },
+  calLink: {
+    fontFamily: fontFamily.sans,
+    fontSize: 12,
+    color: colors.accentPrimary,
+  },
 
-    calDayHeaders: { flexDirection: 'row', marginBottom: 4 },
-    calDayHeaderCell: { width: '14.28%' as any, alignItems: 'center' },
-    calDayHeaderText: { fontSize: 9, color: t.colors.textTertiary },
+  calDayHeaders: { flexDirection: 'row', marginBottom: 4 },
+  calDayHeaderCell: { width: '14.28%' as any, alignItems: 'center' },
+  calDayHeaderText: {
+    fontFamily: fontFamily.sans,
+    fontSize: 9,
+    color: colors.textTertiary,
+  },
 
-    calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-    calCell: { width: '14.28%' as any, height: 28, alignItems: 'center', justifyContent: 'center' },
-    calDot: { width: 20, height: 20, borderRadius: 10 },
+  calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calCell: { width: '14.28%' as any, height: 28, alignItems: 'center', justifyContent: 'center' },
+  calDot: { width: 20, height: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  calDotEmpty: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.accentSand + '20',
+  },
 
-    // Section
-    sectionLabel: {
-      ...t.typography.labelSmall, fontWeight: '600',
-      color: t.colors.textTertiary, letterSpacing: 1,
-      textTransform: 'uppercase' as const, textAlign: 'center' as const,
-      marginBottom: t.spacing.lg,
-    },
+  // Section
+  sectionLabel: {
+    fontFamily: fontFamily.serifItalic,
+    fontSize: 14,
+    color: colors.textTertiary,
+    letterSpacing: 1,
+    textTransform: 'uppercase' as const,
+    textAlign: 'center' as const,
+    marginBottom: spacing.lg,
+  },
 
-    // Weekly card
-    weeklyCard: {
-      backgroundColor: t.colors.surface, borderRadius: t.borderRadius.xl,
-      padding: t.spacing.xl, marginBottom: t.spacing['2xl'],
-      ...t.shadows.sm,
-    },
+  // Weekly card
+  weeklyCard: {
+    backgroundColor: colors.bgIvory,
+    borderRadius: borderRadius.sm,
+    padding: spacing.xl,
+    marginBottom: spacing['2xl'],
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+    ...shadows.crisp,
+  },
 
-    emotionStrip: {
-      flexDirection: 'row', justifyContent: 'center',
-      gap: 8, marginBottom: t.spacing.xl,
-    },
-    stripDot: { width: 14, height: 14, borderRadius: 7 },
+  emotionStrip: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: spacing.xl,
+  },
+  stripDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.accentSand + '40',
+  },
 
-    distRow: { flexDirection: 'row', justifyContent: 'center', gap: t.spacing.xl },
-    distItem: { alignItems: 'center', gap: 4 },
-    distDot: { width: 10, height: 10, borderRadius: 5 },
-    distPct: { fontSize: 14, fontWeight: '700', color: t.colors.textPrimary, letterSpacing: -0.5 },
-    distLabel: { fontSize: 10, color: t.colors.textTertiary },
+  distRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl },
+  distItem: { alignItems: 'center', gap: 4 },
+  distPct: {
+    fontFamily: fontFamily.sansSemiBold,
+    fontSize: 14,
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  distLabel: {
+    fontFamily: fontFamily.sans,
+    fontSize: 10,
+    color: colors.textTertiary,
+  },
 
-    summaryBox: {
-      marginTop: t.spacing.xl, backgroundColor: t.colors.primarySubtle,
-      borderRadius: t.borderRadius.lg, padding: t.spacing.lg,
-    },
-    summaryText: {
-      ...t.typography.bodySmall, color: t.colors.textSecondary,
-      fontStyle: 'italic', lineHeight: 20, textAlign: 'center',
-    },
+  summaryBox: {
+    marginTop: spacing.xl,
+    backgroundColor: colors.accentPrimaryLight + '30',
+    borderRadius: borderRadius.sm,
+    padding: spacing.lg,
+  },
+  summaryText: {
+    fontFamily: fontFamily.script,
+    fontSize: 16,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    lineHeight: 22,
+    textAlign: 'center',
+  },
 
-    // Stats
-    statsRow: {
-      flexDirection: 'row', justifyContent: 'center',
-      gap: t.spacing['5xl'], marginBottom: t.spacing['3xl'],
-    },
-    statBox: { alignItems: 'center' },
-    statNum: { fontSize: 32, fontWeight: '200', color: t.colors.primary, letterSpacing: -2 },
-    statLabel: { fontSize: 11, color: t.colors.textTertiary, marginTop: 4, letterSpacing: 0.3 },
+  // Stats
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing['5xl'],
+    marginBottom: spacing['3xl'],
+  },
+  statBox: { alignItems: 'center' },
+  statNum: {
+    fontFamily: fontFamily.serifItalic,
+    fontSize: 32,
+    fontWeight: '200',
+    color: colors.accentPrimary,
+    letterSpacing: -2,
+  },
+  statLabel: {
+    fontFamily: fontFamily.sans,
+    fontSize: 11,
+    color: colors.textTertiary,
+    marginTop: 4,
+    letterSpacing: 0.3,
+  },
 
-    // Reports
-    section: { marginBottom: t.spacing['2xl'] },
-    reportItem: {
-      flexDirection: 'row', alignItems: 'center',
-      paddingVertical: 14, borderBottomWidth: 1,
-      borderBottomColor: t.colors.borderSubtle, gap: 12,
-    },
-    reportBadge: {
-      backgroundColor: t.colors.primarySubtle,
-      paddingHorizontal: 8, paddingVertical: 4,
-      borderRadius: t.borderRadius.sm,
-    },
-    reportType: { fontSize: 10, fontWeight: '700', color: t.colors.primary, textTransform: 'uppercase' },
-    reportTitle: { ...t.typography.titleSmall, fontWeight: '600', color: t.colors.textPrimary },
-    reportPeriod: { ...t.typography.caption, color: t.colors.textTertiary, marginTop: 2 },
-  });
-}
+  // Reports
+  section: { marginBottom: spacing['2xl'] },
+  reportItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.accentSand + '30',
+    gap: 12,
+  },
+  reportBadge: {
+    backgroundColor: colors.accentPrimaryLight + '40',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: borderRadius.xs,
+  },
+  reportType: {
+    fontFamily: fontFamily.sansSemiBold,
+    fontSize: 10,
+    color: colors.accentPrimary,
+    textTransform: 'uppercase',
+  },
+  reportTitle: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  reportPeriod: {
+    fontFamily: fontFamily.sans,
+    fontSize: 11,
+    color: colors.textTertiary,
+    marginTop: 2,
+  },
+});
