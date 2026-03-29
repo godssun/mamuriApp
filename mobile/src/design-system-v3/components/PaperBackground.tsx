@@ -6,7 +6,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { colors } from '../tokens/colors';
 import { linedBackground, gridBackground, zIndex } from '../tokens/textures';
 
@@ -16,7 +16,7 @@ type BackgroundColor = 'base' | 'warm' | 'cream' | 'ivory';
 interface PaperBackgroundProps {
   variant?: BackgroundVariant;
   color?: BackgroundColor;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
 }
 

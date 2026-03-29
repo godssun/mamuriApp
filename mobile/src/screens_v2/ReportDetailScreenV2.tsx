@@ -127,15 +127,15 @@ export default function ReportDetailScreenV2({ route, navigation }: Props) {
             <Text style={s.insightLabel}>감정 분포</Text>
             <View style={s.emotionRow}>
               {Object.entries(report.emotionSummary).map(([emotion, count]) => {
-                const emotionColor = EMOTION_COLORS[emotion] || colors.accentSand;
+                const emotionColor = EMOTION_COLORS[emotion as keyof typeof EMOTION_COLORS] || colors.accentSand;
                 return (
                   <View key={emotion} style={s.emotionChip}>
-                    <EmotionStickerView emotionKey={emotion} size="mini" />
+                    <EmotionStickerView emotionKey={emotion as any} size="mini" />
                     <Text style={[s.emotionCount, { color: emotionColor }]}>
                       {count as number}회
                     </Text>
                     <Text style={s.emotionLabel}>
-                      {EMOTION_LABELS[emotion] || emotion}
+                      {EMOTION_LABELS[emotion as keyof typeof EMOTION_LABELS] || emotion}
                     </Text>
                   </View>
                 );

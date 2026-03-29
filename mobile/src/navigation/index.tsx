@@ -4,7 +4,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import { useThemeV2 } from '../design-system-v2';
 import { colors as v3Colors, fontFamily as v3FontFamily } from '../design-system-v3';
 import { companionApi } from '../api/client';
 import {
@@ -15,8 +14,7 @@ import {
   DiaryStackParamListV3,
 } from '../types';
 
-// V2 Screens (legacy Welcome kept for reference)
-// import { WelcomeScreen } from '../screens_v2/WelcomeScreen';
+// V3 Screens
 import { WelcomeScreenV3 as WelcomeScreen } from '../screens_v2/WelcomeScreenV3';
 import { LoginScreenV2 } from '../screens_v2/LoginScreenV2';
 import { SignupScreenV2 } from '../screens_v2/SignupScreenV2';
@@ -148,7 +146,6 @@ function MainNavigator() {
 // 루트 네비게이션
 export default function Navigation() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { theme } = useThemeV2();
 
   if (isLoading) {
     return (

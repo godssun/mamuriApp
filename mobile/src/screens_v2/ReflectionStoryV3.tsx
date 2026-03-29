@@ -117,7 +117,7 @@ export default function ReflectionStoryV3() {
                       isToday && { borderWidth: 1.5, borderColor: colors.accentPrimary },
                     ]}>
                       <EmotionStickerView
-                        emotionKey={entry.primaryEmotionCode}
+                        emotionKey={entry.primaryEmotionCode as any}
                         size="tiny"
                       />
                     </View>

@@ -17,8 +17,8 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { companionApi, ApiError } from '../api/client';
-import { primaryEmotionColors } from '../design-system-v2/colors';
 import { useAuth } from '../contexts/AuthContext';
+import { EMOTION_COLORS } from '../constants/stickers';
 import {
   colors, fontFamily, shadows, spacing, borderRadius, layout, duration,
 } from '../design-system-v3';
@@ -151,17 +151,17 @@ export function CompanionSetupScreenV2() {
                     s.emotionCard, emotionBlobRadii[i],
                     {
                       backgroundColor: selectedEmotion === e.key
-                        ? (primaryEmotionColors[e.key as keyof typeof primaryEmotionColors] || colors.accentPrimary) + '25'
+                        ? (EMOTION_COLORS[e.key as keyof typeof EMOTION_COLORS] || colors.accentPrimary) + '25'
                         : colors.bgIvory,
                       borderWidth: selectedEmotion === e.key ? 1.5 : 1,
                       borderColor: selectedEmotion === e.key
-                        ? primaryEmotionColors[e.key as keyof typeof primaryEmotionColors] || colors.accentPrimary
+                        ? EMOTION_COLORS[e.key as keyof typeof EMOTION_COLORS] || colors.accentPrimary
                         : colors.accentSand + '30',
                     },
                   ]}
                 >
                   <View style={[s.emotionDot, {
-                    backgroundColor: primaryEmotionColors[e.key as keyof typeof primaryEmotionColors] || colors.accentPrimary,
+                    backgroundColor: EMOTION_COLORS[e.key as keyof typeof EMOTION_COLORS] || colors.accentPrimary,
                   }]} />
                   <Text style={s.emotionLabel}>{e.label}</Text>
                 </TouchableOpacity>
