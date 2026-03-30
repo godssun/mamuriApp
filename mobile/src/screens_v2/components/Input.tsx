@@ -1,20 +1,19 @@
 /**
- * Design System v2 — Input Component
+ * Input v3 — Warm paper-tone text input
  *
  * Features: focus animation, error state, helper text, icon support
+ * Ivory surface, sand border, sage focus accent.
+ *
+ * v3 design system tokens. No react-native-svg.
  */
 
 import React, { useRef, useState, useCallback } from 'react';
 import {
-  View,
-  TextInput,
-  Text,
-  StyleSheet,
-  Animated,
-  TextInputProps,
-  ViewStyle,
+  View, TextInput, Text, StyleSheet, Animated, TextInputProps, ViewStyle,
 } from 'react-native';
-import { useThemeV2 } from '../../design-system-v2';
+import {
+  colors, fontFamily, spacing, borderRadius, duration,
+} from '../../design-system-v3';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
   label?: string;
@@ -26,59 +25,48 @@ interface InputProps extends Omit<TextInputProps, 'style'> {
 }
 
 export function Input({
-  label,
-  error,
-  helper,
-  leftIcon,
-  rightIcon,
-  containerStyle,
+  label, error, helper, leftIcon, rightIcon, containerStyle,
   ...textInputProps
 }: InputProps) {
-  const { theme } = useThemeV2();
   const [isFocused, setIsFocused] = useState(false);
   const borderAnim = useRef(new Animated.Value(0)).current;
 
   const handleFocus = useCallback((e: any) => {
     setIsFocused(true);
     Animated.timing(borderAnim, {
-      toValue: 1,
-      duration: theme.duration.fast,
-      useNativeDriver: false,
+      toValue: 1, duration: duration.fast, useNativeDriver: false,
     }).start();
     textInputProps.onFocus?.(e);
-  }, [borderAnim, theme, textInputProps.onFocus]);
+  }, [borderAnim, textInputProps.onFocus]);
 
   const handleBlur = useCallback((e: any) => {
     setIsFocused(false);
     Animated.timing(borderAnim, {
-      toValue: 0,
-      duration: theme.duration.fast,
-      useNativeDriver: false,
+      toValue: 0, duration: duration.fast, useNativeDriver: false,
     }).start();
     textInputProps.onBlur?.(e);
-  }, [borderAnim, theme, textInputProps.onBlur]);
+  }, [borderAnim, textInputProps.onBlur]);
 
   const borderColor = borderAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [
-      error ? theme.colors.error : theme.colors.border,
-      error ? theme.colors.error : theme.colors.borderFocus,
+      error ? '#E05454' : colors.accentSand + '50',
+      error ? '#E05454' : colors.accentPrimary,
     ],
   });
 
   const borderWidth = borderAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [1, 2],
+    outputRange: [1, 1.5],
   });
 
   return (
     <View style={[styles.wrapper, containerStyle]}>
       {label && (
         <Text style={[
-          theme.typography.labelMedium,
+          styles.label,
           {
-            color: error ? theme.colors.error : (isFocused ? theme.colors.primary : theme.colors.textSecondary),
-            marginBottom: theme.spacing.xs,
+            color: error ? '#E05454' : (isFocused ? colors.accentPrimary : colors.textSecondary),
           },
         ]}>
           {label}
@@ -88,9 +76,7 @@ export function Input({
       <Animated.View style={[
         styles.container,
         {
-          backgroundColor: theme.colors.surface,
-          borderRadius: theme.borderRadius.md,
-          height: textInputProps.multiline ? undefined : theme.layout.inputHeight,
+          height: textInputProps.multiline ? undefined : 52,
           minHeight: textInputProps.multiline ? 120 : undefined,
           borderColor,
           borderWidth,
@@ -102,13 +88,12 @@ export function Input({
           {...textInputProps}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          placeholderTextColor={theme.colors.textDisabled}
+          placeholderTextColor={colors.textTertiary}
           style={[
-            theme.typography.bodyMedium,
             styles.input,
             {
-              color: theme.colors.textPrimary,
-              paddingTop: textInputProps.multiline ? theme.spacing.md : 0,
+              textAlignVertical: textInputProps.multiline ? 'top' : 'center',
+              paddingTop: textInputProps.multiline ? spacing.md : 0,
             },
           ]}
         />
@@ -118,12 +103,8 @@ export function Input({
 
       {(error || helper) && (
         <Text style={[
-          theme.typography.caption,
-          {
-            color: error ? theme.colors.error : theme.colors.textTertiary,
-            marginTop: theme.spacing.xs,
-            paddingHorizontal: theme.spacing.xs,
-          },
+          styles.helper,
+          { color: error ? '#E05454' : colors.textTertiary },
         ]}>
           {error || helper}
         </Text>
@@ -133,23 +114,30 @@ export function Input({
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    width: '100%',
+  wrapper: { width: '100%' },
+  label: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 13, fontWeight: '500',
+    marginBottom: spacing.xs,
+    letterSpacing: 0.3,
   },
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.bgIvory,
+    borderRadius: borderRadius.sm,
     overflow: 'hidden',
   },
   input: {
     flex: 1,
-    textAlignVertical: 'top',
+    fontFamily: fontFamily.sans,
+    fontSize: 15, color: colors.textPrimary,
   },
-  leftIcon: {
-    marginRight: 12,
-  },
-  rightIcon: {
-    marginLeft: 12,
+  leftIcon: { marginRight: spacing.md },
+  rightIcon: { marginLeft: spacing.md },
+  helper: {
+    fontFamily: fontFamily.sans,
+    fontSize: 11, marginTop: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
 });

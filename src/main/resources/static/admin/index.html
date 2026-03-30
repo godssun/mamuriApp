@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Mamuri Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #0c0e14; --surface: #151820; --surface2: #1c2030;
+            --border: #252a3a; --text: #e4e6ed; --text2: #8890a6;
+            --accent: #7c6df0; --accent2: #5b8def; --green: #4cce8b;
+            --red: #f06c6c; --orange: #f0a84c; --radius: 10px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+               background:var(--bg); color:var(--text); min-height:100vh; font-size:13px; }
+        /* ---- Login ---- */
+        #login { display:flex; align-items:center; justify-content:center; min-height:100vh;
+                 flex-direction:column; gap:14px; }
+        #login h1 { font-size:22px; color:var(--accent); letter-spacing:-0.5px; margin-bottom:8px; }
+        #login p { font-size:12px; color:var(--text2); }
+        #login input { padding:10px 14px; width:300px; border-radius:8px;
+                       border:1px solid var(--border); background:var(--surface); color:var(--text);
+                       font-size:13px; outline:none; }
+        #login input:focus { border-color:var(--accent); }
+        #login button { padding:10px 28px; border-radius:8px; border:none;
+                        background:var(--accent); color:white; font-size:13px; cursor:pointer; font-weight:600; }
+        #login-error { color:var(--red); font-size:12px; display:none; min-height:16px; }
+        /* ---- App Layout ---- */
+        #app { display:none; }
+        header { background:var(--surface); border-bottom:1px solid var(--border);
+                 padding:12px 28px; display:flex; justify-content:space-between; align-items:center; }
+        header h1 { font-size:16px; color:var(--accent); font-weight:700; letter-spacing:-0.3px; }
+        .header-right { display:flex; align-items:center; gap:12px; }
+        .header-right .admin-name { font-size:12px; color:var(--text2); }
+        .header-right .meta { color:var(--text2); font-size:11px; }
+        header button { padding:5px 10px; border-radius:5px; border:1px solid var(--border);
+                        background:transparent; color:var(--text2); cursor:pointer; font-size:11px; }
+        header button:hover { border-color:var(--accent); color:var(--text); }
+        /* ---- Nav ---- */
+        nav { background:var(--surface); border-bottom:1px solid var(--border);
+              padding:0 28px; display:flex; gap:0; overflow-x:auto; }
+        nav button { padding:10px 16px; border:none; background:transparent;
+                     color:var(--text2); font-size:12px; cursor:pointer;
+                     border-bottom:2px solid transparent; font-weight:500; white-space:nowrap; }
+        nav button.active { color:var(--accent); border-bottom-color:var(--accent); }
+        nav button:hover { color:var(--text); }
+        main { padding:20px 28px; max-width:1440px; margin:0 auto; }
+        /* ---- KPI Cards ---- */
+        .kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+                    gap:12px; margin-bottom:20px; }
+        .kpi-card { background:var(--surface); border:1px solid var(--border);
+                    border-radius:var(--radius); padding:16px; }
+        .kpi-card .label { font-size:10px; color:var(--text2); text-transform:uppercase;
+                           letter-spacing:0.5px; font-weight:500; }
+        .kpi-card .value { font-size:24px; font-weight:700; margin-top:6px; line-height:1; }
+        .kpi-card .sub { font-size:11px; color:var(--text2); margin-top:4px; }
+        .kpi-card.accent .value { color:var(--accent); }
+        .kpi-card.green .value { color:var(--green); }
+        .kpi-card.blue .value { color:var(--accent2); }
+        .kpi-card.orange .value { color:var(--orange); }
+        .kpi-card.red .value { color:var(--red); }
+        /* ---- Charts ---- */
+        .chart-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(460px,1fr));
+                      gap:16px; margin-bottom:20px; }
+        .chart-card { background:var(--surface); border:1px solid var(--border);
+                      border-radius:var(--radius); padding:16px; }
+        .chart-card h3 { font-size:12px; color:var(--text2); margin-bottom:12px; font-weight:500; }
+        .chart-card canvas { max-height:260px; }
+        .dist-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+                     gap:16px; margin-bottom:20px; }
+        /* ---- Table ---- */
+        .table-card { background:var(--surface); border:1px solid var(--border);
+                      border-radius:var(--radius); overflow:hidden; margin-bottom:20px; }
+        .table-header { padding:14px 16px; display:flex; justify-content:space-between;
+                        align-items:center; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+        .table-header h3 { font-size:13px; font-weight:600; }
+        .table-controls { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+        .table-controls input, .table-controls select {
+            padding:5px 8px; border-radius:5px; border:1px solid var(--border);
+            background:var(--surface2); color:var(--text); font-size:11px; outline:none; }
+        .table-controls input { width:180px; }
+        .table-controls input:focus, .table-controls select:focus { border-color:var(--accent); }
+        table { width:100%; border-collapse:collapse; }
+        th { padding:8px 14px; text-align:left; font-size:10px; color:var(--text2);
+             text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border);
+             background:var(--surface2); }
+        td { padding:8px 14px; font-size:12px; border-bottom:1px solid var(--border); }
+        tr:hover td { background:var(--surface2); }
+        .badge { padding:2px 7px; border-radius:8px; font-size:10px; font-weight:600; }
+        .badge-free { background:#2d3140; color:var(--text2); }
+        .badge-active { background:#1a3d2d; color:var(--green); }
+        .badge-trialing { background:#2d2a1a; color:var(--orange); }
+        .badge-premium { background:#2a1a3d; color:var(--accent); }
+        .badge-deluxe { background:#1a2d3d; color:var(--accent2); }
+        .badge-canceled { background:#3d1a1a; color:var(--red); }
+        .badge-past_due { background:#3d2a1a; color:var(--orange); }
+        .pagination { padding:10px 16px; display:flex; justify-content:space-between;
+                      align-items:center; border-top:1px solid var(--border); font-size:11px; color:var(--text2); }
+        .pagination button { padding:4px 10px; border-radius:5px; border:1px solid var(--border);
+                             background:transparent; color:var(--text); cursor:pointer; font-size:11px; }
+        .pagination button:disabled { opacity:.3; cursor:default; }
+        /* ---- Retention ---- */
+        .retention-table th, .retention-table td { text-align:center; }
+        .retention-cell { border-radius:3px; padding:3px 6px; font-size:11px; }
+        /* ---- Modal ---- */
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.65);
+                         z-index:100; align-items:center; justify-content:center; }
+        .modal-overlay.show { display:flex; }
+        .modal { background:var(--surface); border:1px solid var(--border);
+                 border-radius:var(--radius); padding:20px; width:500px; max-height:80vh; overflow-y:auto; }
+        .modal h2 { font-size:14px; margin-bottom:14px; }
+        .modal .field { display:flex; justify-content:space-between; padding:6px 0;
+                        border-bottom:1px solid var(--border); font-size:12px; }
+        .modal .field .label { color:var(--text2); }
+        .modal .close-btn { margin-top:14px; padding:6px 14px; border-radius:5px; border:1px solid var(--border);
+                            background:transparent; color:var(--text); cursor:pointer; float:right; font-size:11px; }
+        /* ---- Sections ---- */
+        .section { display:none; }
+        .section.active { display:block; }
+        /* ---- Responsive ---- */
+        @media(max-width:768px) { .chart-grid,.dist-grid{grid-template-columns:1fr;} main{padding:14px;} }
+    </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="login">
+    <h1>Mamuri Admin</h1>
+    <p>관리자 계정으로 로그인하세요</p>
+    <input type="email" id="login-email" placeholder="Email" autocomplete="email">
+    <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+    <button onclick="doLogin()">Login</button>
+    <div id="login-error"></div>
+</div>
+
+<!-- App -->
+<div id="app">
+    <header>
+        <h1>Mamuri Admin</h1>
+        <div class="header-right">
+            <span class="admin-name" id="admin-name"></span>
+            <span class="meta" id="last-updated"></span>
+            <button onclick="refreshData()">Refresh</button>
+            <button onclick="doLogout()">Logout</button>
+        </div>
+    </header>
+    <nav id="nav-bar">
+        <button class="active" onclick="showSection('overview',this)">Overview</button>
+        <button onclick="showSection('growth',this)">Growth</button>
+        <button onclick="showSection('engagement',this)">Engagement</button>
+        <button onclick="showSection('ai',this)">AI Usage</button>
+        <button onclick="showSection('users',this)">Users</button>
+        <button onclick="showSection('retention',this)">Retention</button>
+        <button onclick="showSection('safety',this)">Safety</button>
+        <button onclick="showSection('audit',this)">Audit Log</button>
+    </nav>
+    <main>
+        <div id="section-overview" class="section active">
+            <div class="kpi-grid" id="overview-kpis"></div>
+            <div class="chart-grid">
+                <div class="chart-card"><h3>Daily Signups (30d)</h3><canvas id="c-signups-mini"></canvas></div>
+                <div class="chart-card"><h3>DAU (30d)</h3><canvas id="c-dau-mini"></canvas></div>
+            </div>
+            <div class="dist-grid">
+                <div class="chart-card"><h3>Subscription Tier</h3><canvas id="c-tier-dist"></canvas></div>
+                <div class="chart-card"><h3>Auth Provider</h3><canvas id="c-provider-dist"></canvas></div>
+            </div>
+        </div>
+        <div id="section-growth" class="section">
+            <div class="kpi-grid" id="growth-kpis"></div>
+            <div class="chart-grid">
+                <div class="chart-card"><h3>Daily Signups</h3><canvas id="c-signups"></canvas></div>
+                <div class="chart-card"><h3>Cumulative Users</h3><canvas id="c-cumulative"></canvas></div>
+            </div>
+        </div>
+        <div id="section-engagement" class="section">
+            <div class="kpi-grid" id="engagement-kpis"></div>
+            <div class="chart-grid">
+                <div class="chart-card"><h3>DAU Trend (30d)</h3><canvas id="c-dau"></canvas></div>
+            </div>
+        </div>
+        <div id="section-ai" class="section">
+            <div class="kpi-grid" id="ai-kpis"></div>
+            <div class="chart-grid">
+                <div class="chart-card"><h3>AI Calls (30d)</h3><canvas id="c-ai-calls"></canvas></div>
+                <div class="chart-card"><h3>AI Cost KRW (30d)</h3><canvas id="c-ai-cost"></canvas></div>
+            </div>
+        </div>
+        <div id="section-users" class="section">
+            <div class="table-card">
+                <div class="table-header">
+                    <h3>Users</h3>
+                    <div class="table-controls">
+                        <input type="text" id="user-search" placeholder="Search email / nickname..." oninput="debounceSearch()">
+                        <select id="user-tier-filter" onchange="loadUsers()">
+                            <option value="">All Tiers</option>
+                            <option value="FREE">Free</option><option value="DELUXE">Deluxe</option><option value="PREMIUM">Premium</option>
+                        </select>
+                        <select id="user-status-filter" onchange="loadUsers()">
+                            <option value="">All Status</option>
+                            <option value="FREE">Free</option><option value="TRIALING">Trialing</option>
+                            <option value="ACTIVE">Active</option><option value="PAST_DUE">Past Due</option><option value="CANCELED">Canceled</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;"><table>
+                    <thead><tr><th>ID</th><th>Email</th><th>Nickname</th><th>Provider</th><th>Tier</th><th>Status</th><th>Diaries</th><th>Streak</th><th>Joined</th></tr></thead>
+                    <tbody id="user-tbody"></tbody>
+                </table></div>
+                <div class="pagination">
+                    <span id="user-page-info"></span>
+                    <div><button id="user-prev" onclick="changePage(-1)">Prev</button><button id="user-next" onclick="changePage(1)">Next</button></div>
+                </div>
+            </div>
+        </div>
+        <div id="section-retention" class="section">
+            <div class="table-card">
+                <div class="table-header"><h3>Weekly Cohort Retention</h3></div>
+                <div style="overflow-x:auto;"><table class="retention-table">
+                    <thead><tr><th>Cohort</th><th>Size</th><th>D1</th><th>D7</th><th>D14</th><th>D30</th></tr></thead>
+                    <tbody id="retention-tbody"></tbody>
+                </table></div>
+            </div>
+            <div class="chart-grid">
+                <div class="chart-card" id="churn-card"><h3>Churn Reasons (3mo)</h3><canvas id="c-churn"></canvas></div>
+            </div>
+        </div>
+        <div id="section-safety" class="section">
+            <div class="kpi-grid" id="safety-kpis"></div>
+        </div>
+        <div id="section-audit" class="section">
+            <div class="table-card">
+                <div class="table-header"><h3>Admin Audit Log</h3></div>
+                <div style="overflow-x:auto;"><table>
+                    <thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target</th><th>IP</th><th>Detail</th></tr></thead>
+                    <tbody id="audit-tbody"></tbody>
+                </table></div>
+                <div class="pagination">
+                    <span id="audit-page-info"></span>
+                    <div><button id="audit-prev" onclick="changeAuditPage(-1)">Prev</button><button id="audit-next" onclick="changeAuditPage(1)">Next</button></div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- User Detail Modal -->
+<div class="modal-overlay" id="user-modal">
+    <div class="modal">
+        <h2>User Detail</h2>
+        <div id="user-detail-fields"></div>
+        <button class="close-btn" onclick="closeModal()">Close</button>
+        <div style="clear:both"></div>
+    </div>
+</div>
+
+<script>
+const API_BASE = window.location.hostname === 'localhost'
+    ? '' : 'https://api.mamuri.app';
+let TOKEN='', currentPage=0, auditPage=0;
+const charts={};
+
+// ---- Auth ----
+function doLogin(){
+    const email=document.getElementById('login-email').value;
+    const pw=document.getElementById('login-password').value;
+    const errEl=document.getElementById('login-error');
+    errEl.style.display='none';
+    if(!email||!pw)return;
+    fetch(API_BASE+'/api/admin/auth/login',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email,password:pw})
+    }).then(r=>r.json()).then(j=>{
+        if(!j.success){errEl.textContent=j.message||'Login failed';errEl.style.display='block';return;}
+        TOKEN=j.data.accessToken;
+        sessionStorage.setItem('admin_token',TOKEN);
+        sessionStorage.setItem('admin_name',j.data.name);
+        sessionStorage.setItem('admin_role',j.data.role);
+        enterApp(j.data.name, j.data.role);
+    }).catch(()=>{errEl.textContent='서버에 연결할 수 없습니다.';errEl.style.display='block';});
+}
+
+function doLogout(){
+    TOKEN='';
+    sessionStorage.clear();
+    location.reload();
+}
+
+function enterApp(name, role){
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('admin-name').textContent=name+' ('+role+')';
+    refreshData();
+}
+
+// Auto-login from session
+(function(){
+    const t=sessionStorage.getItem('admin_token');
+    if(t){
+        TOKEN=t;
+        apiFetch('/api/admin/auth/me').then(d=>{
+            enterApp(d.name, d.role);
+        }).catch(()=>{sessionStorage.clear();});
+    }
+    document.getElementById('login-password').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+})();
+
+// ---- API ----
+async function apiFetch(url){
+    const res=await fetch(API_BASE+url,{headers:{'Authorization':'Bearer '+TOKEN}});
+    if(res.status===401||res.status===403){doLogout();throw new Error('Unauthorized');}
+    if(!res.ok)throw new Error(res.status);
+    const j=await res.json();
+    if(!j.success)throw new Error(j.message);
+    return j.data;
+}
+
+// ---- Navigation ----
+function showSection(name,btn){
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    document.getElementById('section-'+name).classList.add('active');
+    if(btn)btn.classList.add('active');
+    if(name==='users'&&!document.getElementById('user-tbody').children.length)loadUsers();
+    if(name==='retention')loadRetention();
+    if(name==='audit')loadAuditLogs();
+}
+
+// ---- Data ----
+async function refreshData(){
+    document.getElementById('last-updated').textContent='Loading...';
+    try{
+        const [ov,su,da,ai]=await Promise.all([
+            apiFetch('/api/admin/dashboard/overview'),
+            apiFetch('/api/admin/dashboard/signups?days=30'),
+            apiFetch('/api/admin/dashboard/dau?days=30'),
+            apiFetch('/api/admin/dashboard/ai-usage?days=30'),
+        ]);
+        renderOverview(ov); renderGrowth(ov,su); renderEngagement(ov,da); renderAi(ov,ai);
+        renderMiniCharts(su,da); renderDistributions(ov); renderSafety(ov);
+        document.getElementById('last-updated').textContent='Updated '+new Date().toLocaleTimeString('ko-KR');
+    }catch(e){document.getElementById('last-updated').textContent='Error';console.error(e);}
+}
+
+// ---- Overview ----
+function renderOverview(d){
+    document.getElementById('overview-kpis').innerHTML=
+        kpi('Total Users',fmtN(d.totalUsers),'','accent')
+        +kpi('DAU',fmtN(d.dau),'일기 작성자','green')
+        +kpi('WAU',fmtN(d.wau),'7일','blue')
+        +kpi('MAU',fmtN(d.mau),'30일','blue')
+        +kpi('Stickiness',d.dauMauRatio+'%','DAU/MAU','accent')
+        +kpi('New Today','+'+fmtN(d.newUsersToday),'가입','green')
+        +kpi('New Week','+'+fmtN(d.newUsersThisWeek),'','')
+        +kpi('New Month','+'+fmtN(d.newUsersThisMonth),'','')
+        +kpi('AI Cost Today',fmtK(d.aiCostToday),fmtN(d.aiCallsToday)+' calls','orange')
+        +kpi('AI Cost Month',fmtK(d.aiCostThisMonth),'','orange')
+        +kpi('Conversations',fmtN(d.activeConversationsToday),'Today','')
+        +kpi('Messages',fmtN(d.userMessagesToday)+' / '+fmtN(d.aiMessagesToday),'User / AI','')
+        +kpi('Total Diaries',fmtN(d.totalDiaries),'','')
+        +kpi('Avg Streak',d.avgCurrentStreak,'Max '+d.maxCurrentStreak,'accent')
+        +kpi('Safety',fmtN(d.safetyEventsToday),d.safetyEventsThisWeek+' week',d.safetyEventsToday>0?'red':'green')
+        +kpi('Deletions',fmtN(d.deletionsThisMonth),'this month',d.deletionsThisMonth>0?'red':'');
+}
+
+// ---- Growth ----
+function renderGrowth(d,su){
+    document.getElementById('growth-kpis').innerHTML=
+        kpi('Total',fmtN(d.totalUsers),'','accent')+kpi('Today','+'+fmtN(d.newUsersToday),'','green')
+        +kpi('Week','+'+fmtN(d.newUsersThisWeek),'','blue')+kpi('Month','+'+fmtN(d.newUsersThisMonth),'','blue');
+    lineChart('c-signups',su.labels,su.values,'Signups','#7c6df0');
+    let cum=0;const cv=su.values.map(v=>cum+=v);const base=d.totalUsers-cum;
+    lineChart('c-cumulative',su.labels,cv.map(v=>base+v),'Users','#5b8def');
+}
+
+// ---- Engagement ----
+function renderEngagement(d,da){
+    document.getElementById('engagement-kpis').innerHTML=
+        kpi('DAU',fmtN(d.dau),'','green')+kpi('WAU',fmtN(d.wau),'','blue')
+        +kpi('MAU',fmtN(d.mau),'','blue')+kpi('Stickiness',d.dauMauRatio+'%','DAU/MAU','accent')
+        +kpi('Avg Streak',d.avgCurrentStreak,'','')
+        +kpi('Conversations',fmtN(d.activeConversationsToday),'today','');
+    lineChart('c-dau',da.labels,da.values,'DAU','#4cce8b');
+}
+
+// ---- AI ----
+function renderAi(d,ai){
+    const tc=ai.callCounts.reduce((a,b)=>a+b,0);
+    document.getElementById('ai-kpis').innerHTML=
+        kpi('Calls Today',fmtN(d.aiCallsToday),'','accent')
+        +kpi('Cost Today',fmtK(d.aiCostToday),'','orange')
+        +kpi('Cost Month',fmtK(d.aiCostThisMonth),'','orange')
+        +kpi('Calls 30d',fmtN(tc),'','');
+    barChart('c-ai-calls',ai.labels,ai.callCounts,'Calls','#7c6df0');
+    lineChart('c-ai-cost',ai.labels,ai.costs.map(Number),'KRW','#f0a84c');
+}
+
+// ---- Mini Charts ----
+function renderMiniCharts(su,da){
+    lineChart('c-signups-mini',su.labels,su.values,'Signups','#7c6df0');
+    lineChart('c-dau-mini',da.labels,da.values,'DAU','#4cce8b');
+}
+
+// ---- Distributions ----
+function renderDistributions(d){
+    doughnut('c-tier-dist',d.subscriptionTierDist,{FREE:'#6b7280',DELUXE:'#5b8def',PREMIUM:'#7c6df0'});
+    doughnut('c-provider-dist',d.authProviderDist,{EMAIL:'#7c6df0',GOOGLE:'#4cce8b',APPLE:'#e4e6ed',KAKAO:'#f0a84c'});
+}
+
+// ---- Safety ----
+function renderSafety(d){
+    document.getElementById('safety-kpis').innerHTML=
+        kpi('Today',fmtN(d.safetyEventsToday),'',d.safetyEventsToday>0?'red':'green')
+        +kpi('Week',fmtN(d.safetyEventsThisWeek),'',d.safetyEventsThisWeek>0?'orange':'green');
+}
+
+// ---- Retention ----
+async function loadRetention(){
+    try{
+        const [ret,ch]=await Promise.all([apiFetch('/api/admin/dashboard/retention?weeks=8'),apiFetch('/api/admin/dashboard/churn')]);
+        document.getElementById('retention-tbody').innerHTML=ret.cohorts.map(c=>`<tr>
+            <td>${c.weekLabel}</td><td>${c.cohortSize}</td>
+            <td><span class="retention-cell" style="background:${rc(c.day1Retention)}">${c.day1Retention}%</span></td>
+            <td><span class="retention-cell" style="background:${rc(c.day7Retention)}">${c.day7Retention}%</span></td>
+            <td><span class="retention-cell" style="background:${rc(c.day14Retention)}">${c.day14Retention}%</span></td>
+            <td><span class="retention-cell" style="background:${rc(c.day30Retention)}">${c.day30Retention}%</span></td>
+        </tr>`).join('');
+        if(!ch.reasonDistribution||!Object.keys(ch.reasonDistribution).length){
+            document.getElementById('churn-card').innerHTML='<h3>Churn Reasons</h3><p style="color:var(--text2);padding:16px">No data</p>';
+        }else{doughnut('c-churn',ch.reasonDistribution);}
+    }catch(e){console.error(e);}
+}
+function rc(p){return p>=40?'rgba(76,206,139,.3)':p>=20?'rgba(240,168,76,.3)':p>0?'rgba(240,108,108,.2)':'transparent';}
+
+// ---- Users ----
+let searchTimer;
+function debounceSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(loadUsers,300);}
+async function loadUsers(){
+    const kw=document.getElementById('user-search').value;
+    const tier=document.getElementById('user-tier-filter').value;
+    const st=document.getElementById('user-status-filter').value;
+    const p=new URLSearchParams({page:currentPage,size:20});
+    if(kw)p.set('keyword',kw);if(tier)p.set('tier',tier);if(st)p.set('status',st);
+    try{const d=await apiFetch('/api/admin/users?'+p);renderUsers(d);}catch(e){console.error(e);}
+}
+function renderUsers(pg){
+    document.getElementById('user-tbody').innerHTML=pg.content.map(u=>`<tr onclick="showUser(${u.id})" style="cursor:pointer">
+        <td>${u.id}</td><td>${esc(u.email)}</td><td>${esc(u.nickname)}</td><td>${u.authProvider}</td>
+        <td><span class="badge badge-${u.subscriptionTier.toLowerCase()}">${u.subscriptionTier}</span></td>
+        <td><span class="badge badge-${u.subscriptionStatus.toLowerCase()}">${u.subscriptionStatus}</span></td>
+        <td>${u.diaryCount}</td><td>${u.currentStreak}d</td><td>${u.createdAt?u.createdAt.substring(0,10):'-'}</td>
+    </tr>`).join('');
+    document.getElementById('user-page-info').textContent=`Page ${pg.number+1}/${pg.totalPages} (${pg.totalElements})`;
+    document.getElementById('user-prev').disabled=pg.first;
+    document.getElementById('user-next').disabled=pg.last;
+}
+function changePage(d){currentPage=Math.max(0,currentPage+d);loadUsers();}
+async function showUser(id){
+    try{
+        const u=await apiFetch('/api/admin/users/'+id);
+        const fs=[['ID',u.id],['Email',u.email],['Nickname',u.nickname],['Auth',u.authProvider],
+            ['AI Name',u.aiName],['Level',u.maxLevel],['Sub Status',u.subscriptionStatus],
+            ['Sub Tier',u.subscriptionTier],['Period End',u.currentPeriodEnd||'-'],
+            ['Stripe',u.stripeCustomerId||'-'],['Quota Used',u.quotaUsed],['Diaries',u.diaryCount],
+            ['Streak',u.currentStreak+'d'],['Best Streak',u.longestStreak+'d'],
+            ['Last Diary',u.lastDiaryDate||'-'],['Joined',u.createdAt?u.createdAt.substring(0,19):'-'],
+            ['Updated',u.updatedAt?u.updatedAt.substring(0,19):'-']];
+        document.getElementById('user-detail-fields').innerHTML=
+            fs.map(([l,v])=>`<div class="field"><span class="label">${l}</span><span>${esc(String(v))}</span></div>`).join('');
+        document.getElementById('user-modal').classList.add('show');
+    }catch(e){console.error(e);}
+}
+function closeModal(){document.getElementById('user-modal').classList.remove('show');}
+
+// ---- Audit Log ----
+async function loadAuditLogs(){
+    try{
+        const d=await apiFetch('/api/admin/dashboard/audit-logs?page='+auditPage+'&size=50');
+        document.getElementById('audit-tbody').innerHTML=d.content.map(a=>`<tr>
+            <td>${a.createdAt?a.createdAt.substring(0,19):'-'}</td>
+            <td>${esc(a.adminEmail)}</td><td>${esc(a.action)}</td>
+            <td>${a.targetType?a.targetType+(a.targetId?'#'+a.targetId:''):'-'}</td>
+            <td>${a.ipAddress||'-'}</td><td>${esc(a.detail||'-')}</td>
+        </tr>`).join('');
+        document.getElementById('audit-page-info').textContent=`Page ${d.number+1}/${d.totalPages} (${d.totalElements})`;
+        document.getElementById('audit-prev').disabled=d.first;
+        document.getElementById('audit-next').disabled=d.last;
+    }catch(e){console.error(e);}
+}
+function changeAuditPage(d){auditPage=Math.max(0,auditPage+d);loadAuditLogs();}
+
+// ---- Chart Helpers ----
+function lineChart(id,labels,data,label,color){
+    if(charts[id])charts[id].destroy();
+    const ctx=document.getElementById(id);if(!ctx)return;
+    charts[id]=new Chart(ctx,{type:'line',data:{labels:labels.map(l=>l.substring(5)),
+        datasets:[{label,data,borderColor:color,backgroundColor:color+'20',fill:true,tension:.3,pointRadius:1,borderWidth:2}]},
+        options:chartOpts()});
+}
+function barChart(id,labels,data,label,color){
+    if(charts[id])charts[id].destroy();
+    const ctx=document.getElementById(id);if(!ctx)return;
+    charts[id]=new Chart(ctx,{type:'bar',data:{labels:labels.map(l=>l.substring(5)),
+        datasets:[{label,data,backgroundColor:color+'80',borderColor:color,borderWidth:1,borderRadius:3}]},
+        options:chartOpts()});
+}
+function doughnut(id,dataMap,colorMap){
+    if(charts[id])charts[id].destroy();
+    const ctx=document.getElementById(id);if(!ctx)return;
+    const labels=Object.keys(dataMap),vals=Object.values(dataMap);
+    const dc=['#7c6df0','#5b8def','#4cce8b','#f0a84c','#f06c6c','#9399ab'];
+    const colors=colorMap?labels.map((l,i)=>colorMap[l]||dc[i%dc.length]):dc;
+    charts[id]=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:colors,borderWidth:0}]},
+        options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#8890a6',padding:10,font:{size:10}}}},cutout:'65%'}});
+}
+function chartOpts(){
+    return{responsive:true,interaction:{intersect:false,mode:'index'},plugins:{legend:{display:false}},
+        scales:{x:{grid:{color:'#252a3a'},ticks:{color:'#8890a6',font:{size:9},maxTicksLimit:10}},
+                y:{grid:{color:'#252a3a'},ticks:{color:'#8890a6',font:{size:9}},beginAtZero:true}}};
+}
+
+// ---- Helpers ----
+function fmtN(n){return n==null?'0':Number(n).toLocaleString();}
+function fmtK(n){return(n==null?0:Number(n)).toLocaleString('ko-KR',{maximumFractionDigits:0})+' KRW';}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function kpi(label,value,sub,cls){
+    return`<div class="kpi-card ${cls}"><div class="label">${label}</div><div class="value">${value}</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`;
+}
+</script>
+</body>
+</html>

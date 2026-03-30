@@ -209,6 +209,7 @@ export default function DiaryListScreen({ navigation }: Props) {
       {/* 일기 목록 */}
       <SectionList
         sections={sections}
+        extraData={selectedDate}
         renderItem={({ item }) => (
           <DiaryCard diary={item} onPress={handleDiaryPress} />
         )}

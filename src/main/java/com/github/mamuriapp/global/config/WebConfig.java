@@ -22,10 +22,21 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final UploadProperties uploadProperties;
 
+    @Value("${admin.cors.allowed-origins:https://admin.mamuri.app}")
+    private String adminAllowedOrigins;
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
                 .allowedOrigins(allowedOrigins.split(","))
+                .allowedMethods("GET", "POST", "PUT", "DELETE")
+                .allowedHeaders("Content-Type", "Authorization")
+                .allowCredentials(true)
+                .maxAge(3600);
+
+        // Admin API CORS — admin.mamuri.app 전용
+        registry.addMapping("/api/admin/**")
+                .allowedOrigins(adminAllowedOrigins.split(","))
                 .allowedMethods("GET", "POST", "PUT", "DELETE")
                 .allowedHeaders("Content-Type", "Authorization")
                 .allowCredentials(true)

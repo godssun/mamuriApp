@@ -3,27 +3,50 @@ package com.github.mamuriapp.diary.dto;
 import com.github.mamuriapp.ai.dto.AiCommentResponse;
 import com.github.mamuriapp.diary.entity.Diary;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 일기 응답 DTO.
  */
 @Getter
 @AllArgsConstructor
+@Builder
 public class DiaryResponse {
 
     private Long id;
     private String title;
     private String content;
     private LocalDate diaryDate;
+    private String diaryType;
+    private String theme;
     private AiCommentResponse aiComment;
+    private EmotionInfo emotion;
     private LevelUpInfo levelUp;
     private StreakInfo streak;
+    private List<DiaryPhotoResponse> photos;
+    private List<DiaryDecorationResponse> decorations;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    /**
+     * 감정 정보.
+     */
+    @Getter
+    @AllArgsConstructor
+    @Builder
+    public static class EmotionInfo {
+        private String primaryEmotion;
+        private int emotionScore;
+        private Long primaryStickerId;
+        private String stickerCode;
+        private String stickerImageUrl;
+        private List<Long> secondaryStickerIds;
+    }
 
     /**
      * 레벨업 정보.
@@ -48,88 +71,111 @@ public class DiaryResponse {
 
     /**
      * 엔티티를 DTO로 변환한다 (AI 코멘트 없이).
-     *
-     * @param diary 일기 엔티티
-     * @return DiaryResponse
      */
     public static DiaryResponse from(Diary diary) {
-        return new DiaryResponse(
-                diary.getId(),
-                diary.getTitle(),
-                diary.getContent(),
-                diary.getDiaryDate(),
-                null,
-                null,
-                null,
-                diary.getCreatedAt(),
-                diary.getUpdatedAt()
-        );
+        return DiaryResponse.builder()
+                .id(diary.getId())
+                .title(diary.getTitle())
+                .content(diary.getContent())
+                .diaryDate(diary.getDiaryDate())
+                .diaryType(diary.getDiaryType())
+                .theme(diary.getTheme())
+                .createdAt(diary.getCreatedAt())
+                .updatedAt(diary.getUpdatedAt())
+                .build();
+    }
+
+    /**
+     * 목록용 DTO 변환 (썸네일 사진 + 감정 정보 포함).
+     */
+    public static DiaryResponse forList(Diary diary, DiaryPhotoResponse thumbnail, EmotionInfo emotion) {
+        return DiaryResponse.builder()
+                .id(diary.getId())
+                .title(diary.getTitle())
+                .content(diary.getContent())
+                .diaryDate(diary.getDiaryDate())
+                .diaryType(diary.getDiaryType())
+                .theme(diary.getTheme())
+                .photos(thumbnail != null ? List.of(thumbnail) : null)
+                .emotion(emotion)
+                .createdAt(diary.getCreatedAt())
+                .updatedAt(diary.getUpdatedAt())
+                .build();
     }
 
     /**
      * 엔티티를 DTO로 변환한다 (AI 코멘트 포함).
-     *
-     * @param diary     일기 엔티티
-     * @param aiComment AI 코멘트 응답
-     * @return DiaryResponse
      */
     public static DiaryResponse of(Diary diary, AiCommentResponse aiComment) {
-        return new DiaryResponse(
-                diary.getId(),
-                diary.getTitle(),
-                diary.getContent(),
-                diary.getDiaryDate(),
-                aiComment,
-                null,
-                null,
-                diary.getCreatedAt(),
-                diary.getUpdatedAt()
-        );
+        return DiaryResponse.builder()
+                .id(diary.getId())
+                .title(diary.getTitle())
+                .content(diary.getContent())
+                .diaryDate(diary.getDiaryDate())
+                .diaryType(diary.getDiaryType())
+                .theme(diary.getTheme())
+                .aiComment(aiComment)
+                .createdAt(diary.getCreatedAt())
+                .updatedAt(diary.getUpdatedAt())
+                .build();
+    }
+
+    /**
+     * 엔티티를 DTO로 변환한다 (AI 코멘트 + 사진 + 꾸미기 포함, 상세 조회용).
+     */
+    public static DiaryResponse ofDetail(Diary diary, AiCommentResponse aiComment,
+                                          List<DiaryPhotoResponse> photos,
+                                          List<DiaryDecorationResponse> decorations) {
+        return DiaryResponse.builder()
+                .id(diary.getId())
+                .title(diary.getTitle())
+                .content(diary.getContent())
+                .diaryDate(diary.getDiaryDate())
+                .diaryType(diary.getDiaryType())
+                .theme(diary.getTheme())
+                .aiComment(aiComment)
+                .photos(photos)
+                .decorations(decorations)
+                .createdAt(diary.getCreatedAt())
+                .updatedAt(diary.getUpdatedAt())
+                .build();
     }
 
     /**
      * 엔티티를 DTO로 변환한다 (AI 코멘트 + 레벨업 정보 포함).
-     *
-     * @param diary       일기 엔티티
-     * @param aiComment   AI 코멘트 응답
-     * @param levelUpInfo 레벨업 정보 (nullable)
-     * @return DiaryResponse
      */
     public static DiaryResponse of(Diary diary, AiCommentResponse aiComment, LevelUpInfo levelUpInfo) {
-        return new DiaryResponse(
-                diary.getId(),
-                diary.getTitle(),
-                diary.getContent(),
-                diary.getDiaryDate(),
-                aiComment,
-                levelUpInfo,
-                null,
-                diary.getCreatedAt(),
-                diary.getUpdatedAt()
-        );
+        return DiaryResponse.builder()
+                .id(diary.getId())
+                .title(diary.getTitle())
+                .content(diary.getContent())
+                .diaryDate(diary.getDiaryDate())
+                .diaryType(diary.getDiaryType())
+                .theme(diary.getTheme())
+                .aiComment(aiComment)
+                .levelUp(levelUpInfo)
+                .createdAt(diary.getCreatedAt())
+                .updatedAt(diary.getUpdatedAt())
+                .build();
     }
 
     /**
      * 엔티티를 DTO로 변환한다 (AI 코멘트 + 레벨업 + 스트릭 정보 포함).
-     *
-     * @param diary       일기 엔티티
-     * @param aiComment   AI 코멘트 응답
-     * @param levelUpInfo 레벨업 정보 (nullable)
-     * @param streakInfo  스트릭 정보 (nullable)
-     * @return DiaryResponse
      */
     public static DiaryResponse of(Diary diary, AiCommentResponse aiComment,
                                    LevelUpInfo levelUpInfo, StreakInfo streakInfo) {
-        return new DiaryResponse(
-                diary.getId(),
-                diary.getTitle(),
-                diary.getContent(),
-                diary.getDiaryDate(),
-                aiComment,
-                levelUpInfo,
-                streakInfo,
-                diary.getCreatedAt(),
-                diary.getUpdatedAt()
-        );
+        return DiaryResponse.builder()
+                .id(diary.getId())
+                .title(diary.getTitle())
+                .content(diary.getContent())
+                .diaryDate(diary.getDiaryDate())
+                .diaryType(diary.getDiaryType())
+                .theme(diary.getTheme())
+                .aiComment(aiComment)
+                .levelUp(levelUpInfo)
+                .streak(streakInfo)
+                .createdAt(diary.getCreatedAt())
+                .updatedAt(diary.getUpdatedAt())
+                .build();
     }
 }

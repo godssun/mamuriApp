@@ -1,21 +1,19 @@
 /**
- * Design System v2 — Screen Container
+ * ScreenContainer v3 — Warm paper screen wrapper
  *
- * Provides consistent screen layout with safe area, status bar, and scroll behavior.
+ * Provides consistent screen layout with safe area, status bar,
+ * and scroll behavior. Cream paper background by default.
+ *
+ * v3 design system tokens.
  */
 
 import React from 'react';
 import {
-  View,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  StatusBar,
-  StyleSheet,
-  ViewStyle,
+  View, ScrollView, KeyboardAvoidingView, Platform,
+  StatusBar, StyleSheet, ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useThemeV2 } from '../../design-system-v2';
+import { colors, spacing, layout } from '../../design-system-v3';
 
 interface ScreenContainerProps {
   children: React.ReactNode;
@@ -29,42 +27,30 @@ interface ScreenContainerProps {
 }
 
 export function ScreenContainer({
-  children,
-  scrollable = true,
-  keyboardAvoiding = false,
-  padded = true,
-  style,
-  contentStyle,
-  header,
-  footer,
+  children, scrollable = true, keyboardAvoiding = false,
+  padded = true, style, contentStyle, header, footer,
 }: ScreenContainerProps) {
-  const { theme, isDark } = useThemeV2();
   const insets = useSafeAreaInsets();
 
   const containerStyle: ViewStyle = {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.bgCream,
   };
 
   const contentPadding: ViewStyle = padded
-    ? { paddingHorizontal: theme.layout.screenPaddingH }
+    ? { paddingHorizontal: layout.screenPaddingH }
     : {};
 
   const inner = (
     <>
-      <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.colors.background}
-      />
-
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bgCream} />
       {header}
-
       {scrollable ? (
         <ScrollView
           style={styles.flex}
           contentContainerStyle={[
             contentPadding,
-            { paddingBottom: insets.bottom + theme.spacing['3xl'] },
+            { paddingBottom: insets.bottom + spacing['3xl'] },
             contentStyle,
           ]}
           showsVerticalScrollIndicator={false}
@@ -77,7 +63,6 @@ export function ScreenContainer({
           {children}
         </View>
       )}
-
       {footer}
     </>
   );

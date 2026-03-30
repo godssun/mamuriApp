@@ -1,23 +1,21 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
-
-const CRISIS_CONTACTS = [
-  { name: '자살예방상담전화', number: '1393' },
-  { name: '정신건강위기상담전화', number: '1577-0199' },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function CrisisBanner() {
+  const { t } = useTranslation();
+
+  const contacts = t('crisis.contacts', { returnObjects: true }) as Array<{ name: string; number: string }>;
+
   const handleCall = (number: string) => {
     Linking.openURL(`tel:${number}`);
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>
-        힘든 시간을 보내고 계시다면, 도움을 받을 수 있어요
-      </Text>
+      <Text style={styles.title}>{t('crisis.title')}</Text>
       <View style={styles.contacts}>
-        {CRISIS_CONTACTS.map((contact) => (
+        {Array.isArray(contacts) && contacts.map((contact) => (
           <TouchableOpacity
             key={contact.number}
             style={styles.contactButton}
@@ -28,9 +26,7 @@ export default function CrisisBanner() {
           </TouchableOpacity>
         ))}
       </View>
-      <Text style={styles.note}>
-        당신의 안전이 가장 중요합니다
-      </Text>
+      <Text style={styles.note}>{t('crisis.note')}</Text>
     </View>
   );
 }

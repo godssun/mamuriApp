@@ -96,6 +96,7 @@ export interface UserSettings {
   backgroundTheme: 'warm' | 'light' | 'dark';
   fontFamily: 'system' | 'serif';
   fontSize: 'small' | 'medium' | 'large';
+  diaryFont?: 'default' | 'serif' | 'round' | 'pen';
   language?: 'ko' | 'en' | 'ja' | 'zh';
   aiDataConsent?: boolean;
 }
@@ -176,7 +177,7 @@ export interface DeleteAccountRequest {
 }
 
 // 구독
-export type SubscriptionTier = 'FREE' | 'DELUXE' | 'PREMIUM';
+export type SubscriptionTier = 'FREE' | 'PREMIUM';
 
 export type SubscriptionStatusType = 'FREE' | 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
 
@@ -190,6 +191,51 @@ export interface SubscriptionInfo {
   crisisFlag: boolean;
 }
 
+/**
+ * Premium Entitlements — 구독자 전용 기능 접근 권한
+ *
+ * isPremium이 true이면 모든 entitlement가 열림.
+ * 개별 기능별 체크가 필요한 경우 이 인터페이스를 사용.
+ */
+export interface PremiumEntitlements {
+  /** 커스텀 스티커 제작 (사진→배경제거→스티커화) */
+  canCreateCustomSticker: boolean;
+  /** AI 댓글 일일 한도 (무료: 1, 프리미엄: 10) */
+  aiCommentDailyLimit: number;
+  /** AI 대화 일일 한도 (무료: 3, 프리미엄: 30) */
+  aiConversationDailyLimit: number;
+  /** 프리미엄 테마 사용 */
+  canUsePremiumThemes: boolean;
+  /** 프리미엄 폰트 사용 */
+  canUsePremiumFonts: boolean;
+  /** 고급 감정 리포트/회고 */
+  canViewAdvancedReports: boolean;
+}
+
+/** IAP Product ID 상수 */
+export const IAP_PRODUCTS = {
+  MONTHLY: 'mamuri_premium_monthly',
+  YEARLY: 'mamuri_premium_yearly',
+} as const;
+
+/** 커스텀 스티커 데이터 구조 */
+export interface CustomSticker {
+  id: string;
+  /** 원본 이미지 URI */
+  originalUri: string;
+  /** 배경 제거된 스티커 URI */
+  stickerUri: string;
+  /** 스티커 썸네일 URI */
+  thumbnailUri: string;
+  /** 생성 시간 */
+  createdAt: string;
+  /** 스티커 크기 (px) */
+  width: number;
+  height: number;
+  /** 테두리 스타일 */
+  borderStyle?: 'none' | 'white' | 'black' | 'shadow';
+}
+
 // 네비게이션
 export type RootStackParamList = {
   Auth: undefined;
@@ -197,6 +243,7 @@ export type RootStackParamList = {
 };
 
 export type AuthStackParamList = {
+  Welcome: undefined;
   Login: undefined;
   Signup: undefined;
   SocialNickname: { provider: SocialProvider; token: string };
@@ -208,11 +255,18 @@ export type MainStackParamList = {
   Settings: undefined;
   DiaryArchive: undefined;
   DiaryDetailFromArchive: { diaryId: number };
+  ReportDetail: { reportId: number };
+  EmotionCalendar: undefined;
+  EmotionPicker: { preselectedEmotion?: EmotionKey; returnTo?: string };
+  Paywall: undefined;
+  CustomSticker: undefined;
 };
 
 export type MainTabParamList = {
+  Home: undefined;
   DiaryList: undefined;
   Companion: undefined;
+  Reflect: undefined;
 };
 
 export type DiaryStackParamList = {
@@ -220,4 +274,100 @@ export type DiaryStackParamList = {
   WriteDiary: { editDiaryId: number } | undefined;
   DiaryDetail: { diaryId: number };
   AIComment: { diaryId: number };
+};
+
+// ── V3: 감정 스티커 시스템 ──
+
+export type EmotionKey = 'JOY' | 'CALM' | 'SAD' | 'ANXIOUS' | 'COMPLEX';
+
+export interface EmotionCategory {
+  id: number;
+  code: EmotionKey;
+  nameKo: string;
+  displayOrder: number;
+  colorHex: string;
+}
+
+export interface EmotionSticker {
+  id: number;
+  code: string;
+  nameKo: string;
+  imageUrl: string;
+  isDefault: boolean;
+  isPremium: boolean;
+  category: EmotionCategory;
+}
+
+export interface EmotionInfo {
+  primaryEmotion?: string;
+  primarySticker: EmotionSticker | null;
+  primaryStickerId?: number;
+  stickerCode?: string;
+  emotionScore: number;
+  secondaryTags: string[];
+  secondaryStickerIds?: number[];
+}
+
+export interface CalendarDayEntry {
+  date: string;
+  diaryCount: number;
+  primaryEmotionCode: EmotionKey | null;
+  emotionScore: number | null;
+}
+
+export interface DiaryCalendarResponseV2 {
+  year: number;
+  month: number;
+  days: CalendarDayEntry[];
+}
+
+export interface DiaryCreateRequestV3 {
+  title?: string;
+  content?: string;
+  diaryDate?: string;
+  diaryType?: 'TEXT' | 'VISUAL' | 'MIXED';
+  primaryStickerId?: number;
+  primaryEmotion?: EmotionKey;
+  secondaryEmotions?: string[];
+  emotionScore?: number;
+  theme?: string;
+}
+
+export interface DiaryV3 extends Diary {
+  diaryType?: string;
+  theme?: string;
+  emotion?: EmotionInfo | null;
+  photos?: DiaryPhoto[];
+  decorations?: DiaryDecorationPlacement[];
+}
+
+export interface DiaryPhoto {
+  id: number;
+  cdnUrl: string;
+  displayOrder: number;
+}
+
+export interface DiaryDecorationPlacement {
+  id: number;
+  assetId?: number;
+  assetType?: string;
+  assetCode?: string;    // 백엔드가 실제로 반환하는 필드
+  imageUrl?: string;
+  positionX: number;
+  positionY: number;
+  scale: number;
+  rotation: number;
+  zIndex?: number;
+}
+
+export type DiaryStackParamListV3 = {
+  DiaryListHome: { filterDate?: string } | undefined;
+  EmotionPicker: { preselectedEmotion?: EmotionKey; returnTo?: string };
+  WriteDiary: { editDiaryId?: number; selectedEmotion?: EmotionKey; selectedStickerId?: number; secondaryTags?: string[] };
+  DiaryDetail: { diaryId: number };
+  AIComment: { diaryId: number };
+};
+
+export type MainStackParamListV3 = MainStackParamList & {
+  EmotionCalendar: undefined;
 };

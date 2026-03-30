@@ -1,7 +1,16 @@
 package com.github.mamuriapp.ai.service;
 
+import com.github.mamuriapp.ai.entity.UserMemory;
+import com.github.mamuriapp.ai.repository.UserMemoryRepository;
 import com.github.mamuriapp.diary.entity.Diary;
+import com.github.mamuriapp.diary.entity.DiaryEmotion;
+import com.github.mamuriapp.diary.entity.DiaryPhoto;
+import com.github.mamuriapp.diary.entity.EmotionSticker;
+import com.github.mamuriapp.diary.repository.DiaryEmotionRepository;
+import com.github.mamuriapp.diary.repository.DiaryPhotoRepository;
 import com.github.mamuriapp.diary.repository.DiaryRepository;
+import com.github.mamuriapp.diary.repository.EmotionStickerRepository;
+import org.springframework.data.domain.PageRequest;
 import com.github.mamuriapp.user.entity.User;
 import com.github.mamuriapp.user.entity.UserSettings;
 import com.github.mamuriapp.user.repository.UserSettingsRepository;
@@ -50,8 +59,24 @@ public class PromptBuilder {
             "최고의 친구"                // Lv.10
     };
 
+    // 관계 단계 설명 (7단계)
+    private static final String[] RELATIONSHIP_DESCRIPTIONS = {
+            "",
+            "첫 만남 단계 — 조심스럽고 공손하게, 사용자를 알아가고 있는 중이야",
+            "알아가는 중 — 사용자의 이야기에 관심을 보이며 기억을 쌓고 있어",
+            "친해진 사이 — 자연스럽게 이전 대화를 언급하고, 가벼운 농담도 가능해",
+            "깊은 신뢰 — 패턴을 조심스럽게 지적할 수 있고, 진심 어린 조언도 가능해",
+            "소울메이트 — 완전한 맥락 이해, 깊은 공감과 함께 솔직한 대화가 가능해",
+            "영혼의 동반자 — 말하지 않아도 알 수 있는 사이, 깊은 패턴 인사이트 제공 가능",
+            "평생의 친구 — 모든 이야기를 함께해온 사이, 가장 진심 어린 대화가 가능해"
+    };
+
     private final UserSettingsRepository userSettingsRepository;
     private final DiaryRepository diaryRepository;
+    private final UserMemoryRepository userMemoryRepository;
+    private final DiaryEmotionRepository diaryEmotionRepository;
+    private final DiaryPhotoRepository diaryPhotoRepository;
+    private final EmotionStickerRepository emotionStickerRepository;
 
     /**
      * 개인화된 프롬프트를 조립한다.
@@ -85,6 +110,22 @@ public class PromptBuilder {
 
         String speechStyleInstruction = mapSpeechStyle(settings);
 
+        // v5/v6: 기억, 감정, 관계 단계 주입
+        String memories = formatMemories(user.getId());
+        String emotionContext = formatRecentEmotions(user.getId());
+        String todayEmotion = getDiaryEmotion(diary.getId());
+        int relStage = Math.max(1, Math.min(7, user.getRelationshipStage()));
+        String relationshipDescription = RELATIONSHIP_DESCRIPTIONS[relStage];
+
+        // v6: 3계층 기억 분리
+        String longTermMemories = formatTieredMemories(user.getId(), "LONG_TERM", 5);
+        String midTermMemories = formatTieredMemories(user.getId(), "MID_TERM", 5);
+        String shortTermMemories = formatTieredMemories(user.getId(), "SHORT_TERM", 5);
+
+        // v6: 스티커/사진 컨텍스트
+        String stickerContext = formatStickerContext(diary.getId());
+        String photoContext = formatPhotoContext(diary.getId());
+
         return template
                 .replace("{{aiName}}", aiName)
                 .replace("{{userName}}", userName)
@@ -92,8 +133,17 @@ public class PromptBuilder {
                 .replace("{{speechStyleInstruction}}", speechStyleInstruction)
                 .replace("{{level}}", String.valueOf(level))
                 .replace("{{levelDescription}}", levelDescription)
+                .replace("{{relationshipDescription}}", relationshipDescription)
+                .replace("{{memories}}", memories)
+                .replace("{{longTermMemories}}", longTermMemories)
+                .replace("{{midTermMemories}}", midTermMemories)
+                .replace("{{shortTermMemories}}", shortTermMemories)
+                .replace("{{emotionContext}}", emotionContext)
+                .replace("{{todayEmotion}}", todayEmotion)
+                .replace("{{stickerContext}}", stickerContext)
+                .replace("{{photoContext}}", photoContext)
                 .replace("{{recentDiaries}}", recentContext)
-                .replace("{{content}}", content);
+                .replace("{{content}}", content != null ? content : "(텍스트 없음 — 스티커/사진으로 기록)");
     }
 
     private String mapTone(UserSettings settings) {
@@ -160,6 +210,18 @@ public class PromptBuilder {
         String content = truncate(diary.getContent(), maxContentChars);
         String conversationHistory = formatConversationHistory(history);
 
+        // v2/v3: 기억 + 관계 주입
+        String memories = formatMemories(user.getId());
+        int relStage = Math.max(1, Math.min(7, user.getRelationshipStage()));
+        String relationshipDescription = RELATIONSHIP_DESCRIPTIONS[relStage];
+
+        // v3: 3계층 기억 분리 + 스티커/사진
+        String longTermMemories = formatTieredMemories(user.getId(), "LONG_TERM", 5);
+        String midTermMemories = formatTieredMemories(user.getId(), "MID_TERM", 5);
+        String shortTermMemories = formatTieredMemories(user.getId(), "SHORT_TERM", 5);
+        String stickerContext = formatStickerContext(diary.getId());
+        String photoContext = formatPhotoContext(diary.getId());
+
         return template
                 .replace("{{aiName}}", aiName)
                 .replace("{{userName}}", userName)
@@ -167,7 +229,14 @@ public class PromptBuilder {
                 .replace("{{speechStyleInstruction}}", speechStyleInstruction)
                 .replace("{{level}}", String.valueOf(level))
                 .replace("{{levelDescription}}", levelDescription)
-                .replace("{{content}}", content)
+                .replace("{{relationshipDescription}}", relationshipDescription)
+                .replace("{{memories}}", memories)
+                .replace("{{longTermMemories}}", longTermMemories)
+                .replace("{{midTermMemories}}", midTermMemories)
+                .replace("{{shortTermMemories}}", shortTermMemories)
+                .replace("{{stickerContext}}", stickerContext)
+                .replace("{{photoContext}}", photoContext)
+                .replace("{{content}}", content != null ? content : "(텍스트 없음)")
                 .replace("{{conversationHistory}}", conversationHistory);
     }
 
@@ -181,6 +250,76 @@ public class PromptBuilder {
             sb.append(speaker).append(": ").append(msg.getContent()).append("\n");
         }
         return sb.toString();
+    }
+
+    private String formatMemories(Long userId) {
+        List<UserMemory> memories = userMemoryRepository.findTopMemories(userId, PageRequest.of(0, 10));
+        if (memories.isEmpty()) {
+            return "(아직 기억 없음 — 대화를 나누면서 자연스럽게 알아갈 거예요)";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (UserMemory m : memories) {
+            sb.append("- [").append(m.getMemoryType()).append("] ")
+              .append(m.getContent())
+              .append(" (중요도: ").append(m.getImportance()).append(")\n");
+        }
+        return sb.toString();
+    }
+
+    private String formatRecentEmotions(Long userId) {
+        List<DiaryEmotion> recent = diaryEmotionRepository.findRecentByUserId(userId, PageRequest.of(0, 7));
+        if (recent.isEmpty()) {
+            return "(최근 감정 기록 없음)";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (DiaryEmotion e : recent) {
+            sb.append("- ").append(e.getPrimaryEmotion())
+              .append(" (강도: ").append(e.getEmotionScore()).append("/5)\n");
+        }
+        return sb.toString();
+    }
+
+    private String getDiaryEmotion(Long diaryId) {
+        return diaryEmotionRepository.findByDiaryId(diaryId)
+                .map(DiaryEmotion::getPrimaryEmotion)
+                .orElse("미선택");
+    }
+
+    private String formatTieredMemories(Long userId, String tier, int limit) {
+        List<UserMemory> memories = userMemoryRepository.findByUserIdAndTier(
+                userId, tier, PageRequest.of(0, limit));
+        if (memories.isEmpty()) {
+            return "(없음)";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (UserMemory m : memories) {
+            sb.append("- [").append(m.getMemoryType()).append("] ")
+              .append(m.getContent())
+              .append(" (중요도: ").append(m.getImportance())
+              .append(", 언급: ").append(m.getMentionCount()).append("회)\n");
+        }
+        return sb.toString();
+    }
+
+    private String formatStickerContext(Long diaryId) {
+        return diaryEmotionRepository.findByDiaryId(diaryId)
+                .map(emotion -> {
+                    if (emotion.getPrimaryStickerId() == null) {
+                        return "(스티커 미사용)";
+                    }
+                    return emotionStickerRepository.findById(emotion.getPrimaryStickerId())
+                            .map(sticker -> sticker.getNameKo() + " (" + sticker.getCategory().getNameKo() + ")")
+                            .orElse("스티커 ID: " + emotion.getPrimaryStickerId());
+                })
+                .orElse("(감정 기록 없음)");
+    }
+
+    private String formatPhotoContext(Long diaryId) {
+        List<DiaryPhoto> photos = diaryPhotoRepository.findByDiaryIdOrderByDisplayOrderAsc(diaryId);
+        if (photos.isEmpty()) {
+            return "(사진 없음)";
+        }
+        return "사진 " + photos.size() + "장 첨부됨";
     }
 
     private String truncate(String text, int maxChars) {

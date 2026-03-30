@@ -89,6 +89,42 @@ export const moodColors = {
 } as const;
 
 // ============================================================
+// Primary Emotions — 5-category system for check-in
+// ============================================================
+export const primaryEmotionColors = {
+  JOY: '#FFD166',       // 좋아요 — warm yellow
+  CALM: '#83C9A8',      // 괜찮아요 — sage green
+  SAD: '#7BA7D9',       // 별로예요 — soft blue
+  ANXIOUS: '#E8A87C',   // 힘들어요 — warm coral
+  COMPLEX: '#B8B0C8',   // 복잡해요 — muted lavender
+} as const;
+
+// Secondary emotion tags
+export const secondaryEmotionColors: Record<string, string> = {
+  '설렘': '#FF9B7A',
+  '감사': '#A8D5BA',
+  '뿌듯함': '#FFD166',
+  '평온': '#83C9A8',
+  '외로움': '#9BB8D9',
+  '불안': '#E8A87C',
+  '분노': '#E07A7A',
+  '피곤': '#B8B0C8',
+  '후회': '#C0A8D0',
+  '그리움': '#9BB8D9',
+};
+
+// ============================================================
+// Companion — emotion-based accent colors
+// ============================================================
+export const companionColors = {
+  happy: '#83C9A8',     // 기뻐하는 동반자
+  worried: '#9BB8D9',   // 걱정하는 동반자
+  curious: '#B8B0C8',   // 궁금해하는 동반자
+  proud: '#FFD166',     // 뿌듯한 동반자
+  sleepy: '#C0B8D0',    // 졸린 동반자
+} as const;
+
+// ============================================================
 // Light Theme — Semantic Tokens
 // ============================================================
 export const lightColors = {

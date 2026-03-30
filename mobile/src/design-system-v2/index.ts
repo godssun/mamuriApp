@@ -3,7 +3,7 @@
  */
 
 // Colors
-export { palette, moodColors, lightColors, darkColors } from './colors';
+export { palette, moodColors, lightColors, darkColors, primaryEmotionColors, secondaryEmotionColors, companionColors } from './colors';
 export type { ColorTokens } from './colors';
 
 // Typography

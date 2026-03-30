@@ -15,4 +15,5 @@ import org.springframework.stereotype.Component;
 public class UploadProperties {
     private String dir = "uploads";
     private long maxFileSize = 5242880; // 5MB
+    private String baseUrl = "http://localhost:8080";
 }

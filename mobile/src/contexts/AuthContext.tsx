@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { authApi, tokenStorage, setForceLogoutHandler, clearForceLogoutHandler } from '../api/client';
+import { authApi, tokenStorage, consentStorage, setForceLogoutHandler, clearForceLogoutHandler } from '../api/client';
 import { SignupRequest, LoginRequest, SocialProvider } from '../types';
 import { signOutFromProviders } from '../services/socialAuth';
 
@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const forceLogout = useCallback(() => {
     tokenStorage.clear();
     SecureStore.deleteItemAsync(AUTH_PROVIDER_KEY);
+    consentStorage.clear();
     setIsAuthenticated(false);
     setIsNewUser(false);
   }, []);
@@ -79,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = useCallback(async (data: SignupRequest) => {
     await authApi.signup(data);
+    await SecureStore.setItemAsync(AUTH_PROVIDER_KEY, 'EMAIL');
     setIsNewUser(true);
     setIsAuthenticated(true);
   }, []);
