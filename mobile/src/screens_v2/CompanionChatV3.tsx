@@ -16,11 +16,14 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { colors, fontFamily, shadows, spacing, borderRadius, layout } from '../design-system-v3';
 import { PaperBackground } from '../design-system-v3/components/PaperBackground';
 import { companionApi, settingsApi, memoryApi, ApiError } from '../api/client';
 import type { CompanionProfile, CompanionSettings, UserSettings, MainStackParamList } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
+import CrisisBanner from '../components/CrisisBanner';
 import { getAvatarImageUri } from '../utils/avatar';
 import { Button } from './components/Button';
 import { Input } from './components/Input';
@@ -30,21 +33,23 @@ if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
 
-const AI_TONE_OPTIONS = [
-  { value: 'warm' as const, label: '따뜻한', desc: '편안하고 다정한 말투' },
-  { value: 'calm' as const, label: '차분한', desc: '조용하고 안정적인 말투' },
-  { value: 'cheerful' as const, label: '밝은', desc: '에너지 넘치는 활기찬 말투' },
-  { value: 'realistic' as const, label: '현실적인', desc: '솔직하고 담담한 말투' },
+const AI_TONE_KEYS = [
+  { value: 'warm' as const, labelKey: 'companion.toneWarm', descKey: 'companion.toneWarmDesc' },
+  { value: 'calm' as const, labelKey: 'companion.toneCalm', descKey: 'companion.toneCalmDesc' },
+  { value: 'cheerful' as const, labelKey: 'companion.toneCheerful', descKey: 'companion.toneCheerfulDesc' },
+  { value: 'realistic' as const, labelKey: 'companion.toneRealistic', descKey: 'companion.toneRealisticDesc' },
 ];
 
-const SPEECH_STYLE_OPTIONS = [
-  { value: 'formal' as const, label: '존댓말', desc: '정중한 존댓말' },
-  { value: 'casual' as const, label: '반말', desc: '편안한 반말' },
+const SPEECH_STYLE_KEYS = [
+  { value: 'formal' as const, labelKey: 'companion.speechFormal', descKey: 'companion.speechFormalDesc' },
+  { value: 'casual' as const, labelKey: 'companion.speechCasual', descKey: 'companion.speechCasualDesc' },
 ];
 
 export default function CompanionChatV3() {
   const mainNav = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { setCompanionName } = useAuth();
+  const { t } = useTranslation();
+  const { hasCrisisFlag } = useSubscription();
 
   const [profile, setProfile] = useState<CompanionProfile | null>(null);
   const [companionSettings, setCompanionSettings] = useState<CompanionSettings | null>(null);
@@ -87,7 +92,7 @@ export default function CompanionChatV3() {
 
   const handleSaveName = async () => {
     const trimmed = newName.trim();
-    if (!trimmed) { Alert.alert('알림', '이름을 입력해주세요.'); return; }
+    if (!trimmed) { Alert.alert(t('common.alert'), t('companion.nameRequired')); return; }
     setIsSavingName(true);
     try {
       const updated = await companionApi.updateName({ aiName: trimmed });
@@ -95,7 +100,7 @@ export default function CompanionChatV3() {
       setCompanionName(trimmed);
       setShowNameModal(false);
     } catch (error) {
-      Alert.alert('오류', error instanceof ApiError ? error.message : '이름 변경에 실패했습니다.');
+      Alert.alert(t('common.error'), error instanceof ApiError ? error.message : t('companion.nameChangeFailed'));
     } finally {
       setIsSavingName(false);
     }
@@ -136,8 +141,8 @@ export default function CompanionChatV3() {
   if (!profile) {
     return (
       <View style={s.loadingContainer}>
-        <Text style={s.errorText}>프로필을 불러올 수 없습니다.</Text>
-        <Button label="다시 시도" variant="primary" onPress={loadData} />
+        <Text style={s.errorText}>{t('companion.profileLoadFailed')}</Text>
+        <Button label={t('companion.retry')} variant="primary" onPress={loadData} />
       </View>
     );
   }
@@ -147,6 +152,9 @@ export default function CompanionChatV3() {
   return (
     <PaperBackground variant="plain" color="cream">
       <ScrollView style={s.root} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        {/* Crisis Banner */}
+        {hasCrisisFlag && <CrisisBanner />}
+
         {/* Header */}
         <View style={s.header}>
           <Text style={s.headerTitle}>{profile.aiName}</Text>
@@ -175,7 +183,7 @@ export default function CompanionChatV3() {
 
           <TouchableOpacity style={s.nameRow} onPress={() => { setNewName(profile.aiName); setShowNameModal(true); }}>
             <Text style={s.charName}>{profile.aiName}</Text>
-            <Text style={s.changeText}>변경</Text>
+            <Text style={s.changeText}>{t('companion.change')}</Text>
           </TouchableOpacity>
 
           {/* Relationship Progress */}
@@ -194,7 +202,7 @@ export default function CompanionChatV3() {
             </View>
             {!profile.maxLevel && (
               <Text style={s.levelProgress}>
-                다음 레벨까지 {profile.nextLevelDiaryCount - profile.diaryCount}일기
+                {t('companion.diaryCountValue', { count: profile.nextLevelDiaryCount - profile.diaryCount })}
               </Text>
             )}
           </View>
@@ -203,8 +211,8 @@ export default function CompanionChatV3() {
         {/* Companion Message */}
         {msg && (
           <View style={s.msgCard}>
-            <Text style={s.msgText}>"{msg.message}"</Text>
-            {msg.subMessage && <Text style={s.msgSub}>{msg.subMessage}</Text>}
+            <Text style={s.msgText}>"{msg.type ? t(`companionMsg.${msg.type}`, { days: msg.message?.match(/\d+/)?.[0] || '', defaultValue: msg.message }) : msg.message}"</Text>
+            {msg.subMessage && <Text style={s.msgSub}>{msg.type ? t(`companionMsg.${msg.type}_sub`, { defaultValue: msg.subMessage }) : msg.subMessage}</Text>}
           </View>
         )}
 
@@ -214,18 +222,18 @@ export default function CompanionChatV3() {
         <View style={s.statsCard}>
           <View style={s.statItem}>
             <Text style={s.statNum}>{profile.diaryCount}</Text>
-            <Text style={s.statLabel}>함께한 기록</Text>
+            <Text style={s.statLabel}>{t('companion.diaryCount')}</Text>
           </View>
           <View style={s.statDivider} />
           <View style={s.statItem}>
             <Text style={s.statNum}>{relationshipStage}</Text>
-            <Text style={s.statLabel}>관계 단계</Text>
+            <Text style={s.statLabel}>{t('companion.records')}</Text>
           </View>
         </View>
 
         {/* AI Settings Accordion */}
         <TouchableOpacity style={s.accordionHeader} onPress={toggleAiSettings} activeOpacity={0.7}>
-          <Text style={s.accordionTitle}>AI 설정</Text>
+          <Text style={s.accordionTitle}>{t('companion.aiSettings')}</Text>
           <Text style={s.accordionArrow}>{showAiSettings ? '⌃' : '⌄'}</Text>
         </TouchableOpacity>
 
@@ -234,8 +242,8 @@ export default function CompanionChatV3() {
             {/* AI Toggle */}
             <View style={s.settingRow}>
               <View style={{ flex: 1 }}>
-                <Text style={s.settingLabel}>AI 코멘트</Text>
-                <Text style={s.settingDesc}>일기에 AI 코멘트를 받을지 설정</Text>
+                <Text style={s.settingLabel}>{t('companion.aiCommentToggle')}</Text>
+                <Text style={s.settingDesc}>{t('companion.aiCommentDesc')}</Text>
               </View>
               <Switch
                 value={settings?.aiEnabled ?? true}
@@ -247,9 +255,9 @@ export default function CompanionChatV3() {
 
             {/* Tone */}
             <View style={s.settingGroup}>
-              <Text style={s.settingLabel}>말투 톤</Text>
+              <Text style={s.settingLabel}>{t('companion.aiTone')}</Text>
               <View style={s.optionList}>
-                {AI_TONE_OPTIONS.map((opt) => {
+                {AI_TONE_KEYS.map((opt) => {
                   const isSelected = companionSettings?.aiTone === opt.value;
                   return (
                     <TouchableOpacity
@@ -261,8 +269,8 @@ export default function CompanionChatV3() {
                       onPress={() => updateCompanionSettings({ aiTone: opt.value })}
                       disabled={isSavingCompanion}
                     >
-                      <Text style={[s.optionLabel, { color: isSelected ? colors.accentPrimary : colors.textPrimary }]}>{opt.label}</Text>
-                      <Text style={[s.optionDesc, { color: isSelected ? colors.accentPrimary : colors.textSecondary }]}>{opt.desc}</Text>
+                      <Text style={[s.optionLabel, { color: isSelected ? colors.accentPrimary : colors.textPrimary }]}>{t(opt.labelKey)}</Text>
+                      <Text style={[s.optionDesc, { color: isSelected ? colors.accentPrimary : colors.textSecondary }]}>{t(opt.descKey)}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -271,9 +279,9 @@ export default function CompanionChatV3() {
 
             {/* Speech style */}
             <View style={s.settingGroup}>
-              <Text style={s.settingLabel}>말투 스타일</Text>
+              <Text style={s.settingLabel}>{t('companion.speechStyle')}</Text>
               <View style={s.optionList}>
-                {SPEECH_STYLE_OPTIONS.map((opt) => {
+                {SPEECH_STYLE_KEYS.map((opt) => {
                   const isSelected = companionSettings?.speechStyle === opt.value;
                   return (
                     <TouchableOpacity
@@ -285,8 +293,8 @@ export default function CompanionChatV3() {
                       onPress={() => updateCompanionSettings({ speechStyle: opt.value })}
                       disabled={isSavingCompanion}
                     >
-                      <Text style={[s.optionLabel, { color: isSelected ? colors.accentPrimary : colors.textPrimary }]}>{opt.label}</Text>
-                      <Text style={[s.optionDesc, { color: isSelected ? colors.accentPrimary : colors.textSecondary }]}>{opt.desc}</Text>
+                      <Text style={[s.optionLabel, { color: isSelected ? colors.accentPrimary : colors.textPrimary }]}>{t(opt.labelKey)}</Text>
+                      <Text style={[s.optionDesc, { color: isSelected ? colors.accentPrimary : colors.textSecondary }]}>{t(opt.descKey)}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -301,21 +309,21 @@ export default function CompanionChatV3() {
         <Modal visible={showNameModal} transparent animationType="fade">
           <View style={s.modalOverlay}>
             <View style={s.nameModal}>
-              <Text style={s.modalTitle}>이름 변경</Text>
+              <Text style={s.modalTitle}>{t('companion.changeName')}</Text>
               <Input
                 value={newName}
                 onChangeText={setNewName}
-                placeholder="새 이름 입력"
+                placeholder={t('companion.newNamePlaceholder')}
                 maxLength={20}
                 autoFocus
                 containerStyle={{ marginBottom: 20 }}
               />
               <View style={s.modalBtns}>
                 <View style={{ flex: 1 }}>
-                  <Button label="취소" variant="secondary" onPress={() => setShowNameModal(false)} fullWidth />
+                  <Button label={t('common.cancel')} variant="secondary" onPress={() => setShowNameModal(false)} fullWidth />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Button label="저장" variant="primary" onPress={handleSaveName} loading={isSavingName} fullWidth />
+                  <Button label={t('common.save')} variant="primary" onPress={handleSaveName} loading={isSavingName} fullWidth />
                 </View>
               </View>
             </View>

@@ -102,7 +102,7 @@ export function CompanionSetupScreenV2() {
   const footer = (
     <View style={s.footer}>
       {step < 3 ? (
-        <Button label={step === 0 ? (selectedEmotion ? '다음' : '건너뛰기') : t('companion.setup.next')} variant="primary" size="lg" fullWidth onPress={() => setStep(step + 1)} />
+        <Button label={step === 0 ? (selectedEmotion ? t('companion.setup.next') : t('companion.setup.skip')) : t('companion.setup.next')} variant="primary" size="lg" fullWidth onPress={() => setStep(step + 1)} />
       ) : (
         <Button label={t('companion.setup.startButton')} variant="primary" size="lg" fullWidth onPress={handleComplete} loading={isSaving} />
       )}
@@ -111,11 +111,11 @@ export function CompanionSetupScreenV2() {
   );
 
   const emotions = [
-    { key: 'JOY', label: '좋아요' },
-    { key: 'CALM', label: '괜찮아요' },
-    { key: 'SAD', label: '별로예요' },
-    { key: 'ANXIOUS', label: '힘들어요' },
-    { key: 'COMPLEX', label: '복잡해요' },
+    { key: 'JOY', label: t('emotion.joy') },
+    { key: 'CALM', label: t('emotion.calm') },
+    { key: 'SAD', label: t('emotion.sad') },
+    { key: 'ANXIOUS', label: t('emotion.anxious') },
+    { key: 'COMPLEX', label: t('emotion.complex') },
   ];
 
   return (
@@ -140,8 +140,8 @@ export function CompanionSetupScreenV2() {
         {/* Step 0: Emotion check-in */}
         {step === 0 && (
           <View style={{ alignItems: 'center' }}>
-            <Text style={s.stepTitle}>오늘 기분은 어때요?</Text>
-            <Text style={s.stepDesc}>매일 이렇게 기분을 기록할 수 있어요</Text>
+            <Text style={s.stepTitle}>{t('emotion.selectPrompt')}</Text>
+            <Text style={s.stepDesc}>{t('emotion.setupDesc')}</Text>
             <View style={s.emotionGrid}>
               {emotions.map((e, i) => (
                 <TouchableOpacity
@@ -169,7 +169,7 @@ export function CompanionSetupScreenV2() {
             </View>
             {selectedEmotion && (
               <Text style={s.emotionHint}>
-                좋아요! 이렇게 매일 감정을 기록하면{'\n'}AI 친구가 당신을 더 잘 이해할 수 있어요
+                {t('emotion.setupHint')}
               </Text>
             )}
           </View>

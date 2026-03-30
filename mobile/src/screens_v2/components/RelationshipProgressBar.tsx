@@ -6,16 +6,17 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, fontFamily } from '../../design-system-v3';
 
-const STAGES = [
-  { key: 1, label: '첫 만남' },
-  { key: 2, label: '알아가기' },
-  { key: 3, label: '친해지기' },
-  { key: 4, label: '편안함' },
-  { key: 5, label: '깊은 신뢰' },
-  { key: 6, label: '소울메이트' },
-  { key: 7, label: '영원한 친구' },
+const STAGE_KEYS = [
+  { key: 1, labelKey: 'relationship.firstMeeting' },
+  { key: 2, labelKey: 'relationship.gettingToKnow' },
+  { key: 3, labelKey: 'relationship.gettingCloser' },
+  { key: 4, labelKey: 'relationship.comfort' },
+  { key: 5, labelKey: 'relationship.deepTrust' },
+  { key: 6, labelKey: 'relationship.soulmate' },
+  { key: 7, labelKey: 'relationship.foreverFriend' },
 ] as const;
 
 interface RelationshipProgressBarProps {
@@ -25,15 +26,16 @@ interface RelationshipProgressBarProps {
 }
 
 export function RelationshipProgressBar({ currentStage, currentLevel, maxLevel }: RelationshipProgressBarProps) {
+  const { t } = useTranslation();
   const clampedStage = Math.max(1, Math.min(7, currentStage));
   const progress = ((clampedStage - 1) / 6) * 100;
-  const stageInfo = STAGES[clampedStage - 1];
+  const stageInfo = STAGE_KEYS[clampedStage - 1];
 
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={[styles.stageLabel, { color: colors.accentPrimary }]}>
-          {stageInfo.label}
+          {t(stageInfo.labelKey)}
         </Text>
         <Text style={[styles.levelText, { color: colors.textTertiary }]}>
           Lv.{currentLevel}/{maxLevel}
@@ -49,7 +51,7 @@ export function RelationshipProgressBar({ currentStage, currentLevel, maxLevel }
           }]}
         />
         {/* Stage dots */}
-        {STAGES.map((stage, i) => {
+        {STAGE_KEYS.map((stage, i) => {
           const dotPos = (i / 6) * 100;
           const isReached = i < clampedStage;
           return (
@@ -70,9 +72,9 @@ export function RelationshipProgressBar({ currentStage, currentLevel, maxLevel }
 
       {/* Stage labels (first, middle, last) */}
       <View style={styles.labelsRow}>
-        <Text style={[styles.miniLabel, { color: colors.textTertiary }]}>{STAGES[0].label}</Text>
-        <Text style={[styles.miniLabel, { color: colors.textTertiary }]}>{STAGES[3].label}</Text>
-        <Text style={[styles.miniLabel, { color: colors.textTertiary }]}>{STAGES[6].label}</Text>
+        <Text style={[styles.miniLabel, { color: colors.textTertiary }]}>{t(STAGE_KEYS[0].labelKey)}</Text>
+        <Text style={[styles.miniLabel, { color: colors.textTertiary }]}>{t(STAGE_KEYS[3].labelKey)}</Text>
+        <Text style={[styles.miniLabel, { color: colors.textTertiary }]}>{t(STAGE_KEYS[6].labelKey)}</Text>
       </View>
     </View>
   );

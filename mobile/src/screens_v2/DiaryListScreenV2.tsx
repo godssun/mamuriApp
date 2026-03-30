@@ -31,10 +31,10 @@ import { DiaryV3, StreakResponse, DiaryStackParamListV3, EmotionKey } from '../t
 import { formatDiaryDate } from '../utils/dateFormat';
 import { EmotionStickerView } from './components/EmotionStickerView';
 import { EMOTION_COLORS, EMOTION_LABELS } from '../constants/stickers';
+import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CONTENT_W = SCREEN_W - spacing['2xl'] * 2;
-const SHORT_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'DiaryListHome'>;
 
@@ -57,9 +57,12 @@ const polaroidRotations = ['-2deg', '1.5deg', '-1deg', '2deg', '-0.5deg'];
 const showTapeFor = [true, false, true, false, true];
 
 export function DiaryListScreenV2({ navigation, route }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const listAnim = useRef(new Animated.Value(0)).current;
   const dateScrollRef = useRef<ScrollView>(null);
+
+  const SHORT_WEEKDAYS = t('diaryList.weekdays', { returnObjects: true }) as string[];
 
   // ── Date state ──
   const filterDate = route.params?.filterDate;
@@ -175,7 +178,7 @@ export function DiaryListScreenV2({ navigation, route }: Props) {
     const rotation = polaroidRotations[index % polaroidRotations.length];
     const hasTape = showTapeFor[index % showTapeFor.length];
     const diaryDate = new Date(item.diaryDate);
-    const dateLabel = `${diaryDate.getMonth() + 1}월 ${diaryDate.getDate()}일`;
+    const dateLabel = t('date.monthDay', { month: diaryDate.getMonth() + 1, day: diaryDate.getDate() });
 
     return (
       <Animated.View style={[
@@ -220,7 +223,7 @@ export function DiaryListScreenV2({ navigation, route }: Props) {
             {item.aiComment !== null && (
               <View style={styles.aiTag}>
                 <View style={styles.aiDot} />
-                <Text style={styles.aiTagText}>마무리의 한마디</Text>
+                <Text style={styles.aiTagText}>{t('diaryList.aiComment')}</Text>
               </View>
             )}
           </View>
@@ -242,14 +245,14 @@ export function DiaryListScreenV2({ navigation, route }: Props) {
           <View style={[styles.emptyPageLine, { width: '40%' }]} />
         </View>
         <Text style={styles.emptyTitle}>
-          {isToday ? '오늘의 페이지가 비어있어요' : '이 날의 기록이 없어요'}
+          {isToday ? t('diaryList.emptyToday') : t('diaryList.emptyOther')}
         </Text>
         <Text style={styles.emptyDesc}>
-          {isToday ? '오늘의 감정을 한 장의 페이지로 남겨보세요' : '다른 날의 기록을 둘러보세요'}
+          {isToday ? t('diaryList.emptyTodayDesc') : t('diaryList.emptyOtherDesc')}
         </Text>
         {isToday && (
           <TouchableOpacity style={styles.writeBtn} onPress={() => navigation.navigate('WriteDiary', {})} activeOpacity={0.8}>
-            <Text style={styles.writeBtnText}>페이지 시작하기</Text>
+            <Text style={styles.writeBtnText}>{t('diaryList.startPage')}</Text>
           </TouchableOpacity>
         )}
       </Animated.View>
@@ -260,11 +263,11 @@ export function DiaryListScreenV2({ navigation, route }: Props) {
     <PaperBackground variant="plain" color="cream">
       {/* ══ Header: title + streak ══ */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
-        <Text style={styles.headerTitle}>나의 기록</Text>
+        <Text style={styles.headerTitle}>{t('diaryList.myRecords')}</Text>
         {streak && streak.currentStreak > 0 && (
           <View style={styles.streakBadge}>
             <Text style={styles.streakNum}>{streak.currentStreak}</Text>
-            <Text style={styles.streakLabel}>일째</Text>
+            <Text style={styles.streakLabel}>{t('date.daysSuffix')}</Text>
           </View>
         )}
       </View>
@@ -277,7 +280,7 @@ export function DiaryListScreenV2({ navigation, route }: Props) {
             <Text style={styles.monthArrow}>‹</Text>
           </TouchableOpacity>
           <Text style={styles.monthTitle}>
-            {year}년 {month + 1}월
+            {t('date.yearMonth', { year, month: month + 1 })}
           </Text>
           <TouchableOpacity
             onPress={() => changeMonth(1)}

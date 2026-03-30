@@ -53,34 +53,60 @@ export interface DiaryPageRendererProps {
   borderColor?: string;
   bgColor?: string;
 
+  // Font override (diary font from settings)
+  contentFontFamily?: string;
+
   // Editor-specific
   autoFocus?: boolean;
   textInputRef?: React.RefObject<TextInput | null>;
 }
 
 /* ── Notebook Background ── */
-function NotebookBackground({ theme, height }: { theme: string; height: number }) {
-  if (theme === 'note' || theme === 'warm') {
-    const lineCount = Math.ceil(height / LINE_HEIGHT);
+/**
+ * NotebookBackground — 테마의 pattern 필드에 따라 배경 패턴 렌더링
+ *
+ * DIARY_THEMES 구조를 기반으로 pattern을 resolve해서 사용.
+ * 레거시 키(nature)도 LEGACY_THEME_MAP으로 호환.
+ */
+function resolvePattern(theme: string): 'none' | 'lined' | 'grid' {
+  const { DIARY_THEMES, LEGACY_THEME_MAP } = require('../../constants/stickers');
+  const resolved = LEGACY_THEME_MAP[theme] || theme;
+  const found = DIARY_THEMES.find((t: any) => t.key === resolved);
+  return found?.pattern || 'none';
+}
+
+function NotebookBackground({ theme, height, topOffset }: { theme: string; height: number; topOffset: number }) {
+  const pattern = resolvePattern(theme);
+
+  // ── 프리미엄 종이 질감 — PaperBackground가 전체 배경을 담당하므로
+  //    본문 영역에서는 추가 텍스처 없이 테마 패턴(lined 등)만 렌더링.
+  //    crumpled은 lined 패턴을 사용하므로 아래 lined 분기에서 처리됨.
+  //    aged/misty는 패턴 없이 배경색+텍스처만으로 무드를 표현.
+
+  if (pattern === 'lined') {
+    const lineCount = Math.ceil((height + topOffset) / LINE_HEIGHT) + 1;
+    const lineColor = theme === 'warm'
+      ? 'rgba(180, 160, 140, 0.12)'
+      : 'rgba(160, 148, 135, 0.10)';
     return (
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <View style={[StyleSheet.absoluteFill, { top: -topOffset }]} pointerEvents="none">
         {Array.from({ length: lineCount }).map((_, i) => (
           <View
             key={i}
             style={{
               height: LINE_HEIGHT,
               borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: theme === 'note' ? '#E8E0D0' : '#F0E8E0',
+              borderBottomColor: lineColor,
             }}
           />
         ))}
       </View>
     );
   }
-  if (theme === 'grid' || theme === 'nature') {
-    const rowCount = Math.ceil(height / LINE_HEIGHT);
+  if (pattern === 'grid') {
+    const rowCount = Math.ceil((height + topOffset) / LINE_HEIGHT) + 1;
     return (
-      <View style={[StyleSheet.absoluteFill, { flexDirection: 'column' }]} pointerEvents="none">
+      <View style={[StyleSheet.absoluteFill, { top: -topOffset, flexDirection: 'column' }]} pointerEvents="none">
         {Array.from({ length: rowCount }).map((_, row) => (
           <View key={row} style={{ flexDirection: 'row', height: LINE_HEIGHT }}>
             {Array.from({ length: 12 }).map((_, col) => (
@@ -89,7 +115,7 @@ function NotebookBackground({ theme, height }: { theme: string; height: number }
                 style={{
                   flex: 1,
                   borderWidth: StyleSheet.hairlineWidth,
-                  borderColor: theme === 'grid' ? '#D0D8D0' : '#D8E8D8',
+                  borderColor: 'rgba(160, 175, 160, 0.10)',
                 }}
               />
             ))}
@@ -100,6 +126,16 @@ function NotebookBackground({ theme, height }: { theme: string; height: number }
   }
   return null;
 }
+
+/* ── Layout alignment constants ──
+ *
+ * 줄노트 정렬 핵심:
+ * - TITLE_AREA_HEIGHT가 LINE_HEIGHT의 배수여야 본문이 줄에 맞음
+ * - 제목: LINE_HEIGHT × 2 = 56px (lineHeight 28 + padding으로 2줄 차지)
+ * - 구분선: 별도 공간 차지 없음 (제목 영역 안에 포함)
+ * - 본문: LINE_HEIGHT 단위로 정확히 정렬
+ */
+const TITLE_AREA_HEIGHT = LINE_HEIGHT * 2; // 56px — 제목이 정확히 2줄 차지
 
 /* ── Renderer ── */
 const noop = () => {};
@@ -125,6 +161,7 @@ export function DiaryPageRenderer({
   subtleColor = '#999',
   borderColor = '#E0E0E0',
   bgColor,
+  contentFontFamily,
   autoFocus,
   textInputRef,
 }: DiaryPageRendererProps) {
@@ -138,6 +175,11 @@ export function DiaryPageRenderer({
 
   const sortedObjects = [...objects].sort((a, b) => a.zIndex - b.zIndex);
 
+  // 본문 폰트 오버라이드
+  const contentFont = contentFontFamily
+    ? { fontFamily: contentFontFamily }
+    : undefined;
+
   return (
     <View
       style={[styles.pageContainer, bgColor ? { backgroundColor: bgColor } : undefined]}
@@ -146,47 +188,48 @@ export function DiaryPageRenderer({
         if (editable && selectedObjectId) {
           onObjectSelect?.(null);
         }
-        return false; // don't claim the responder — let children handle their own touches
+        return false;
       }}
     >
-      {/* Layer 0: Background pattern */}
-      <NotebookBackground theme={theme} height={canvasHeight} />
+      {/* Layer 0: Background pattern — 줄이 paddingTop 포함 전체에 깔림 */}
+      <NotebookBackground theme={theme} height={canvasHeight} topOffset={0} />
 
-      {/* Layer 1: Text — box-none lets touches pass through empty areas to objects below */}
+      {/* Layer 1: Text */}
       <View style={styles.textLayer} pointerEvents="box-none">
-        {editable ? (
-          <>
+        {/* 제목 영역: 정확히 TITLE_AREA_HEIGHT(LINE_HEIGHT×2) 차지 */}
+        <View style={styles.titleArea}>
+          {editable ? (
             <TextInput
-              style={[styles.titleStyle, { color: textColor }]}
+              style={[styles.titleStyle, { color: textColor }, contentFont && { fontFamily: contentFontFamily }]}
               placeholder="제목 (선택)"
               placeholderTextColor={subtleColor}
               value={title}
               onChangeText={onTitleChange}
               maxLength={100}
             />
-            <View style={[styles.divider, { backgroundColor: borderColor }]} />
-            <TextInput
-              ref={textInputRef}
-              style={[styles.contentStyle, { color: textColor }]}
-              placeholder="오늘 어떤 하루였나요?"
-              placeholderTextColor={subtleColor}
-              value={content}
-              onChangeText={onContentChange}
-              multiline
-              scrollEnabled={false}
-              autoFocus={autoFocus}
-            />
-          </>
+          ) : (
+            title ? (
+              <Text style={[styles.titleStyle, { color: textColor }, contentFont && { fontFamily: contentFontFamily }]}>{title}</Text>
+            ) : null
+          )}
+          <View style={[styles.divider, { backgroundColor: borderColor }]} />
+        </View>
+
+        {/* 본문 영역: 줄 배경 그리드에 정확히 정렬 */}
+        {editable ? (
+          <TextInput
+            ref={textInputRef}
+            style={[styles.contentStyle, { color: textColor }, contentFont]}
+            placeholder="오늘 어떤 하루였나요?"
+            placeholderTextColor={subtleColor}
+            value={content}
+            onChangeText={onContentChange}
+            multiline
+            scrollEnabled={false}
+            autoFocus={autoFocus}
+          />
         ) : (
-          <>
-            {title ? (
-              <Text style={[styles.titleStyle, { color: textColor }]}>{title}</Text>
-            ) : null}
-            {title ? (
-              <View style={[styles.divider, { backgroundColor: borderColor }]} />
-            ) : null}
-            <Text style={[styles.contentStyle, { color: textColor }]}>{content}</Text>
-          </>
+          <Text style={[styles.contentStyle, { color: textColor }, contentFont]}>{content}</Text>
         )}
       </View>
 
@@ -215,27 +258,46 @@ const styles = StyleSheet.create({
     position: 'relative',
     minHeight: 400,
     paddingHorizontal: CANVAS_PADDING_H,
-    paddingTop: 16,
+    /**
+     * paddingTop = LINE_HEIGHT (28px)
+     * 줄 배경의 첫 번째 줄과 제목 텍스트가 정렬되도록
+     */
+    paddingTop: LINE_HEIGHT,
     overflow: 'visible',
   },
   textLayer: {
     zIndex: 100,
   },
+  /**
+   * 제목 영역: 정확히 LINE_HEIGHT × 2 = 56px
+   * 제목 텍스트 + 구분선이 이 안에 포함
+   * → 본문이 3번째 줄부터 시작하여 줄 배경에 정확히 맞음
+   */
+  titleArea: {
+    height: TITLE_AREA_HEIGHT,
+    justifyContent: 'center',
+  },
   titleStyle: {
-    fontSize: 22,
-    fontWeight: '700',
-    lineHeight: 32,
-    paddingVertical: 4,
+    fontSize: 20,
+    fontWeight: '600',
+    lineHeight: LINE_HEIGHT,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   divider: {
-    height: 1,
+    height: StyleSheet.hairlineWidth,
     width: '100%',
-    marginVertical: 8,
+    marginTop: 6,
   },
+  /**
+   * 본문: lineHeight가 LINE_HEIGHT(28px)와 정확히 일치
+   * paddingTop: 0으로 줄 배경 그리드에 바로 맞춤
+   */
   contentStyle: {
     fontSize: 15,
     lineHeight: LINE_HEIGHT,
     paddingTop: 0,
+    paddingBottom: 0,
     minHeight: 200,
     textAlignVertical: 'top',
   },

@@ -11,6 +11,7 @@ import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import {
@@ -22,7 +23,7 @@ import type { CalendarDayEntry } from '../types';
 import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
 
-const DAY_HEADERS = ['일', '월', '화', '수', '목', '금', '토'];
+// DAY_HEADERS moved inside component to use t()
 
 const blobRadii = [
   { borderTopLeftRadius: 16, borderTopRightRadius: 22, borderBottomRightRadius: 18, borderBottomLeftRadius: 24 },
@@ -35,6 +36,8 @@ const blobRadii = [
 export default function EmotionCalendarV3() {
   const insets = useSafeAreaInsets();
   const nav = useNavigation<any>();
+  const { t } = useTranslation();
+  const DAY_HEADERS = t('calendar.weekdays', { returnObjects: true }) as string[];
 
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -99,7 +102,7 @@ export default function EmotionCalendarV3() {
         <TouchableOpacity onPress={() => nav.goBack()} style={s.backBtn}>
           <Text style={s.backText}>{'\u2190'}</Text>
         </TouchableOpacity>
-        <Text style={s.headerTitle}>감정 아카이브</Text>
+        <Text style={s.headerTitle}>{t('calendar.archiveTitle')}</Text>
         <View style={{ width: 44 }} />
       </View>
 
@@ -114,7 +117,7 @@ export default function EmotionCalendarV3() {
             <Text style={s.navArrow}>{'\u2039'}</Text>
           </TouchableOpacity>
           <Text style={s.monthTitle}>
-            {year}년 {month}월
+            {t('date.yearMonth', { year, month })}
           </Text>
           <TouchableOpacity onPress={() => changeMonth(1)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Text style={s.navArrow}>{'\u203A'}</Text>
@@ -188,7 +191,7 @@ export default function EmotionCalendarV3() {
         {/* Emotion Distribution — Scrapbook Card */}
         {totalEntries > 0 && (
           <View style={s.distCard}>
-            <Text style={s.sectionLabel}>이번 달 감정 분포</Text>
+            <Text style={s.sectionLabel}>{t('calendar.monthDistribution')}</Text>
 
             {/* Blob legend items */}
             <View style={s.distLegend}>

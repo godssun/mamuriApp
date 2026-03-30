@@ -30,6 +30,12 @@ export const fontFamily = {
   script: 'Caveat_400Regular',
   scriptMedium: 'Caveat_500Medium',
 
+  /** 일기 본문 폰트 — 한국어 본문/손글씨 */
+  diaryDefault: 'Inter_400Regular',
+  diarySerif: 'GowunBatang_400Regular',
+  diaryHandwriting: 'GowunDodum_400Regular',
+  diaryPen: 'NanumPenScript_400Regular',
+
   /** System fallback — when custom fonts not loaded */
   systemDefault: Platform.select({
     ios: 'System',
@@ -42,6 +48,19 @@ export const fontFamily = {
     default: 'Georgia',
   }),
 } as const;
+
+/**
+ * 일기 작성용 폰트 옵션
+ * Settings에서 사용자가 선택, DiaryPageRenderer에 적용
+ */
+export const DIARY_FONT_OPTIONS = [
+  { key: 'default' as const, label: '기본 본문', font: 'Inter_400Regular', preview: '오늘 하루도 수고했어요', premium: false },
+  { key: 'serif' as const, label: '고운 바탕', font: 'GowunBatang_400Regular', preview: '오늘 하루도 수고했어요', premium: false },
+  { key: 'round' as const, label: '고운 돋움', font: 'GowunDodum_400Regular', preview: '오늘 하루도 수고했어요', premium: true },
+  { key: 'pen' as const, label: '손글씨', font: 'NanumPenScript_400Regular', preview: '오늘 하루도 수고했어요', premium: true },
+] as const;
+
+export type DiaryFontKey = typeof DIARY_FONT_OPTIONS[number]['key'];
 
 // ============================================================
 // Font asset map — uses @expo-google-fonts packages
@@ -77,6 +96,10 @@ export function buildFontAssets(): Record<string, any> {
     Inter_600SemiBold: require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
     Caveat_400Regular: require('@expo-google-fonts/caveat/400Regular/Caveat_400Regular.ttf'),
     Caveat_500Medium: require('@expo-google-fonts/caveat/500Medium/Caveat_500Medium.ttf'),
+    // 일기 작성용 한국어 폰트
+    GowunBatang_400Regular: require('@expo-google-fonts/gowun-batang/400Regular/GowunBatang_400Regular.ttf'),
+    GowunDodum_400Regular: require('@expo-google-fonts/gowun-dodum/400Regular/GowunDodum_400Regular.ttf'),
+    NanumPenScript_400Regular: require('@expo-google-fonts/nanum-pen-script/400Regular/NanumPenScript_400Regular.ttf'),
   };
 }
 

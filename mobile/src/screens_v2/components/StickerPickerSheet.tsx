@@ -14,6 +14,8 @@ import {
   Image, ImageSourcePropType, Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import {
   colors,
   fontFamily,
@@ -23,6 +25,7 @@ import {
   borderRadius,
   layout,
 } from '../../design-system-v3';
+import { useCustomStickers } from '../../contexts/CustomStickerContext';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const COL_COUNT = 4;
@@ -33,43 +36,43 @@ const ITEM_SIZE = (SCREEN_W - GRID_PAD - (COL_COUNT - 1) * GRID_GAP) / COL_COUNT
 interface StickerItem {
   code: string;
   source: ImageSourcePropType;
-  label: string;
+  labelKey: string;
 }
 
 interface StickerPickerSheetProps {
   visible: boolean;
   onClose: () => void;
-  onSelect: (sticker: { code: string; category: string }) => void;
+  onSelect: (sticker: { code: string; category: string; customUri?: string }) => void;
 }
 
-const STICKER_TABS: { key: string; label: string; stickers: StickerItem[] }[] = [
+const STICKER_TABS: { key: string; labelKey: string; stickers: StickerItem[] }[] = [
   {
     key: 'emotion',
-    label: '감정 & 에셋',
+    labelKey: 'sticker.tabEmotion',
     stickers: [
-      { code: 'e_joy', source: require('../../../assets/stickers/emotion/joy.png'), label: '좋아요' },
-      { code: 'e_calm', source: require('../../../assets/stickers/emotion/calm.png'), label: '괜찮아요' },
-      { code: 'e_sad', source: require('../../../assets/stickers/emotion/sad.png'), label: '슬퍼요' },
-      { code: 'e_anxious', source: require('../../../assets/stickers/emotion/anxious.png'), label: '불안해요' },
-      { code: 'e_complex', source: require('../../../assets/stickers/emotion/complex.png'), label: '복잡해요' },
+      { code: 'e_joy', source: require('../../../assets/stickers/emotion/joy.png'), labelKey: 'sticker.e_joy' },
+      { code: 'e_calm', source: require('../../../assets/stickers/emotion/calm.png'), labelKey: 'sticker.e_calm' },
+      { code: 'e_sad', source: require('../../../assets/stickers/emotion/sad.png'), labelKey: 'sticker.e_sad' },
+      { code: 'e_anxious', source: require('../../../assets/stickers/emotion/anxious.png'), labelKey: 'sticker.e_anxious' },
+      { code: 'e_complex', source: require('../../../assets/stickers/emotion/complex.png'), labelKey: 'sticker.e_complex' },
     ],
   },
   {
     key: 'mood',
-    label: '무드',
+    labelKey: 'sticker.tabMood',
     stickers: [
-      { code: 'm_sunny', source: require('../../../assets/stickers/deco/mood/sunny.png'), label: '맑음' },
-      { code: 'm_cloudy', source: require('../../../assets/stickers/deco/mood/cloudy.png'), label: '흐림' },
-      { code: 'm_rainy', source: require('../../../assets/stickers/deco/mood/rainy.png'), label: '비' },
-      { code: 'm_snowy', source: require('../../../assets/stickers/deco/mood/snowy.png'), label: '눈' },
-      { code: 'm_rainbow', source: require('../../../assets/stickers/deco/mood/rainbow.png'), label: '무지개' },
-      { code: 'm_night_sky', source: require('../../../assets/stickers/deco/mood/night_sky.png'), label: '밤하늘' },
-      { code: 'm_flower', source: require('../../../assets/stickers/deco/mood/flower.png'), label: '꽃' },
-      { code: 'm_leaf', source: require('../../../assets/stickers/deco/mood/leaf.png'), label: '잎사귀' },
-      { code: 'm_tree', source: require('../../../assets/stickers/deco/mood/tree.png'), label: '나무' },
-      { code: 'm_star', source: require('../../../assets/stickers/deco/mood/star.png'), label: '별' },
-      { code: 'm_sparkle', source: require('../../../assets/stickers/deco/mood/sparkle.png'), label: '반짝' },
-      { code: 'm_wind', source: require('../../../assets/stickers/deco/mood/wind.png'), label: '바람' },
+      { code: 'm_sunny', source: require('../../../assets/stickers/deco/mood/sunny.png'), labelKey: 'sticker.m_sunny' },
+      { code: 'm_cloudy', source: require('../../../assets/stickers/deco/mood/cloudy.png'), labelKey: 'sticker.m_cloudy' },
+      { code: 'm_rainy', source: require('../../../assets/stickers/deco/mood/rainy.png'), labelKey: 'sticker.m_rainy' },
+      { code: 'm_snowy', source: require('../../../assets/stickers/deco/mood/snowy.png'), labelKey: 'sticker.m_snowy' },
+      { code: 'm_rainbow', source: require('../../../assets/stickers/deco/mood/rainbow.png'), labelKey: 'sticker.m_rainbow' },
+      { code: 'm_night_sky', source: require('../../../assets/stickers/deco/mood/night_sky.png'), labelKey: 'sticker.m_night_sky' },
+      { code: 'm_flower', source: require('../../../assets/stickers/deco/mood/flower.png'), labelKey: 'sticker.m_flower' },
+      { code: 'm_leaf', source: require('../../../assets/stickers/deco/mood/leaf.png'), labelKey: 'sticker.m_leaf' },
+      { code: 'm_tree', source: require('../../../assets/stickers/deco/mood/tree.png'), labelKey: 'sticker.m_tree' },
+      { code: 'm_star', source: require('../../../assets/stickers/deco/mood/star.png'), labelKey: 'sticker.m_star' },
+      { code: 'm_sparkle', source: require('../../../assets/stickers/deco/mood/sparkle.png'), labelKey: 'sticker.m_sparkle' },
+      { code: 'm_wind', source: require('../../../assets/stickers/deco/mood/wind.png'), labelKey: 'sticker.m_wind' },
     ],
   },
 ];
@@ -84,10 +87,17 @@ const blobRadii = [
 
 export function StickerPickerSheet({ visible, onClose, onSelect }: StickerPickerSheetProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
+  const navigation = useNavigation<any>();
+  const { stickers: customStickers } = useCustomStickers();
   const [activeTabIndex, setActiveTabIndex] = useState(0);
 
-  const currentTab = STICKER_TABS[activeTabIndex];
-  const tabLabels = STICKER_TABS.map(t => t.label);
+  const allTabs = [
+    ...STICKER_TABS,
+    { key: 'my', labelKey: 'sticker.tabMy', stickers: [] as StickerItem[] },
+  ];
+  const currentTab = allTabs[activeTabIndex];
+  const tabLabels = allTabs.map(tab => t(tab.labelKey));
 
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -135,33 +145,69 @@ export function StickerPickerSheet({ visible, onClose, onSelect }: StickerPicker
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
-            <View style={styles.grid}>
-              {currentTab.stickers.map((sticker, index) => (
-                <TouchableOpacity
-                  key={sticker.code}
-                  style={[
-                    styles.stickerCell,
-                    blobRadii[index % blobRadii.length],
-                    { width: ITEM_SIZE, height: ITEM_SIZE },
-                  ]}
-                  onPress={() => onSelect({ code: sticker.code, category: currentTab.key })}
-                  activeOpacity={0.6}
-                >
-                  <Image
-                    source={sticker.source}
-                    style={styles.stickerImage}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.stickerLabel}>{sticker.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {currentTab.key === 'my' ? (
+              customStickers.length === 0 ? (
+                <View style={styles.emptyMyStickers}>
+                  <Text style={styles.emptyMyText}>{t('customSticker.empty')}</Text>
+                  <TouchableOpacity
+                    style={styles.createStickerBtn}
+                    onPress={() => { onClose(); navigation.navigate('CustomSticker'); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.createStickerBtnText}>{t('customSticker.createNew')}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.grid}>
+                  {customStickers.map((sticker, index) => (
+                    <TouchableOpacity
+                      key={sticker.id}
+                      style={[
+                        styles.stickerCell,
+                        blobRadii[index % blobRadii.length],
+                        { width: ITEM_SIZE, height: ITEM_SIZE },
+                      ]}
+                      onPress={() => onSelect({ code: sticker.id, category: 'custom', customUri: sticker.stickerUri })}
+                      activeOpacity={0.6}
+                    >
+                      <Image
+                        source={{ uri: sticker.stickerUri }}
+                        style={styles.stickerImage}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )
+            ) : (
+              <View style={styles.grid}>
+                {currentTab.stickers.map((sticker, index) => (
+                  <TouchableOpacity
+                    key={sticker.code}
+                    style={[
+                      styles.stickerCell,
+                      blobRadii[index % blobRadii.length],
+                      { width: ITEM_SIZE, height: ITEM_SIZE },
+                    ]}
+                    onPress={() => onSelect({ code: sticker.code, category: currentTab.key })}
+                    activeOpacity={0.6}
+                  >
+                    <Image
+                      source={sticker.source}
+                      style={styles.stickerImage}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.stickerLabel}>{t(sticker.labelKey)}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </ScrollView>
 
           {/* Close Button */}
           <View style={styles.footer}>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.8}>
-              <Text style={styles.closeBtnText}>서랍 닫기</Text>
+              <Text style={styles.closeBtnText}>{t('sticker.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -261,6 +307,31 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.textSecondary,
     marginTop: 3,
+  },
+
+  // My Stickers empty state
+  emptyMyStickers: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing['2xl'],
+  },
+  emptyMyText: {
+    fontFamily: fontFamily.sans,
+    fontSize: 13,
+    color: colors.textTertiary,
+    marginBottom: spacing.lg,
+  },
+  createStickerBtn: {
+    backgroundColor: colors.accentPrimary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.sm,
+    ...shadows.crisp,
+  },
+  createStickerBtnText: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: 14,
+    color: '#FFFFFF',
   },
 
   // Footer

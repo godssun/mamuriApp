@@ -35,9 +35,12 @@ export {
   feedback,
 } from './tokens';
 
+export { DIARY_FONT_OPTIONS } from './tokens';
+
 export type {
   ScrapbookColorTokens,
   TypographyVariant,
+  DiaryFontKey,
   ShadowLevel,
   SpacingKey,
   BorderRadiusKey,

@@ -1,8 +1,9 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, CommonActions, StackActions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet, ActivityIndicator } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { colors as v3Colors, fontFamily as v3FontFamily } from '../design-system-v3';
 import { companionApi } from '../api/client';
@@ -36,6 +37,8 @@ import EmotionCalendarV3 from '../screens_v2/EmotionCalendarV3';
 import DiaryCanvasEditorV3 from '../screens_v2/DiaryCanvasEditorV3';
 import DiaryPageDetailV3 from '../screens_v2/DiaryPageDetailV3';
 import CompanionChatV3 from '../screens_v2/CompanionChatV3';
+import PaywallScreenV3 from '../screens_v2/PaywallScreenV3';
+import CustomStickerScreenV3 from '../screens_v2/CustomStickerScreenV3';
 import ReflectionStoryV3 from '../screens_v2/ReflectionStoryV3';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -70,6 +73,7 @@ function DiaryNavigator() {
 
 // 메인 탭 (V3 화면으로 교체)
 function MainTabsNavigator() {
+  const { t } = useTranslation();
   const { companionName, setCompanionName } = useAuth();
 
   React.useEffect(() => {
@@ -80,7 +84,7 @@ function MainTabsNavigator() {
     }
   }, []);
 
-  const tabLabel = companionName || '친구';
+  const tabLabel = companionName || t('tabs.companion');
 
   return (
     <MainTab.Navigator
@@ -90,26 +94,32 @@ function MainTabsNavigator() {
       <MainTab.Screen
         name="Home"
         component={HomeStickerScreenV3}
-        options={{ title: '홈' }}
+        options={{ title: t('tabs.home') }}
       />
       <MainTab.Screen
         name="DiaryList"
         component={DiaryNavigator}
-        options={{ title: '일기' }}
+        options={{ title: t('tabs.diary') }}
         listeners={({ navigation: tabNav }) => ({
-          tabPress: () => {
-            // Reset diary stack to list when tab is pressed
+          tabPress: (e: any) => {
+            // 탭 클릭 시 DiaryStack을 DiaryListHome까지 pop
+            e.preventDefault();
             (tabNav as any).navigate('DiaryList', {
               screen: 'DiaryListHome',
-              params: { filterDate: undefined },
             });
+            // 스택에 WriteDiary/DiaryDetail이 남아있으면 popToTop
+            try {
+              tabNav.dispatch(StackActions.popToTop());
+            } catch {
+              // 이미 root이면 무시
+            }
           },
         })}
       />
       <MainTab.Screen
         name="Reflect"
         component={ReflectionStoryV3}
-        options={{ title: '돌아보기' }}
+        options={{ title: t('tabs.reflect') }}
       />
       <MainTab.Screen
         name="Companion"
@@ -137,6 +147,8 @@ function MainNavigator() {
           <MainStack.Screen name="ReportDetail" component={ReportDetailScreenV2 as any} />
           <MainStack.Screen name="EmotionCalendar" component={EmotionCalendarV3 as any} />
           <MainStack.Screen name="EmotionPicker" component={EmotionPickerScreenV3 as any} />
+          <MainStack.Screen name="Paywall" component={PaywallScreenV3} options={{ presentation: 'modal' }} />
+          <MainStack.Screen name="CustomSticker" component={CustomStickerScreenV3} />
         </>
       )}
     </MainStack.Navigator>
@@ -145,12 +157,13 @@ function MainNavigator() {
 
 // 루트 네비게이션
 export default function Navigation() {
+  const { t } = useTranslation();
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: v3Colors.bgCream }]}>
-        <Text style={[styles.loadingText, { color: v3Colors.textPrimary, fontFamily: v3FontFamily.serifItalic }]}>마무리</Text>
+        <Text style={[styles.loadingText, { color: v3Colors.textPrimary, fontFamily: v3FontFamily.serifItalic }]}>{t('auth.appName')}</Text>
         <ActivityIndicator color={v3Colors.accentPrimary} style={{ marginTop: 16 }} />
       </View>
     );

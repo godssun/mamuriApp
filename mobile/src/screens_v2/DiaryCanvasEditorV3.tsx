@@ -12,6 +12,7 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Alert, Animated, Image, Modal, Dimensions,
@@ -25,10 +26,11 @@ import {
 } from '../design-system-v3';
 import { diaryApiV3, diaryPhotoApi, diaryDecorationApi, emotionApi, ApiError } from '../api/client';
 import { useSubscription } from '../contexts/SubscriptionContext';
+import { useTheme } from '../contexts/ThemeContext';
 import type { DiaryStackParamListV3, EmotionKey } from '../types';
 import {
   EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS,
-  DIARY_THEMES,
+  DIARY_THEMES, LEGACY_THEME_MAP,
 } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
 import { StickerPickerSheet } from './components/StickerPickerSheet';
@@ -48,6 +50,7 @@ function nextId(): string {
 
 export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
+  const { t, i18n } = useTranslation();
   const s = styles;
 
   const initialEmotion = route.params?.selectedEmotion as EmotionKey | undefined;
@@ -60,7 +63,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const [title, setTitle] = useState('');
   const [objects, setObjects] = useState<CanvasObjectData[]>([]);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
-  const [selectedTheme, setSelectedTheme] = useState<string>('note');
+  const [selectedTheme, setSelectedTheme] = useState<string>('warm');
   const [currentEmotion, setCurrentEmotion] = useState<EmotionKey | undefined>(initialEmotion);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
@@ -166,7 +169,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const handleAddPhoto = useCallback(async () => {
     const photoCount = objects.filter(o => o.type === 'photo').length;
     if (photoCount >= 3) {
-      Alert.alert('알림', '사진은 최대 3장까지 첨부할 수 있어요.');
+      Alert.alert(t('common.alert'), t('editor.maxPhotos'));
       return;
     }
     try {
@@ -195,12 +198,30 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         }]);
       }
     } catch {
-      Alert.alert('오류', '사진을 불러올 수 없습니다.');
+      Alert.alert(t('common.error'), t('editor.photoError'));
     }
   }, [objects, canvasSize]);
 
   // ── Sticker add ──
-  const handleStickerSelect = useCallback((sticker: { code: string; category: string }) => {
+  const handleStickerSelect = useCallback((sticker: { code: string; category: string; customUri?: string }) => {
+    if (sticker.customUri) {
+      // Custom sticker from gallery
+      const canvasW = canvasSize.width || SCREEN_W - (CANVAS_PADDING_H * 2);
+      setObjects(prev => [...prev, {
+        id: nextId(),
+        type: 'sticker' as const,
+        x: canvasW / 2 - 30,
+        y: 100,
+        width: 60,
+        height: 60,
+        rotation: 0,
+        zIndex: prev.length,
+        stickerCode: sticker.code,
+        stickerSource: { uri: sticker.customUri! },
+      }]);
+      setShowStickerSheet(false);
+      return;
+    }
     const source = getStickerSource(sticker.code);
     if (!source) return;
 
@@ -276,7 +297,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const handleSave = useCallback(async () => {
     const hasPhotos = objects.some(o => o.type === 'photo');
     if (!content.trim() && objects.length === 0) {
-      Alert.alert('알림', '텍스트, 사진, 또는 스티커를 추가해주세요.');
+      Alert.alert(t('common.alert'), t('editor.noContent'));
       return;
     }
     setSaving(true);
@@ -284,9 +305,9 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       const today = new Date();
       const diaryDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-      // 1. Save diary text
-      const diary = await diaryApiV3.createV3({
-        title: title.trim() || '무제',
+      // 1. Save diary text — edit mode uses update, new uses create
+      const diaryPayload: import('../types').DiaryCreateRequestV3 = {
+        title: title.trim() || t('diary.untitled'),
         content: content.trim(),
         diaryDate,
         diaryType: hasPhotos ? 'MIXED' : 'TEXT',
@@ -294,7 +315,10 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         secondaryEmotions: secondaryTags || [],
         emotionScore: 3,
         theme: selectedTheme !== 'default' ? selectedTheme : undefined,
-      });
+      };
+      const diary = isEditMode
+        ? await diaryApiV3.updateV3(editDiaryId!, diaryPayload)
+        : await diaryApiV3.createV3(diaryPayload);
 
       // 2. Upload photos + save positions (photo API)
       const canvasW = canvasSize.width || SCREEN_W - (CANVAS_PADDING_H * 2);
@@ -319,8 +343,8 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         }
       }
 
-      // 3. Save stickers only via decoration API
-      const stickerObjects = objects.filter(o => o.type === 'sticker');
+      // 3. Save standard stickers via decoration API (exclude custom stickers)
+      const stickerObjects = objects.filter(o => o.type === 'sticker' && !o.stickerCode?.startsWith('cs_'));
       if (stickerObjects.length > 0) {
         const decorations = stickerObjects.map((obj) => ({
           assetType: obj.stickerCode || '',
@@ -333,7 +357,30 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         try {
           await diaryDecorationApi.save(diary.id, decorations);
         } catch (e: any) {
-          console.warn('[DiaryCanvas] Decoration save failed:', e?.message);
+          console.warn('[DiaryCanvas] Decoration save failed:', e?.message, 'decorations:', JSON.stringify(decorations.map(d => d.assetType)));
+        }
+      }
+
+      // 4. Save custom stickers as photos
+      const customStickerObjects = objects.filter(o => o.type === 'sticker' && o.stickerCode?.startsWith('cs_'));
+      for (const cs of customStickerObjects) {
+        const csSource = cs.stickerSource as any;
+        if (csSource?.uri) {
+          try {
+            const uploaded = await diaryPhotoApi.upload(diary.id, csSource.uri);
+            if (uploaded?.id) {
+              await diaryPhotoApi.updatePosition(uploaded.id, diary.id, {
+                positionX: canvasW > 0 ? cs.x / canvasW : 0,
+                positionY: canvasW > 0 ? cs.y / canvasW : 0,
+                displayWidth: Math.round(cs.width),
+                displayHeight: Math.round(cs.height),
+                zIndex: cs.zIndex,
+                rotation: cs.rotation || 0,
+              });
+            }
+          } catch (e: any) {
+            console.warn('[DiaryCanvas] Custom sticker save failed:', e?.message);
+          }
         }
       }
 
@@ -341,53 +388,60 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         diaryId: diary.id,
         photosUploaded: photoObjects.length,
         stickersSaved: stickerObjects.length,
+        customStickersSaved: customStickerObjects.length,
       });
 
       refreshSubscription();
       navigation.replace('DiaryDetail', { diaryId: diary.id });
     } catch (error: any) {
       if (error instanceof ApiError && error.status === 429) {
-        Alert.alert('알림', error.message || '잠시 후 다시 시도해주세요.');
+        Alert.alert(t('common.alert'), error.message || t('common.retry'));
       } else {
-        Alert.alert('저장 실패', error?.message || '잠시 후 다시 시도해주세요.');
+        Alert.alert(t('editor.saveFailed'), error?.message || t('common.retry'));
       }
     } finally {
       setSaving(false);
     }
-  }, [content, title, objects, currentEmotion, secondaryTags, selectedTheme, canvasSize, navigation]);
+  }, [content, title, objects, currentEmotion, secondaryTags, selectedTheme, canvasSize, navigation, isEditMode, editDiaryId]);
 
-  const { refresh: refreshSubscription } = useSubscription();
+  const { refresh: refreshSubscription, entitlements } = useSubscription();
+  const { theme: appTheme } = useTheme();
 
-  // ── Theme colors (v3 palette) ──
-  const themeColors: Record<string, string> = {
-    night: '#1A1A2E',
-    warm: colors.bgWarm,
-    nature: colors.bgCream,
-    note: colors.bgIvory,
-    grid: colors.bgCream,
-  };
-  const bgColor = themeColors[selectedTheme] || colors.bgWarm;
-  const textColor = selectedTheme === 'night' ? '#EDEDF0' : colors.textPrimary;
-  const subtleColor = selectedTheme === 'night' ? '#686880' : colors.textTertiary;
-  const borderColor = selectedTheme === 'night' ? '#2A2A3A' : colors.accentSand + '40';
+  // ── Theme colors — DIARY_THEMES 기반 resolve ──
+  const resolvedTheme = LEGACY_THEME_MAP[selectedTheme] || selectedTheme;
+  const themeEntry = DIARY_THEMES.find(t => t.key === resolvedTheme);
+  const isDark = themeEntry?.isDark ?? false;
+  const isTextureTheme = ['crumpled1', 'crumpled2', 'crumpled3'].includes(resolvedTheme);
+  // 모든 테마: 본문 bg를 투명으로 → PaperBackground 배경이 화면 전체를 관통
+  const bgColor = 'transparent';
+  const textColor = isDark ? '#EDEDF0' : colors.textPrimary;
+  const subtleColor = isDark ? '#686880' : colors.textTertiary;
+  const borderColor = isDark ? '#2A2A3A' : colors.accentSand + '40';
 
   const canHaveSomething = content.trim() || objects.length > 0;
 
   return (
-    <PaperBackground variant="lined" color="warm" style={{ paddingTop: insets.top }}>
+    <PaperBackground
+      variant="plain"
+      color="warm"
+      themeKey={resolvedTheme}
+      style={[
+        { paddingTop: insets.top, backgroundColor: themeEntry?.color || colors.bgWarm },
+      ]}
+    >
       {/* Header — transparent on paper */}
       <View style={[s.header, { borderBottomColor: borderColor }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerBtn}>
-          <Text style={[s.headerBtnText, { color: textColor }]}>취소</Text>
+          <Text style={[s.headerBtnText, { color: textColor }]}>{t('editor.cancel')}</Text>
         </TouchableOpacity>
-        <Text style={[s.headerDate, { color: selectedTheme === 'night' ? '#9898AC' : colors.textSecondary }]}>
-          {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+        <Text style={[s.headerDate, { color: isDark ? '#9898AC' : colors.textSecondary }]}>
+          {new Date().toLocaleDateString(i18n.language === 'ko' ? 'ko-KR' : i18n.language === 'ja' ? 'ja-JP' : i18n.language === 'zh' ? 'zh-CN' : 'en-US', { month: 'long', day: 'numeric' })}
         </Text>
         <TouchableOpacity onPress={handleSave} disabled={saving || !canHaveSomething} style={s.headerBtn}>
           <Text style={[s.headerSaveText, {
             color: canHaveSomething ? colors.accentPrimary : colors.textTertiary,
           }]}>
-            {saving ? '저장 중...' : '저장'}
+            {saving ? t('editor.saving') : t('editor.save')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -438,11 +492,11 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
                 </>
               ) : (
                 <Text style={[s.moodLabel, { color: colors.textSecondary }]}>
-                  오늘 기분을 선택해주세요
+                  {t('editor.selectMood')}
                 </Text>
               )}
               <Text style={[s.moodChangeHint, { color: colors.textTertiary }]}>
-                {currentEmotion ? '변경' : '선택'}
+                {currentEmotion ? t('editor.changeMood') : t('editor.chooseMood')}
               </Text>
             </TouchableOpacity>
           </Animated.View>
@@ -469,6 +523,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
             subtleColor={subtleColor}
             borderColor={borderColor}
             bgColor={bgColor}
+            contentFontFamily={appTheme.diaryFontFamily}
             autoFocus={!isEditMode}
             textInputRef={textInputRef}
           />
@@ -478,6 +533,8 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       {/* Bottom Toolbar — glass scrapbook tool tray */}
       <View style={[s.toolbar, {
         paddingBottom: insets.bottom + 8,
+        backgroundColor: 'transparent',
+        borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
       }]}>
         <TouchableOpacity style={s.toolBtn} onPress={handleAddPhoto}>
           <View style={s.toolIconView}>
@@ -486,7 +543,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
               <View style={{ width: 0, height: 0, borderLeftWidth: 4, borderRightWidth: 4, borderBottomWidth: 5, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: colors.accentTerra, marginBottom: 1 }} />
             </View>
           </View>
-          <Text style={s.toolLabel}>사진</Text>
+          <Text style={s.toolLabel}>{t('editor.photo')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={s.toolBtn} onPress={() => setShowThemeSheet(true)}>
@@ -497,7 +554,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
               <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.accentDustyBlue, position: 'absolute', bottom: 1.5, right: 1.5 }} />
             </View>
           </View>
-          <Text style={s.toolLabel}>테마</Text>
+          <Text style={s.toolLabel}>{t('editor.theme')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={s.toolBtn} onPress={() => setShowStickerSheet(true)}>
@@ -509,12 +566,12 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
               <View style={{ position: 'absolute', width: 10, height: 2, backgroundColor: colors.accentPrimary, borderRadius: 1, transform: [{ rotate: '-45deg' }] }} />
             </View>
           </View>
-          <Text style={s.toolLabel}>스티커</Text>
+          <Text style={s.toolLabel}>{t('editor.sticker')}</Text>
         </TouchableOpacity>
 
         {content.length > 0 && (
           <Text style={s.charCount}>
-            {content.length}자
+            {t('editor.charCount', { count: content.length })}
           </Text>
         )}
       </View>
@@ -537,20 +594,48 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       <Modal visible={showThemeSheet} transparent animationType="slide">
         <TouchableOpacity style={s.sheetOverlay} activeOpacity={1} onPress={() => setShowThemeSheet(false)}>
           <View style={[s.sheetContent, { paddingBottom: insets.bottom + 16 }]}>
-            <Text style={s.sheetTitle}>테마 선택</Text>
-            {DIARY_THEMES.map((t) => (
-              <TouchableOpacity
-                key={t.key}
-                style={[s.sheetOption, {
-                  borderColor: selectedTheme === t.key ? colors.accentPrimary : colors.accentSand + '60',
-                  backgroundColor: selectedTheme === t.key ? colors.accentPrimaryLight + '30' : colors.surfaceCard,
-                }]}
-                onPress={() => { setSelectedTheme(t.key); setShowThemeSheet(false); }}
-              >
-                <View style={[s.sheetDot, { backgroundColor: t.color, borderWidth: 1, borderColor: colors.accentSand }]} />
-                <Text style={[s.sheetOptionText, { color: colors.textPrimary }]}>{t.label}</Text>
-              </TouchableOpacity>
-            ))}
+            <Text style={s.sheetTitle}>{t('editor.themeSelect')}</Text>
+            {DIARY_THEMES.map((thm) => {
+              const isSelected = resolvedTheme === thm.key;
+              return (
+                <TouchableOpacity
+                  key={thm.key}
+                  style={[s.sheetOption, {
+                    borderColor: isSelected ? colors.accentPrimary : colors.accentSand + '60',
+                    backgroundColor: isSelected ? colors.accentPrimaryLight + '30' : colors.surfaceCard,
+                  }]}
+                  onPress={() => {
+                    if (thm.premium && !entitlements.canUsePremiumThemes) {
+                      setShowThemeSheet(false);
+                      navigation.navigate('Paywall' as any);
+                      return;
+                    }
+                    setSelectedTheme(thm.key); setShowThemeSheet(false);
+                  }}
+                >
+                  {/* 종이 미리보기 */}
+                  <View style={[s.sheetPreview, { backgroundColor: thm.color, borderColor: colors.accentSand }]}>
+                    {thm.pattern === 'lined' && (
+                      <>
+                        <View style={s.previewLine} />
+                        <View style={s.previewLine} />
+                        <View style={s.previewLine} />
+                      </>
+                    )}
+                    {thm.pattern === 'grid' && (
+                      <View style={s.previewGrid}>
+                        <View style={s.previewGridLine} />
+                        <View style={[s.previewGridLine, { transform: [{ rotate: '90deg' }] }]} />
+                      </View>
+                    )}
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={[s.sheetOptionText, { color: colors.textPrimary }]}>{t(thm.labelKey)}</Text>
+                    {thm.premium && <View style={{ backgroundColor: colors.accentPrimary + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}><Text style={{ fontFamily: fontFamily.sansSemiBold, fontSize: 8, color: colors.accentPrimary }}>PRO</Text></View>}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </TouchableOpacity>
       </Modal>
@@ -559,7 +644,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       <Modal visible={showEmotionPicker} transparent animationType="slide">
         <TouchableOpacity style={s.sheetOverlay} activeOpacity={1} onPress={() => setShowEmotionPicker(false)}>
           <View style={[s.sheetContent, { paddingBottom: insets.bottom + 16 }]}>
-            <Text style={s.sheetTitle}>오늘의 기분</Text>
+            <Text style={s.sheetTitle}>{t('editor.todayMood')}</Text>
             <View style={s.emotionGrid}>
               {EMOTION_KEYS.map((key) => {
                 const isSelected = currentEmotion === key;
@@ -691,7 +776,23 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm, borderWidth: 1, marginBottom: spacing.sm,
     gap: spacing.md,
   },
-  sheetDot: { width: 20, height: 20, borderRadius: 10 },
+  sheetPreview: {
+    width: 28, height: 28, borderRadius: 6,
+    borderWidth: 1, justifyContent: 'center', alignItems: 'center',
+    overflow: 'hidden', gap: 4, paddingVertical: 5,
+  },
+  previewLine: {
+    width: 18, height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(130,120,115,0.25)',
+  },
+  previewGrid: {
+    width: 18, height: 18,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  previewGridLine: {
+    position: 'absolute', width: 18, height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(130,155,130,0.3)',
+  },
   sheetOptionText: {
     fontFamily: fontFamily.sansMedium,
     fontSize: 15, fontWeight: '500',

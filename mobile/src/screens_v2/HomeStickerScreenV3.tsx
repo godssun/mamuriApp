@@ -15,7 +15,7 @@ import {
   Animated, RefreshControl, Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import {
   colors, fontFamily, shadows, spacing, borderRadius,
 } from '../design-system-v3';
@@ -24,6 +24,7 @@ import { diaryApi, emotionApi, companionApi } from '../api/client';
 import type { Diary, CompanionProfile, EmotionKey } from '../types';
 import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
+import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const STICKER_SIZE = (SCREEN_W - 48 - 24) / 3;
@@ -41,6 +42,21 @@ const stickerBlobRadii = [
 export default function HomeStickerScreenV3() {
   const insets = useSafeAreaInsets();
   const nav = useNavigation<any>();
+  const route = useRoute<any>();
+  const { t } = useTranslation();
+
+  // EmotionPicker에서 돌아온 감정
+  const [todayEmotion, setTodayEmotion] = useState<EmotionKey | null>(null);
+  const [todayTag, setTodayTag] = useState<string | null>(null);
+
+  useEffect(() => {
+    const emotion = route.params?.selectedEmotion as EmotionKey | undefined;
+    const tag = route.params?.selectedTag as string | undefined;
+    if (emotion) {
+      setTodayEmotion(emotion);
+      setTodayTag(tag || null);
+    }
+  }, [route.params?.selectedEmotion, route.params?.selectedTag]);
 
   const [profile, setProfile] = useState<CompanionProfile | null>(null);
   const [diaries, setDiaries] = useState<Diary[]>([]);
@@ -70,13 +86,13 @@ export default function HomeStickerScreenV3() {
   const refresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
   const h = new Date().getHours();
-  const greet = h < 6 ? '고요한 밤이에요' : h < 12 ? '좋은 아침이에요' : h < 18 ? '좋은 오후예요' : '좋은 저녁이에요';
+  const greet = h < 6 ? t('home.greetingDawn') : h < 12 ? t('home.greetingMorning') : h < 18 ? t('home.greetingAfternoon') : t('home.greetingEvening');
 
   const handleStickerTap = (key: EmotionKey) => {
     nav.navigate('EmotionPicker', { preselectedEmotion: key });
   };
 
-  const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+  const weekDays = t('home.weekDays', { returnObjects: true }) as string[];
   const weekStrip = getWeekStrip(weekly);
 
   return (
@@ -103,7 +119,7 @@ export default function HomeStickerScreenV3() {
               <View style={styles.greetingBody}>
                 <Text style={styles.greetingName}>{profile.aiName || '마음이'}</Text>
                 <Text style={styles.greetingMsg} numberOfLines={2}>
-                  {msg?.message || greet}
+                  {msg?.type ? t(`companionMsg.${msg.type}`, { days: msg.message?.match(/\d+/)?.[0] || '', defaultValue: msg.message }) : greet}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -112,8 +128,31 @@ export default function HomeStickerScreenV3() {
           {/* ═══ Hero Question — editorial feel ═══ */}
           <View style={styles.heroSection}>
             <Text style={styles.heroSub}>{greet}</Text>
-            <Text style={styles.heroMain}>오늘 기분은 어때요?</Text>
+            <Text style={styles.heroMain}>{t('home.howAreYou')}</Text>
           </View>
+
+          {/* ═══ 오늘의 감정 배너 (선택 후) ═══ */}
+          {todayEmotion && (
+            <TouchableOpacity
+              style={[styles.todayBanner, {
+                backgroundColor: EMOTION_COLORS[todayEmotion] + '12',
+                borderColor: EMOTION_COLORS[todayEmotion] + '30',
+              }]}
+              onPress={() => nav.navigate('EmotionPicker', { preselectedEmotion: todayEmotion })}
+              activeOpacity={0.7}
+            >
+              <EmotionStickerView emotionKey={todayEmotion} size="small" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.todayLabel, { color: EMOTION_COLORS[todayEmotion] }]}>
+                  {t('home.todayFeeling')}
+                </Text>
+                <Text style={[styles.todayEmotion, { color: EMOTION_COLORS[todayEmotion] }]}>
+                  {todayTag || EMOTION_LABELS[todayEmotion]}
+                </Text>
+              </View>
+              <Text style={{ color: colors.textTertiary, fontSize: 12 }}>{t('home.change')}</Text>
+            </TouchableOpacity>
+          )}
 
           {/* ═══ Emotion Sticker Grid (2x3) — blob cards ═══ */}
           <View style={styles.stickerGrid}>
@@ -147,13 +186,13 @@ export default function HomeStickerScreenV3() {
               <View style={styles.questionMark}>
                 <Text style={styles.questionText}>?</Text>
               </View>
-              <Text style={[styles.stickerLabel, { color: colors.textTertiary }]}>모르겠어요</Text>
+              <Text style={[styles.stickerLabel, { color: colors.textTertiary }]}>{t('home.unknown')}</Text>
             </TouchableOpacity>
           </View>
 
           {/* ═══ Weekly Emotion Strip ═══ */}
           <View style={styles.weekSection}>
-            <Text style={styles.sectionLabel}>이번 주</Text>
+            <Text style={styles.sectionLabel}>{t('home.thisWeek')}</Text>
             <View style={styles.weekRow}>
               {weekStrip.map((entry, i) => (
                 <View key={i} style={styles.weekCol}>
@@ -174,19 +213,19 @@ export default function HomeStickerScreenV3() {
             onPress={() => nav.navigate('DiaryList', { screen: 'WriteDiary' })}
             activeOpacity={0.8}
           >
-            <Text style={styles.ctaText}>오늘 기록 시작하기</Text>
+            <Text style={styles.ctaText}>{t('home.startRecord')}</Text>
           </TouchableOpacity>
 
           {/* ═══ Recent Entries — paper cards ═══ */}
           {diaries.length > 0 && (
             <View style={styles.recentSection}>
               <View style={styles.recentHeader}>
-                <Text style={styles.sectionLabel}>최근 기록</Text>
+                <Text style={styles.sectionLabel}>{t('home.recentRecords')}</Text>
                 <TouchableOpacity
                   onPress={() => nav.navigate('DiaryList', { screen: 'DiaryListHome' })}
                   hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 >
-                  <Text style={styles.linkText}>전체보기</Text>
+                  <Text style={styles.linkText}>{t('home.viewAll')}</Text>
                 </TouchableOpacity>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recentScroll}>
@@ -202,7 +241,7 @@ export default function HomeStickerScreenV3() {
                       activeOpacity={0.7}
                     >
                       <Text style={styles.recentDate}>
-                        {date.getMonth() + 1}/{date.getDate()}
+                        {t('date.monthDay', { month: date.getMonth() + 1, day: date.getDate() })}
                       </Text>
                       <Text style={styles.recentTitle} numberOfLines={1}>{d.title}</Text>
                       <Text style={styles.recentPreview} numberOfLines={2}>{d.content}</Text>
@@ -283,6 +322,20 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.serifItalic,
     fontSize: 26, fontWeight: '400',
     color: colors.textPrimary, letterSpacing: -0.5,
+  },
+
+  // Today emotion banner
+  todayBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderRadius: borderRadius.sm, borderWidth: 1,
+  },
+  todayLabel: {
+    fontFamily: fontFamily.sans, fontSize: 11, marginBottom: 2,
+  },
+  todayEmotion: {
+    fontFamily: fontFamily.sansMedium, fontSize: 16, fontWeight: '600',
   },
 
   // Sticker Grid — blob cards

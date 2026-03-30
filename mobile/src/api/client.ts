@@ -233,7 +233,7 @@ async function request<T>(
     await tokenStorage.clear();
     forceLogoutHandler?.();
     throw new ApiError(
-      message || '인증이 만료되었습니다. 다시 로그인해주세요.',
+      message || i18n.t('error.authExpired'),
       401,
       true
     );
@@ -290,7 +290,7 @@ async function requestMultipart<T>(
   try {
     json = text ? JSON.parse(text) : { success: false, data: null, message: null };
   } catch {
-    throw new ApiError('서버 응답을 처리할 수 없습니다.', response.status, response.status === 401);
+    throw new ApiError(i18n.t('error.parseError'), response.status, response.status === 401);
   }
 
   if (response.status === 401 && !_isRetry) {
@@ -300,7 +300,7 @@ async function requestMultipart<T>(
     } catch {
       await tokenStorage.clear();
       forceLogoutHandler?.();
-      throw new ApiError('인증이 만료되었습니다. 다시 로그인해주세요.', 401, true);
+      throw new ApiError(i18n.t('error.authExpired'), 401, true);
     }
   }
 
@@ -504,6 +504,24 @@ export const subscriptionApi = {
   async getStatus(): Promise<SubscriptionInfo> {
     return request<SubscriptionInfo>('/subscription/status');
   },
+
+  /** App Store 영수증을 서버에 전송하여 구독 검증 */
+  async verifyReceipt(receipt: string): Promise<{ success: boolean; status: string }> {
+    return request<any>('/subscription/verify-receipt', {
+      method: 'POST',
+      body: JSON.stringify({ receipt }),
+    });
+  },
+
+  /** 구독 취소 요청 */
+  async cancel(): Promise<void> {
+    return request<void>('/subscription/cancel', { method: 'POST' });
+  },
+
+  /** 구독 상태 동기화 (앱 복귀 시) */
+  async syncStatus(): Promise<SubscriptionInfo> {
+    return request<SubscriptionInfo>('/subscription/sync', { method: 'POST' });
+  },
 };
 
 // 계정 API
@@ -615,6 +633,13 @@ export const diaryApiV3 = {
 
   async getListByDateV3(date: string): Promise<DiaryV3[]> {
     return request<DiaryV3[]>(`/diaries?date=${date}`);
+  },
+
+  async updateV3(id: number, data: DiaryCreateRequestV3): Promise<DiaryV3> {
+    return request<DiaryV3>(`/diaries/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   },
 };
 

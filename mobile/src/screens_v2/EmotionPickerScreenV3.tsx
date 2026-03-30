@@ -21,6 +21,7 @@ import {
 } from '../design-system-v3';
 import { PaperBackground } from '../design-system-v3/components/PaperBackground';
 import type { EmotionKey } from '../types';
+import { useTranslation } from 'react-i18next';
 import {
   EMOTION_COLORS, EMOTION_LABELS,
   SECONDARY_TAGS, EMOTION_KEYS,
@@ -44,6 +45,7 @@ export default function EmotionPickerScreenV3() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
 
+  const { t } = useTranslation();
   const preselected = route.params?.preselectedEmotion as EmotionKey | undefined;
 
   const [step, setStep] = useState<Step>(preselected ? 'secondary' : 'primary');
@@ -70,14 +72,18 @@ export default function EmotionPickerScreenV3() {
 
   const handleToggleTag = (tag: string) => {
     setSelectedTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [tag]
     );
   };
 
   const handleConfirm = () => {
-    nav.navigate('DiaryList', {
-      screen: 'WriteDiary',
-      params: { selectedEmotion, secondaryTags: selectedTags },
+    // Home으로 돌아가면서 감정 기록
+    nav.navigate('MainTabs', {
+      screen: 'Home',
+      params: {
+        selectedEmotion,
+        selectedTag: selectedTags.length > 0 ? selectedTags[0] : undefined,
+      },
     });
   };
 
@@ -99,7 +105,7 @@ export default function EmotionPickerScreenV3() {
           <Text style={s.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={s.headerTitle}>
-          {step === 'primary' ? '지금 기분이 어때요?' : '조금 더 알려주세요'}
+          {step === 'primary' ? t('emotion.pickPrimary') : t('emotion.pickSecondary')}
         </Text>
         <View style={{ width: 44 }} />
       </View>
@@ -112,7 +118,7 @@ export default function EmotionPickerScreenV3() {
           {step === 'primary' ? (
             /* ═══ Step 1: Primary emotion cards — blob shapes ═══ */
             <>
-              <Text style={s.pageSubtitle}>오늘의 감정을 골라주세요</Text>
+              <Text style={s.pageSubtitle}>{t('emotion.pickSubtitle')}</Text>
               <View style={s.cardGrid}>
                 {EMOTION_KEYS.map((key, index) => (
                   <TouchableOpacity
@@ -131,21 +137,26 @@ export default function EmotionPickerScreenV3() {
                     </Text>
                   </TouchableOpacity>
                 ))}
-                {/* "모르겠어요" */}
+                {/* "모르겠어요" → 감정 미지정으로 바로 일기 작성 */}
                 <TouchableOpacity
                   style={[
                     s.emotionCard,
                     cardBlobRadii[5],
                     { backgroundColor: colors.accentSand + '18' },
                   ]}
-                  onPress={() => handleSelectPrimary('COMPLEX')}
+                  onPress={() => {
+                    nav.navigate('MainTabs', {
+                      screen: 'Home',
+                      params: { selectedEmotion: undefined, selectedTag: undefined },
+                    });
+                  }}
                   activeOpacity={0.7}
                 >
                   <View style={s.questionMark}>
                     <Text style={s.questionText}>?</Text>
                   </View>
                   <Text style={[s.emotionName, { color: colors.textTertiary }]}>
-                    모르겠어요
+                    {t('home.unknown')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -161,14 +172,14 @@ export default function EmotionPickerScreenV3() {
                   }]}>
                     <EmotionStickerView emotionKey={selectedEmotion} size="medium" />
                     <Text style={[s.selectedLabel, { color: EMOTION_COLORS[selectedEmotion] }]}>
-                      {EMOTION_LABELS[selectedEmotion]}
+                      {selectedTags.length > 0 ? selectedTags[0] : EMOTION_LABELS[selectedEmotion]}
                     </Text>
                   </View>
                 </View>
               )}
 
-              <Text style={s.tagPrompt}>어떤 감정에 가까운가요?</Text>
-              <Text style={s.tagSub}>여러 개 선택할 수 있어요</Text>
+              <Text style={s.tagPrompt}>{t('emotion.tagPrompt')}</Text>
+              <Text style={s.tagSub}>{t('emotion.tagSubSingle')}</Text>
 
               <View style={s.tagWrap}>
                 {selectedEmotion && SECONDARY_TAGS[selectedEmotion].map((tag) => {
@@ -221,7 +232,7 @@ export default function EmotionPickerScreenV3() {
             onPress={handleConfirm}
             activeOpacity={0.8}
           >
-            <Text style={s.ctaText}>이 감정으로 시작하기</Text>
+            <Text style={s.ctaText}>{t('emotion.startWithThis')}</Text>
           </TouchableOpacity>
         </View>
       )}

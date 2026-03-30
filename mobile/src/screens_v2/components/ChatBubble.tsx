@@ -61,7 +61,7 @@ export function ChatBubble({
       {isAI && (
         <View style={styles.aiIndicator}>
           <View style={styles.aiDot} />
-          <Text style={styles.aiName}>마무리</Text>
+          <Text style={styles.aiName}>{t('companion.defaultName')}</Text>
         </View>
       )}
 

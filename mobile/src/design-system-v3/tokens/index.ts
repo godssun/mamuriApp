@@ -7,8 +7,8 @@ export { palette, scrapbookMoodColors, colors } from './colors';
 export type { ScrapbookColorTokens } from './colors';
 
 // Typography
-export { fontFamily, fontAssetNames, buildFontAssets, typography } from './typography';
-export type { TypographyVariant } from './typography';
+export { fontFamily, fontAssetNames, buildFontAssets, typography, DIARY_FONT_OPTIONS } from './typography';
+export type { TypographyVariant, DiaryFontKey } from './typography';
 
 // Shadows
 export { shadows, innerGlow } from './shadows';

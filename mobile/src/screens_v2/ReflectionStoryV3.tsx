@@ -10,11 +10,13 @@ import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { colors, fontFamily, shadows, spacing, borderRadius } from '../design-system-v3';
 import { PaperBackground } from '../design-system-v3/components/PaperBackground';
 import { emotionApi, calendarApi, reportApi2 } from '../api/client';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import type { CalendarDayEntry, EmotionKey } from '../types';
 import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
@@ -31,6 +33,8 @@ const blobRadii = [
 export default function ReflectionStoryV3() {
   const insets = useSafeAreaInsets();
   const nav = useNavigation<any>();
+  const { t } = useTranslation();
+  const { entitlements } = useSubscription();
 
   const now = new Date();
   const [refreshing, setRefreshing] = useState(false);
@@ -74,7 +78,7 @@ export default function ReflectionStoryV3() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentPrimary} />}
       >
         <View style={{ height: 24 }} />
-        <Text style={s.pageTitle}>돌아보기</Text>
+        <Text style={s.pageTitle}>{t('reflect.title')}</Text>
 
         {/* ═══ Mini Emotion Calendar ═══ */}
         <TouchableOpacity
@@ -83,13 +87,13 @@ export default function ReflectionStoryV3() {
           activeOpacity={0.7}
         >
           <View style={s.calHeader}>
-            <Text style={s.calTitle}>{year}년 {month}월</Text>
-            <Text style={s.calLink}>자세히 →</Text>
+            <Text style={s.calTitle}>{t('date.yearMonth', { year, month })}</Text>
+            <Text style={s.calLink}>{t('calendar.more')}</Text>
           </View>
 
           {/* Day headers */}
           <View style={s.calDayHeaders}>
-            {['일', '월', '화', '수', '목', '금', '토'].map(d => (
+            {(t('calendar.weekdays', { returnObjects: true }) as string[]).map(d => (
               <View key={d} style={s.calDayHeaderCell}>
                 <Text style={s.calDayHeaderText}>{d}</Text>
               </View>
@@ -136,7 +140,7 @@ export default function ReflectionStoryV3() {
         {/* ═══ Weekly Story Card ═══ */}
         {weekly && Object.keys(weeklyDist).length > 0 && (
           <View style={s.weeklyCard}>
-            <Text style={s.sectionLabel}>이번 주 감정</Text>
+            <Text style={s.sectionLabel}>{t('reflect.thisWeek')}</Text>
 
             {/* Emotion strip */}
             <View style={s.emotionStrip}>
@@ -183,11 +187,11 @@ export default function ReflectionStoryV3() {
           <View style={s.statsRow}>
             <View style={s.statBox}>
               <Text style={s.statNum}>{weekly.totalEntries || 0}</Text>
-              <Text style={s.statLabel}>기록한 날</Text>
+              <Text style={s.statLabel}>{t('reflect.recordedDays')}</Text>
             </View>
             <View style={s.statBox}>
               <Text style={s.statNum}>{weekly.averageScore || 0}</Text>
-              <Text style={s.statLabel}>평균 기분</Text>
+              <Text style={s.statLabel}>{t('reflect.avgMood')}</Text>
             </View>
           </View>
         )}
@@ -195,8 +199,8 @@ export default function ReflectionStoryV3() {
         {/* ═══ Reports ═══ */}
         {reports.length > 0 && (
           <View style={s.section}>
-            <Text style={s.sectionLabel}>리포트</Text>
-            {reports.slice(0, 5).map((r: any) => (
+            <Text style={s.sectionLabel}>{t('reflect.reports')}</Text>
+            {reports.slice(0, entitlements.canViewAdvancedReports ? 5 : 1).map((r: any) => (
               <TouchableOpacity
                 key={r.id}
                 style={s.reportItem}
@@ -204,7 +208,7 @@ export default function ReflectionStoryV3() {
                 activeOpacity={0.6}
               >
                 <View style={s.reportBadge}>
-                  <Text style={s.reportType}>{r.reportType === 'WEEKLY' ? '주간' : '월간'}</Text>
+                  <Text style={s.reportType}>{r.reportType === 'WEEKLY' ? t('reflect.weekly') : t('reflect.monthly')}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.reportTitle} numberOfLines={1}>{r.title}</Text>
@@ -212,6 +216,18 @@ export default function ReflectionStoryV3() {
                 </View>
               </TouchableOpacity>
             ))}
+            {!entitlements.canViewAdvancedReports && reports.length > 1 && (
+              <TouchableOpacity
+                style={[s.reportItem, { justifyContent: 'center' }]}
+                onPress={() => nav.navigate('Paywall')}
+                activeOpacity={0.7}
+              >
+                <View style={{ backgroundColor: colors.accentPrimary + '20', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, marginRight: 8 }}>
+                  <Text style={{ fontFamily: fontFamily.sansSemiBold, fontSize: 9, color: colors.accentPrimary }}>PRO</Text>
+                </View>
+                <Text style={[s.reportTitle, { color: colors.accentPrimary }]}>{t('premium.viewPlans')}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 

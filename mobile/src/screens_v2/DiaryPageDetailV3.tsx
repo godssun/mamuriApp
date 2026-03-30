@@ -15,12 +15,18 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Animated, TextInput, ActivityIndicator, Alert, Dimensions, Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors, fontFamily, shadows, spacing, borderRadius, layout } from '../design-system-v3';
 import { PaperBackground } from '../design-system-v3/components/PaperBackground';
+import { LEGACY_THEME_MAP, DIARY_THEMES } from '../constants/stickers';
+import { useCustomStickers } from '../contexts/CustomStickerContext';
 import { diaryApiV3, diaryApi, conversationApi } from '../api/client';
+import { useTheme } from '../contexts/ThemeContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
+import CrisisBanner from '../components/CrisisBanner';
 import type { DiaryV3, ConversationMessage, ConversationLimits, DiaryStackParamListV3, EmotionKey } from '../types';
 import { formatDiaryDate, formatTime } from '../utils/dateFormat';
 import { ChatBubble } from './components/ChatBubble';
@@ -42,17 +48,12 @@ function resolvePhotoUrl(photo: { cdnUrl?: string; url?: string }): string {
 
 type Props = NativeStackScreenProps<DiaryStackParamListV3, 'DiaryDetail'>;
 
-const themeColors: Record<string, string> = {
-  night: '#1A1A2E',
-  warm: colors.bgWarm,
-  nature: colors.bgCream,
-  note: colors.bgIvory,
-  grid: colors.bgCream,
-};
-
 export default function DiaryPageDetailV3({ navigation, route }: Props) {
   const { diaryId } = route.params;
   const insets = useSafeAreaInsets();
+  const { theme: appTheme } = useTheme();
+  const { t } = useTranslation();
+  const { stickers: customStickers } = useCustomStickers();
 
   const [diary, setDiary] = useState<DiaryV3 | null>(null);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
@@ -62,8 +63,13 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
   const [isAITyping, setIsAITyping] = useState(false);
   const [reportMessageId, setReportMessageId] = useState<number | null>(null);
 
+  const { hasCrisisFlag } = useSubscription();
   const contentAnim = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef<ScrollView>(null);
+
+  const isLimitReached = limits !== null
+    && limits.remainingReplies !== null
+    && limits.remainingReplies <= 0;
 
   const fetchData = useCallback(async () => {
     try {
@@ -75,7 +81,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
       setMessages(convData.messages);
       setLimits(convData.limits);
     } catch (error: any) {
-      Alert.alert('오류', error?.message || '데이터를 불러올 수 없습니다.');
+      Alert.alert(t('detail.error'), error?.message || t('error.dataLoadFailed'));
     } finally {
       setLoading(false);
     }
@@ -117,7 +123,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
       }
     } catch (error: any) {
       setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
-      Alert.alert('전송 실패', error?.message || '잠시 후 다시 시도해주세요.');
+      Alert.alert(t('detail.sendFailed'), error?.message || t('common.retry'));
     } finally {
       setIsAITyping(false);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -126,16 +132,16 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
 
   const handleMorePress = () => {
     Alert.alert('', '', [
-      { text: '수정하기', onPress: () => navigation.navigate('WriteDiary', { editDiaryId: diaryId }) },
-      { text: '삭제하기', style: 'destructive', onPress: () => {
-        Alert.alert('일기 삭제', '정말 삭제하시겠어요?', [
-          { text: '취소', style: 'cancel' },
-          { text: '삭제', style: 'destructive', onPress: async () => {
+      { text: t('diary.editAction'), onPress: () => navigation.navigate('WriteDiary', { editDiaryId: diaryId }) },
+      { text: t('diary.deleteAction'), style: 'destructive', onPress: () => {
+        Alert.alert(t('detail.deleteDiary'), t('detail.deleteConfirm'), [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('common.delete'), style: 'destructive', onPress: async () => {
             try { await diaryApi.delete(diaryId); navigation.goBack(); } catch {}
           }},
         ]);
       }},
-      { text: '취소', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   };
 
@@ -159,6 +165,8 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
 
   if (!diary) return null;
 
+  const diaryThemeKey = LEGACY_THEME_MAP[diary.theme || ''] || diary.theme || '';
+
   // ── Data extraction ──
   const emotionCode = (
     diary.emotion?.primarySticker?.category?.code
@@ -167,12 +175,16 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
     || (diary as any).emotion?.primaryEmotion
   ) as EmotionKey | undefined;
   const emotionColor = emotionCode ? EMOTION_COLORS[emotionCode] : null;
-  const diaryTheme = diary.theme || 'note';
-  const bgColor = themeColors[diaryTheme] || colors.bgCream;
-  const txtColor = diaryTheme === 'night' ? '#EDEDF0' : colors.textPrimary;
+  const rawTheme = diary.theme || 'note';
+  const diaryTheme = diaryThemeKey;
+  const themeEntry = DIARY_THEMES.find((t: any) => t.key === diaryTheme);
+  const isTextureTheme = ['crumpled1', 'crumpled2', 'crumpled3'].includes(diaryTheme);
+  const bgColor = 'transparent';
+  const isDarkTheme = themeEntry?.isDark ?? false;
+  const txtColor = isDarkTheme ? '#EDEDF0' : colors.textPrimary;
   const canvasW = Dimensions.get('window').width - (CANVAS_PADDING_H * 2);
   const diaryDate = new Date(diary.diaryDate);
-  const dateLabel = `${diaryDate.getMonth() + 1}월 ${diaryDate.getDate()}일`;
+  const dateLabel = t('date.monthDay', { month: diaryDate.getMonth() + 1, day: diaryDate.getDate() });
 
   // Convert photos + decorations to CanvasObjectData[]
   const canvasObjects: CanvasObjectData[] = [
@@ -190,18 +202,32 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
     ...(diary.decorations || []).map(deco => {
       const code = deco.assetCode || deco.assetType || '';
       const stickerSize = Math.round(60 * (deco.scale || 1));
+      // 커스텀 스티커: cs_로 시작하는 코드는 로컬 파일에서 복원
+      let source = getStickerSource(code) || undefined;
+      if (!source && code.startsWith('cs_')) {
+        const custom = customStickers.find(s => s.id === code);
+        if (custom) source = { uri: custom.stickerUri } as any;
+      }
       return {
         id: `deco_${deco.id}`, type: 'sticker' as const,
         x: (deco.positionX || 0) * canvasW, y: (deco.positionY || 0) * canvasW,
         width: stickerSize, height: stickerSize,
         rotation: deco.rotation || 0, zIndex: deco.zIndex || 0,
-        stickerCode: code, stickerSource: getStickerSource(code) || undefined,
+        stickerCode: code, stickerSource: source,
       };
     }),
   ];
 
   return (
-    <PaperBackground variant="plain" color="cream" style={[s.root, { paddingTop: insets.top }]}>
+    <PaperBackground
+      variant="plain"
+      color="cream"
+      themeKey={diaryThemeKey}
+      style={[
+        s.root,
+        { paddingTop: insets.top, backgroundColor: themeEntry?.color || colors.bgCream },
+      ]}
+    >
       {/* ══ Header — transparent, minimal ══ */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerSideBtn}>
@@ -252,7 +278,12 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
           </View>
 
           {/* ══ Diary Canvas (shared renderer) ══ */}
-          <View style={s.canvasCard}>
+          <View style={[s.canvasCard, {
+            backgroundColor: 'transparent',
+            borderWidth: 0,
+            shadowOpacity: 0,
+            elevation: 0,
+          }]}>
             <DiaryPageRenderer
               title={diary.title || ''}
               content={diary.content || ''}
@@ -260,7 +291,8 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
               objects={canvasObjects}
               editable={false}
               textColor={txtColor}
-              borderColor={diaryTheme === 'night' ? '#2A2A3A' : colors.accentSand + '20'}
+              borderColor={isDarkTheme ? '#2A2A3A' : colors.accentSand + '20'}
+              contentFontFamily={appTheme.diaryFontFamily}
               bgColor={bgColor}
             />
           </View>
@@ -273,7 +305,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
                 <View style={s.dividerLine} />
                 <View style={s.dividerLabel}>
                   <View style={s.dividerDot} />
-                  <Text style={s.dividerText}>마무리의 이야기</Text>
+                  <Text style={s.dividerText}>{t('detail.conversation')}</Text>
                 </View>
                 <View style={s.dividerLine} />
               </View>
@@ -299,28 +331,45 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
       </ScrollView>
 
       {/* ══ Input bar — warm paper tone ══ */}
-      <View style={[s.inputBar, { paddingBottom: insets.bottom + 8 }]}>
+      {/* ══ Crisis Banner ══ */}
+      {hasCrisisFlag && <CrisisBanner />}
+
+      {/* ══ Quota limit banner ══ */}
+      {isLimitReached && (
+        <View style={s.limitBanner}>
+          <Text style={s.limitText}>{t('detail.quotaReached')}</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Paywall' as any)}>
+            <Text style={s.limitLink}>{t('premium.viewPlans')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <View style={[s.inputBar, {
+        paddingBottom: insets.bottom + 8,
+        backgroundColor: 'transparent',
+      }]}>
         <View style={s.inputInner}>
           <TextInput
             style={s.textInput}
-            placeholder="이야기를 이어가보세요..."
+            placeholder={isLimitReached ? t('detail.quotaReachedShort') : t('diary.continuePlaceholder')}
             placeholderTextColor={colors.textTertiary}
             value={inputText}
             onChangeText={setInputText}
             multiline
             maxLength={500}
+            editable={!isLimitReached}
           />
           <TouchableOpacity
             onPress={handleSendMessage}
-            disabled={!inputText.trim() || isAITyping}
+            disabled={!inputText.trim() || isAITyping || isLimitReached}
             style={[
               s.sendBtn,
-              (inputText.trim() && !isAITyping) ? s.sendBtnActive : s.sendBtnInactive,
+              (inputText.trim() && !isAITyping && !isLimitReached) ? s.sendBtnActive : s.sendBtnInactive,
             ]}
           >
             <Text style={[
               s.sendIcon,
-              { color: (inputText.trim() && !isAITyping) ? colors.surfacePure : colors.textTertiary },
+              { color: (inputText.trim() && !isAITyping && !isLimitReached) ? colors.surfacePure : colors.textTertiary },
             ]}>
               ↑
             </Text>
@@ -468,4 +517,27 @@ const s = StyleSheet.create({
   sendBtnActive: { backgroundColor: colors.accentPrimary },
   sendBtnInactive: { backgroundColor: 'transparent' },
   sendIcon: { fontSize: 16 },
+
+  // Quota limit
+  limitBanner: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: colors.accentPrimary + '10',
+    borderTopWidth: 1,
+    borderTopColor: colors.accentSand + '30',
+  },
+  limitText: {
+    fontFamily: fontFamily.sans,
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  limitLink: {
+    fontFamily: fontFamily.sansSemiBold,
+    fontSize: 12,
+    color: colors.accentPrimary,
+  },
 });

@@ -24,6 +24,7 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   colors, fontFamily, shadows, spacing, borderRadius, layout,
+  DIARY_FONT_OPTIONS,
 } from '../design-system-v3';
 import { companionApi, ApiError } from '../api/client';
 import { CompanionProfile, CompanionSettings, MainStackParamList } from '../types';
@@ -54,7 +55,7 @@ export function SettingsScreenV2() {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { t } = useTranslation();
   const { logout, forceLogout } = useAuth();
-  const { isPremium } = useSubscription();
+  const { isPremium, openManagement } = useSubscription();
   const { theme: v1Theme, updateAppearance } = useTheme();
   const [companion, setCompanion] = useState<CompanionProfile | null>(null);
   const [companionSettings, setCompanionSettings] = useState<CompanionSettings | null>(null);
@@ -198,6 +199,30 @@ export function SettingsScreenV2() {
         </View>
       </View>
 
+      {/* ── 구독 ── */}
+      <View style={s.section}>
+        <Text style={s.sectionLabel}>{t('settings.subscription')}</Text>
+        <TouchableOpacity
+          style={s.logoutBtn}
+          onPress={() => isPremium ? openManagement() : navigation.navigate('Paywall' as any)}
+        >
+          <Text style={[s.listRowText, { textAlign: 'center', color: colors.accentPrimary }]}>
+            {isPremium ? t('settings.premiumActive') : t('premium.viewPlans')}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[s.logoutBtn, { marginTop: spacing.sm }]}
+          onPress={() => navigation.navigate('CustomSticker' as any)}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+            <Text style={[s.listRowText, { textAlign: 'center', color: colors.accentPrimary }]}>
+              {t('premium.customSticker')}
+            </Text>
+            {!isPremium && <View style={{ backgroundColor: colors.accentPrimary + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}><Text style={{ fontFamily: fontFamily.sansSemiBold, fontSize: 8, color: colors.accentPrimary }}>PRO</Text></View>}
+          </View>
+        </TouchableOpacity>
+      </View>
+
       {/* ── 외관 ── */}
       <View style={s.section}>
         <Text style={s.sectionLabel}>{t('settings.appearance')}</Text>
@@ -279,12 +304,45 @@ export function SettingsScreenV2() {
           </View>
         </View>
 
+        {/* 일기 작성 폰트 */}
+        <View style={s.settingCard}>
+          <Text style={s.settingTitle}>{t('settings.diaryFont')}</Text>
+          <View style={{ gap: spacing.sm }}>
+            {DIARY_FONT_OPTIONS.map((opt) => {
+              const sel = v1Theme.diaryFontKey === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[s.diaryFontCard, sel ? s.optionSelected : s.optionDefault]}
+                  onPress={() => {
+                    if (opt.premium && !isPremium) {
+                      navigation.navigate('Paywall' as any);
+                      return;
+                    }
+                    updateAppearance({ diaryFont: opt.key });
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={[s.optionCaption, sel && { color: colors.accentPrimary }]}>
+                      {opt.label}
+                    </Text>
+                    {opt.premium && <View style={{ backgroundColor: colors.accentPrimary + '20', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 }}><Text style={{ fontFamily: fontFamily.sansSemiBold, fontSize: 7, color: colors.accentPrimary }}>PRO</Text></View>}
+                  </View>
+                  <Text style={[s.diaryFontPreview, { fontFamily: opt.font }]}>
+                    {opt.preview}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {/* 미리보기 */}
         <View style={s.previewCard}>
           <Text style={s.previewLabel}>{t('settings.preview')}</Text>
           <Text style={{
             fontSize: Math.round(16 * v1Theme.fontScale),
-            fontFamily: v1Theme.fontFamily,
+            fontFamily: v1Theme.diaryFontFamily,
             color: colors.textPrimary,
             lineHeight: Math.round(26 * v1Theme.fontScale),
           }}>
@@ -479,6 +537,14 @@ const s = StyleSheet.create({
   },
   optionPreview: {
     fontSize: 15, color: colors.textPrimary,
+  },
+
+  diaryFontCard: {
+    padding: spacing.md,
+    borderWidth: 1, borderRadius: borderRadius.sm, gap: 4,
+  },
+  diaryFontPreview: {
+    fontSize: 16, color: colors.textPrimary, lineHeight: 24,
   },
 
   previewCard: {

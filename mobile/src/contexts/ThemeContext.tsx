@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { settingsApi } from '../api/client';
 import { useAuth } from './AuthContext';
 import { UserSettings } from '../types';
+import { DIARY_FONT_OPTIONS } from '../design-system-v3';
+import type { DiaryFontKey } from '../design-system-v3';
 
 export interface ThemeColors {
   background: string;
@@ -16,6 +18,9 @@ export interface Theme {
   fontFamily: string | undefined;
   fontScale: number;
   isDark: boolean;
+  /** 일기 작성용 폰트 (fontFamily name) */
+  diaryFontFamily: string;
+  diaryFontKey: DiaryFontKey;
 }
 
 const WARM_THEME: ThemeColors = {
@@ -59,11 +64,13 @@ const DEFAULT_THEME: Theme = {
   fontFamily: undefined,
   fontScale: 1.0,
   isDark: false,
+  diaryFontFamily: DIARY_FONT_OPTIONS[0].font,
+  diaryFontKey: 'default',
 };
 
 interface ThemeContextType {
   theme: Theme;
-  updateAppearance: (updates: Partial<Pick<UserSettings, 'backgroundTheme' | 'fontFamily' | 'fontSize'>>) => Promise<void>;
+  updateAppearance: (updates: Partial<Pick<UserSettings, 'backgroundTheme' | 'fontFamily' | 'fontSize' | 'diaryFont'>>) => Promise<void>;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -71,26 +78,33 @@ const ThemeContext = createContext<ThemeContextType>({
   updateAppearance: async () => {},
 });
 
-function buildTheme(settings: Pick<UserSettings, 'backgroundTheme' | 'fontFamily' | 'fontSize'>): Theme {
+type AppearanceSettings = Pick<UserSettings, 'backgroundTheme' | 'fontFamily' | 'fontSize'> & { diaryFont?: string };
+
+function buildTheme(settings: AppearanceSettings): Theme {
+  const diaryFontKey = (settings.diaryFont || 'default') as DiaryFontKey;
+  const diaryOption = DIARY_FONT_OPTIONS.find(o => o.key === diaryFontKey) || DIARY_FONT_OPTIONS[0];
   return {
     colors: THEME_MAP[settings.backgroundTheme] ?? WARM_THEME,
     fontFamily: settings.fontFamily === 'serif' ? 'NanumMyeongjo_400Regular' : undefined,
     fontScale: FONT_SCALE_MAP[settings.fontSize] ?? 1.0,
     isDark: settings.backgroundTheme === 'dark',
+    diaryFontFamily: diaryOption.font,
+    diaryFontKey: diaryOption.key,
   };
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
-  const [appearance, setAppearance] = useState<Pick<UserSettings, 'backgroundTheme' | 'fontFamily' | 'fontSize'>>({
+  const [appearance, setAppearance] = useState<AppearanceSettings>({
     backgroundTheme: 'warm',
     fontFamily: 'system',
     fontSize: 'medium',
+    diaryFont: 'default',
   });
 
   useEffect(() => {
     if (!isAuthenticated) {
-      setAppearance({ backgroundTheme: 'warm', fontFamily: 'system', fontSize: 'medium' });
+      setAppearance({ backgroundTheme: 'warm', fontFamily: 'system', fontSize: 'medium', diaryFont: 'default' });
       return;
     }
 
@@ -100,6 +114,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           backgroundTheme: data.backgroundTheme ?? 'warm',
           fontFamily: data.fontFamily ?? 'system',
           fontSize: data.fontSize ?? 'medium',
+          diaryFont: (data as any).diaryFont ?? 'default',
         });
       })
       .catch(() => {});
@@ -108,7 +123,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useMemo(() => buildTheme(appearance), [appearance]);
 
   const updateAppearance = useCallback(async (
-    updates: Partial<Pick<UserSettings, 'backgroundTheme' | 'fontFamily' | 'fontSize'>>
+    updates: Partial<Pick<UserSettings, 'backgroundTheme' | 'fontFamily' | 'fontSize' | 'diaryFont'>>
   ) => {
     const prev = appearance;
     const next = { ...appearance, ...updates };

@@ -11,6 +11,7 @@
  */
 
 import React, { useRef, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Animated, PanResponder, Image, View,
   StyleSheet, Alert, ImageSourcePropType,
@@ -49,6 +50,7 @@ export function DraggableSticker({
   selected = false,
   onSelect,
 }: DraggableStickerProps) {
+  const { t } = useTranslation();
   const pan = useRef(new Animated.ValueXY({ x: initialX, y: initialY })).current;
   const scale = useRef(new Animated.Value(1)).current;
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -74,9 +76,9 @@ export function DraggableSticker({
         // Start long press timer
         longPressTimer.current = setTimeout(() => {
           if (onDelete) {
-            Alert.alert('스티커 삭제', '이 스티커를 삭제할까요?', [
-              { text: '취소', style: 'cancel' },
-              { text: '삭제', style: 'destructive', onPress: () => onDelete(id) },
+            Alert.alert(t('sticker.deleteTitle'), t('sticker.deleteConfirm'), [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('common.delete'), style: 'destructive', onPress: () => onDelete(id) },
             ]);
           }
         }, 600);

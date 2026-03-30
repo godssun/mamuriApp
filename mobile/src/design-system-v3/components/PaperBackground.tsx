@@ -6,9 +6,23 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp, Image } from 'react-native';
 import { colors } from '../tokens/colors';
 import { linedBackground, gridBackground, zIndex } from '../tokens/textures';
+
+/**
+ * PRO 텍스처 테마 레이어 설계:
+ *
+ * Layer 1: 테마별 배경색 (DIARY_THEMES.color로 View 전체에 적용)
+ * Layer 2: 텍스처 이미지 — 매우 낮은 opacity로 종이 질감만 암시
+ * Layer 3: 색조 오버레이 — 테마 무드를 살리는 반투명 tint
+ * Layer 4: 콘텐츠 — 텍스트 가독성 최우선
+ */
+const TEXTURE_THEMES: Record<string, { source: any; opacity: number }> = {
+  crumpled1: { source: require('../../../assets/textures/crumpled_paper.png'), opacity: 0.35 },
+  crumpled2: { source: require('../../../assets/textures/crumpled_plain.png'), opacity: 0.35 },
+  crumpled3: { source: require('../../../assets/textures/crumpled_plain.png'), opacity: 0.25 },
+};
 
 type BackgroundVariant = 'plain' | 'lined' | 'grid';
 type BackgroundColor = 'base' | 'warm' | 'cream' | 'ivory';
@@ -16,6 +30,8 @@ type BackgroundColor = 'base' | 'warm' | 'cream' | 'ivory';
 interface PaperBackgroundProps {
   variant?: BackgroundVariant;
   color?: BackgroundColor;
+  /** 일기 테마 키 — PRO 텍스처 테마일 때 배경 이미지 적용 */
+  themeKey?: string;
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
 }
@@ -30,6 +46,7 @@ const bgColorMap: Record<BackgroundColor, string> = {
 export function PaperBackground({
   variant = 'plain',
   color = 'warm',
+  themeKey,
   style,
   children,
 }: PaperBackgroundProps) {
@@ -39,10 +56,27 @@ export function PaperBackground({
     return <GridOverlay />;
   }, [variant]);
 
+  const texture = themeKey ? TEXTURE_THEMES[themeKey] : undefined;
+
   return (
     <View style={[styles.container, { backgroundColor: bgColorMap[color] }, style]}>
+      {/* PRO 텍스처 배경 이미지 */}
+      {texture && (
+        <Image
+          source={texture.source}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            opacity: texture.opacity,
+          }}
+          resizeMode="cover"
+        />
+      )}
       {/* Subtle noise fallback */}
-      <View style={styles.noiseOverlay} pointerEvents="none" />
+      {!texture && <View style={styles.noiseOverlay} pointerEvents="none" />}
       {lines}
       <View style={styles.content}>{children}</View>
     </View>

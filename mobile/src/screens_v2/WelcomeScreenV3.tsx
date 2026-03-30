@@ -13,6 +13,7 @@ import React, { useEffect, useRef } from 'react';
 import {
   View, Text, Animated, StyleSheet, Dimensions,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../types';
@@ -176,6 +177,7 @@ const stampStyles = StyleSheet.create({
 // ── Main Screen ──
 export function WelcomeScreenV3({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const cardFade = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(40)).current;
@@ -221,17 +223,17 @@ export function WelcomeScreenV3({ navigation }: Props) {
 
           {/* Greeting */}
           <Text style={styles.greetingTitle}>
-            {'안녕하세요,\n저는 마무리에요.'}
+            {t('welcome.greeting')}
           </Text>
 
           <Text style={styles.greetingMessage}>
-            {'당신의 하루와 감정을\n이곳에 조용히 담아두세요.\n\n저는 이곳을 지켜보며\n당신의 이야기에 귀 기울일게요.'}
+            {t('welcome.message')}
           </Text>
 
           {/* Card Footer */}
           <View style={styles.cardFooter}>
             <PostalStamp />
-            <Text style={styles.signature}>— 마무리</Text>
+            <Text style={styles.signature}>— {t('welcome.signature')}</Text>
           </View>
         </Animated.View>
 
@@ -241,7 +243,7 @@ export function WelcomeScreenV3({ navigation }: Props) {
           { opacity: btnFade, paddingBottom: insets.bottom + 40 },
         ]}>
           <ScrapbookButton
-            title="시작하기"
+            title={t('auth.start')}
             variant="outline"
             onPress={() => navigation.replace('Login')}
           />

@@ -96,6 +96,7 @@ export interface UserSettings {
   backgroundTheme: 'warm' | 'light' | 'dark';
   fontFamily: 'system' | 'serif';
   fontSize: 'small' | 'medium' | 'large';
+  diaryFont?: 'default' | 'serif' | 'round' | 'pen';
   language?: 'ko' | 'en' | 'ja' | 'zh';
   aiDataConsent?: boolean;
 }
@@ -176,7 +177,7 @@ export interface DeleteAccountRequest {
 }
 
 // 구독
-export type SubscriptionTier = 'FREE' | 'DELUXE' | 'PREMIUM';
+export type SubscriptionTier = 'FREE' | 'PREMIUM';
 
 export type SubscriptionStatusType = 'FREE' | 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
 
@@ -188,6 +189,51 @@ export interface SubscriptionInfo {
   dailyRepliesMax: number; // -1 = unlimited, 0 = blocked
   currentPeriodEnd: string | null;
   crisisFlag: boolean;
+}
+
+/**
+ * Premium Entitlements — 구독자 전용 기능 접근 권한
+ *
+ * isPremium이 true이면 모든 entitlement가 열림.
+ * 개별 기능별 체크가 필요한 경우 이 인터페이스를 사용.
+ */
+export interface PremiumEntitlements {
+  /** 커스텀 스티커 제작 (사진→배경제거→스티커화) */
+  canCreateCustomSticker: boolean;
+  /** AI 댓글 일일 한도 (무료: 1, 프리미엄: 10) */
+  aiCommentDailyLimit: number;
+  /** AI 대화 일일 한도 (무료: 3, 프리미엄: 30) */
+  aiConversationDailyLimit: number;
+  /** 프리미엄 테마 사용 */
+  canUsePremiumThemes: boolean;
+  /** 프리미엄 폰트 사용 */
+  canUsePremiumFonts: boolean;
+  /** 고급 감정 리포트/회고 */
+  canViewAdvancedReports: boolean;
+}
+
+/** IAP Product ID 상수 */
+export const IAP_PRODUCTS = {
+  MONTHLY: 'mamuri_premium_monthly',
+  YEARLY: 'mamuri_premium_yearly',
+} as const;
+
+/** 커스텀 스티커 데이터 구조 */
+export interface CustomSticker {
+  id: string;
+  /** 원본 이미지 URI */
+  originalUri: string;
+  /** 배경 제거된 스티커 URI */
+  stickerUri: string;
+  /** 스티커 썸네일 URI */
+  thumbnailUri: string;
+  /** 생성 시간 */
+  createdAt: string;
+  /** 스티커 크기 (px) */
+  width: number;
+  height: number;
+  /** 테두리 스타일 */
+  borderStyle?: 'none' | 'white' | 'black' | 'shadow';
 }
 
 // 네비게이션
@@ -212,6 +258,8 @@ export type MainStackParamList = {
   ReportDetail: { reportId: number };
   EmotionCalendar: undefined;
   EmotionPicker: { preselectedEmotion?: EmotionKey; returnTo?: string };
+  Paywall: undefined;
+  CustomSticker: undefined;
 };
 
 export type MainTabParamList = {

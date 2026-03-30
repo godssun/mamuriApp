@@ -12,6 +12,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
@@ -26,6 +27,7 @@ type Props = NativeStackScreenProps<any, 'ReportDetail'>;
 
 export default function ReportDetailScreenV2({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const reportId = route.params?.reportId;
 
   const [report, setReport] = useState<any>(null);
@@ -64,7 +66,7 @@ export default function ReportDetailScreenV2({ route, navigation }: Props) {
           </TouchableOpacity>
         </View>
         <View style={s.center}>
-          <Text style={s.errorText}>리포트를 찾을 수 없습니다.</Text>
+          <Text style={s.errorText}>{t('reportDetail.notFound')}</Text>
         </View>
       </PaperBackground>
     );
@@ -77,7 +79,7 @@ export default function ReportDetailScreenV2({ route, navigation }: Props) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
           <Text style={s.backArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={s.headerTitle}>리포트</Text>
+        <Text style={s.headerTitle}>{t('reportDetail.header')}</Text>
         <View style={{ width: 44 }} />
       </View>
 
@@ -85,7 +87,7 @@ export default function ReportDetailScreenV2({ route, navigation }: Props) {
         {/* Type Badge */}
         <View style={s.typeBadge}>
           <Text style={s.typeBadgeText}>
-            {report.reportType === 'WEEKLY' ? '주간 리포트' : '월간 리포트'}
+            {report.reportType === 'WEEKLY' ? t('reportDetail.weeklyReport') : t('reportDetail.monthlyReport')}
           </Text>
         </View>
 
@@ -96,7 +98,7 @@ export default function ReportDetailScreenV2({ route, navigation }: Props) {
         <Text style={s.title}>{report.title}</Text>
 
         {/* Meta */}
-        <Text style={s.meta}>{report.diaryCount}개의 일기를 기반으로 작성되었어요</Text>
+        <Text style={s.meta}>{t('reportDetail.diaryBased', { count: report.diaryCount })}</Text>
 
         {/* Content */}
         <View style={s.card}>
@@ -106,7 +108,7 @@ export default function ReportDetailScreenV2({ route, navigation }: Props) {
         {/* Growth Insight */}
         {report.growthInsight && (
           <View style={s.insightCard}>
-            <Text style={s.insightLabel}>이번 주 성장 포인트</Text>
+            <Text style={s.insightLabel}>{t('reportDetail.growthPoint')}</Text>
             <Text style={s.insightText}>{report.growthInsight}</Text>
           </View>
         )}
@@ -114,7 +116,7 @@ export default function ReportDetailScreenV2({ route, navigation }: Props) {
         {/* Key Events */}
         {report.keyEvents && report.keyEvents.length > 0 && (
           <View style={s.card}>
-            <Text style={s.insightLabel}>주요 사건</Text>
+            <Text style={s.insightLabel}>{t('reportDetail.keyEvents')}</Text>
             {report.keyEvents.map((event: string, i: number) => (
               <Text key={i} style={s.eventItem}>• {event}</Text>
             ))}
@@ -124,7 +126,7 @@ export default function ReportDetailScreenV2({ route, navigation }: Props) {
         {/* Emotion Summary */}
         {report.emotionSummary && Object.keys(report.emotionSummary).length > 0 && (
           <View style={s.card}>
-            <Text style={s.insightLabel}>감정 분포</Text>
+            <Text style={s.insightLabel}>{t('reportDetail.emotionDist')}</Text>
             <View style={s.emotionRow}>
               {Object.entries(report.emotionSummary).map(([emotion, count]) => {
                 const emotionColor = EMOTION_COLORS[emotion as keyof typeof EMOTION_COLORS] || colors.accentSand;
@@ -132,7 +134,7 @@ export default function ReportDetailScreenV2({ route, navigation }: Props) {
                   <View key={emotion} style={s.emotionChip}>
                     <EmotionStickerView emotionKey={emotion as any} size="mini" />
                     <Text style={[s.emotionCount, { color: emotionColor }]}>
-                      {count as number}회
+                      {count as number}{t('reportDetail.countSuffix')}
                     </Text>
                     <Text style={s.emotionLabel}>
                       {EMOTION_LABELS[emotion as keyof typeof EMOTION_LABELS] || emotion}
