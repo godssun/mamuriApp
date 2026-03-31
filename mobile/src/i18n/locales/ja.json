@@ -466,6 +466,8 @@
     "restoreNone": "復元する購入履歴がありません。",
     "purchaseFailed": "購入失敗",
     "restoreFailed": "復元失敗",
+    "loadFailed": "サブスクリプション情報を読み込めません",
+    "retry": "再試行",
     "legalNote": "サブスクリプションは確認時にiTunesアカウントに請求されます。\n現在の期間終了の24時間前に自動更新されます。\n設定からいつでも解約できます。"
   },
   "customSticker": {

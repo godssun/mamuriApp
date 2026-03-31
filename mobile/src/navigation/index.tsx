@@ -102,16 +102,20 @@ function MainTabsNavigator() {
         options={{ title: t('tabs.diary') }}
         listeners={({ navigation: tabNav }) => ({
           tabPress: (e: any) => {
-            // 탭 클릭 시 DiaryStack을 DiaryListHome까지 pop
             e.preventDefault();
-            (tabNav as any).navigate('DiaryList', {
-              screen: 'DiaryListHome',
-            });
-            // 스택에 WriteDiary/DiaryDetail이 남아있으면 popToTop
-            try {
-              tabNav.dispatch(StackActions.popToTop());
-            } catch {
-              // 이미 root이면 무시
+            // DiaryStack의 state key를 찾아 직접 리셋
+            const state = tabNav.getState();
+            const diaryRoute = state?.routes?.find((r: any) => r.name === 'DiaryList');
+            if (diaryRoute?.state?.key) {
+              tabNav.dispatch({
+                ...CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'DiaryListHome' }],
+                }),
+                target: diaryRoute.state.key,
+              });
+            } else {
+              (tabNav as any).navigate('DiaryList', { screen: 'DiaryListHome' });
             }
           },
         })}

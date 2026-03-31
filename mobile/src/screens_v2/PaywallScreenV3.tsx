@@ -5,7 +5,7 @@
  * Shows subscription benefits, monthly/yearly options, purchase/restore.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
   ActivityIndicator, Alert,
@@ -26,7 +26,7 @@ export default function PaywallScreenV3() {
   const { t } = useTranslation();
   const {
     products, isLoadingProducts, isPurchasing, isPremium,
-    purchase, restorePurchases,
+    purchase, restorePurchases, refresh,
   } = useSubscription();
 
   const [selectedPeriod, setSelectedPeriod] = useState<'monthly' | 'yearly'>('yearly');
@@ -34,6 +34,23 @@ export default function PaywallScreenV3() {
   const monthly = products.find(p => p.period === 'monthly');
   const yearly = products.find(p => p.period === 'yearly');
   const selected = selectedPeriod === 'yearly' ? yearly : monthly;
+
+  // ── 진단 로그: 버튼 비활성화 원인 추적 ──
+  useEffect(() => {
+    console.log('[Paywall] State:', JSON.stringify({
+      productsCount: products.length,
+      isLoadingProducts,
+      isPurchasing,
+      isPremium,
+      hasMonthly: !!monthly,
+      hasYearly: !!yearly,
+      selectedPeriod,
+      hasSelected: !!selected,
+      selectedId: selected?.identifier,
+      selectedPrice: selected?.priceString,
+      btnDisabled: !selected || isPurchasing,
+    }));
+  }, [products, isLoadingProducts, isPurchasing, isPremium, selected]);
 
   const handlePurchase = async () => {
     if (!selected) return;
@@ -114,6 +131,13 @@ export default function PaywallScreenV3() {
         {/* Plan Selection */}
         {isLoadingProducts ? (
           <ActivityIndicator color={colors.accentPrimary} style={{ marginVertical: spacing['2xl'] }} />
+        ) : products.length === 0 ? (
+          <View style={s.errorContainer}>
+            <Text style={s.errorText}>{t('premium.loadFailed')}</Text>
+            <TouchableOpacity style={s.retryBtn} onPress={refresh} activeOpacity={0.7}>
+              <Text style={s.retryText}>{t('premium.retry')}</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <View style={s.planSection}>
             {/* Yearly */}
@@ -165,31 +189,40 @@ export default function PaywallScreenV3() {
           </View>
         )}
 
-        {/* Trial info */}
-        <Text style={s.trialInfo}>{t('premium.freeTrial')}</Text>
-        <Text style={s.trialDesc}>{t('premium.trialDesc')}</Text>
+        {/* Trial + Purchase + Restore — products 로드 후에만 표시 */}
+        {selected && (
+          <>
+            {/* Trial info — introPrice가 있을 때만 표시 (자격 없으면 숨김) */}
+            {selected.introPrice && (
+              <>
+                <Text style={s.trialInfo}>{t('premium.freeTrial')}</Text>
+                <Text style={s.trialDesc}>{t('premium.trialDesc')}</Text>
+              </>
+            )}
 
-        {/* Purchase Button */}
-        <TouchableOpacity
-          style={[s.purchaseBtn, (!selected || isPurchasing) && s.purchaseBtnDisabled]}
-          onPress={handlePurchase}
-          disabled={!selected || isPurchasing}
-          activeOpacity={0.8}
-        >
-          {isPurchasing ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={s.purchaseBtnText}>{t('premium.subscribe')}</Text>
-          )}
-        </TouchableOpacity>
+            {/* Purchase Button */}
+            <TouchableOpacity
+              style={[s.purchaseBtn, isPurchasing && s.purchaseBtnDisabled]}
+              onPress={handlePurchase}
+              disabled={isPurchasing}
+              activeOpacity={0.8}
+            >
+              {isPurchasing ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={s.purchaseBtnText}>{t('premium.subscribe')}</Text>
+              )}
+            </TouchableOpacity>
 
-        {/* Restore */}
-        <TouchableOpacity style={s.restoreBtn} onPress={handleRestore} activeOpacity={0.6}>
-          <Text style={s.restoreText}>{t('premium.restorePurchase')}</Text>
-        </TouchableOpacity>
+            {/* Restore */}
+            <TouchableOpacity style={s.restoreBtn} onPress={handleRestore} activeOpacity={0.6}>
+              <Text style={s.restoreText}>{t('premium.restorePurchase')}</Text>
+            </TouchableOpacity>
 
-        {/* Legal */}
-        <Text style={s.legalText}>{t('premium.legalNote')}</Text>
+            {/* Legal */}
+            <Text style={s.legalText}>{t('premium.legalNote')}</Text>
+          </>
+        )}
 
         <View style={{ height: spacing['4xl'] }} />
       </ScrollView>
@@ -288,6 +321,26 @@ const s = StyleSheet.create({
   },
   discountText: {
     fontFamily: fontFamily.sansSemiBold, fontSize: 10,
+    color: colors.accentPrimary,
+  },
+
+  // Error state
+  errorContainer: {
+    alignItems: 'center' as const,
+    marginVertical: spacing['2xl'],
+    gap: spacing.md,
+  },
+  errorText: {
+    fontFamily: fontFamily.sans, fontSize: 14,
+    color: colors.textSecondary, textAlign: 'center' as const,
+  },
+  retryBtn: {
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1, borderColor: colors.accentPrimary,
+  },
+  retryText: {
+    fontFamily: fontFamily.sansMedium, fontSize: 14,
     color: colors.accentPrimary,
   },
 

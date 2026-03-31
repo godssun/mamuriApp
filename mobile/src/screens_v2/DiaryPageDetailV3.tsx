@@ -182,14 +182,14 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
   const bgColor = 'transparent';
   const isDarkTheme = themeEntry?.isDark ?? false;
   const txtColor = isDarkTheme ? '#EDEDF0' : colors.textPrimary;
-  const canvasW = Dimensions.get('window').width - (CANVAS_PADDING_H * 2);
+  const canvasW = Dimensions.get('window').width;
   const diaryDate = new Date(diary.diaryDate);
   const dateLabel = t('date.monthDay', { month: diaryDate.getMonth() + 1, day: diaryDate.getDate() });
 
   // Convert photos + decorations to CanvasObjectData[]
   const canvasObjects: CanvasObjectData[] = [
     ...(diary.photos || []).map((p: any, i: number) => {
-      const photoW = p.displayWidth || Math.min(canvasW * 0.9, 300);
+      const photoW = p.displayWidth || Math.min(canvasW * 0.85, 300);
       const photoH = p.displayHeight || photoW * 0.75;
       return {
         id: `photo_${p.id}`, type: 'photo' as const,
@@ -283,6 +283,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
             borderWidth: 0,
             shadowOpacity: 0,
             elevation: 0,
+            marginHorizontal: 0,
           }]}>
             <DiaryPageRenderer
               title={diary.title || ''}

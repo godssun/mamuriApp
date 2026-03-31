@@ -73,6 +73,7 @@ export function CanvasObject({
 
   const pan = useRef(new Animated.ValueXY({ x, y })).current;
   const liftScale = useRef(new Animated.Value(1)).current;
+  const resizeScale = useRef(new Animated.Value(1)).current;
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resizeStart = useRef({ w: width, h: height });
   const rotateStart = useRef({ rotation });
@@ -84,49 +85,81 @@ export function CanvasObject({
     lastDataPos.current = { x, y };
   }
 
-  // ── Drag ──
+  // ── Drag (롱프레스 선택 모델) ──
+  const LONG_PRESS_MS = 400; // 선택까지 걸리는 시간
   const panResponder = useMemo(() => {
     if (!editable) return null;
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gs) =>
-        Math.abs(gs.dx) > 3 || Math.abs(gs.dy) > 3,
+        selected && (Math.abs(gs.dx) > 3 || Math.abs(gs.dy) > 3),
+      // ScrollView가 gesture를 가로채지 못하도록 차단
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
       onPanResponderGrant: () => {
-        onSelect(id);
-        pan.extractOffset();
-        Animated.spring(liftScale, { toValue: 1.05, friction: 6, useNativeDriver: true }).start();
-        longPressTimer.current = setTimeout(() => onDelete(id), 800);
+        if (selected) {
+          // 이미 선택된 상태 → 즉시 드래그 시작
+          pan.extractOffset();
+          Animated.spring(liftScale, { toValue: 1.05, friction: 6, useNativeDriver: true }).start();
+        } else {
+          // 미선택 → 롱프레스 타이머로 선택 진입
+          longPressTimer.current = setTimeout(() => {
+            onSelect(id);
+            Animated.spring(liftScale, { toValue: 1.08, friction: 6, useNativeDriver: true }).start();
+            // 선택 직후 드래그 준비
+            pan.extractOffset();
+          }, LONG_PRESS_MS);
+        }
       },
       onPanResponderMove: (_e, gs) => {
+        // 롱프레스 대기 중 이동 → 타이머 취소
         if (longPressTimer.current && (Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5)) {
           clearTimeout(longPressTimer.current);
           longPressTimer.current = null;
         }
-        Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false })(_e, gs);
+        // 선택된 상태에서만 드래그
+        if (selected) {
+          Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false })(_e, gs);
+        }
       },
       onPanResponderRelease: () => {
-        if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
-        Animated.spring(liftScale, { toValue: 1, friction: 6, useNativeDriver: true }).start();
-        pan.flattenOffset();
-        onMove(id, (pan.x as any)._value ?? x, (pan.y as any)._value ?? y);
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+        if (selected) {
+          Animated.spring(liftScale, { toValue: 1, friction: 6, useNativeDriver: true }).start();
+          pan.flattenOffset();
+          onMove(id, (pan.x as any)._value ?? x, (pan.y as any)._value ?? y);
+        }
       },
     });
-  }, [editable, id, onMove, onDelete, onSelect]);
+  }, [editable, id, selected, onMove, onSelect]);
 
-  // ── Resize (bottom-right) ──
+  // ── Resize (bottom-right) — scale 기반으로 부드럽게 ──
   const resizePanResponder = useMemo(() => {
     if (!editable) return null;
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => { resizeStart.current = { w: width, h: height }; },
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderGrant: () => {
+        resizeStart.current = { w: width, h: height };
+      },
       onPanResponderMove: (_e, gs) => {
         const delta = (gs.dx + gs.dy) / 2;
         const newW = Math.max(MIN_SIZE, Math.min(MAX_SIZE, resizeStart.current.w + delta));
-        const newH = type === 'sticker' ? newW : Math.max(MIN_SIZE, Math.min(MAX_SIZE, newW / aspectRatio));
-        onResize(id, Math.round(newW), Math.round(newH));
+        const scaleFactor = newW / (resizeStart.current.w || 1);
+        resizeScale.setValue(scaleFactor);
       },
-      onPanResponderRelease: () => {},
+      onPanResponderRelease: () => {
+        const scaleFactor = (resizeScale as any)._value ?? 1;
+        const finalW = Math.round(Math.max(MIN_SIZE, Math.min(MAX_SIZE, resizeStart.current.w * scaleFactor)));
+        const finalH = type === 'sticker' ? finalW : Math.round(Math.max(MIN_SIZE, Math.min(MAX_SIZE, finalW / aspectRatio)));
+        resizeScale.setValue(1);
+        onResize(id, finalW, finalH);
+      },
     });
   }, [editable, id, width, height, type, aspectRatio]);
 
@@ -136,6 +169,8 @@ export function CanvasObject({
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
       onPanResponderGrant: () => { rotateStart.current = { rotation }; },
       onPanResponderMove: (_e, gs) => {
         const deltaDeg = gs.dx * 0.5;
@@ -188,7 +223,7 @@ export function CanvasObject({
         pointerEvents="none"
         style={[styles.container, {
           width, height, zIndex,
-          transform: [...sharedTransform, { scale: liftScale }],
+          transform: [...sharedTransform, { scale: Animated.multiply(liftScale, resizeScale) }],
         }]}
       >
         <Image
@@ -203,7 +238,7 @@ export function CanvasObject({
         style={[styles.container, {
           width, height,
           zIndex: zIndex + TOUCH_LAYER_Z_BOOST,
-          transform: [...sharedTransform, { scale: liftScale }],
+          transform: [...sharedTransform, { scale: Animated.multiply(liftScale, resizeScale) }],
         }]}
         {...panResponder?.panHandlers}
       >
