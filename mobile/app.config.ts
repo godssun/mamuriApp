@@ -27,7 +27,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
-        backgroundColor: '#3B2D8B',
+        backgroundColor: '#F4EFEA',
       },
       edgeToEdgeEnabled: true,
       package: 'com.mamuri.app',
