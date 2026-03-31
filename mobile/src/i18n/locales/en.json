@@ -466,6 +466,8 @@
     "restoreNone": "No purchases to restore.",
     "purchaseFailed": "Purchase Failed",
     "restoreFailed": "Restore Failed",
+    "loadFailed": "Unable to load subscription options",
+    "retry": "Retry",
     "legalNote": "Subscription is charged to your iTunes account upon confirmation.\nIt auto-renews 24 hours before the current period ends.\nYou can cancel anytime in Settings."
   },
   "customSticker": {

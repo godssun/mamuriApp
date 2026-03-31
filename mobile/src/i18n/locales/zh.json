@@ -466,6 +466,8 @@
     "restoreNone": "没有可恢复的购买记录。",
     "purchaseFailed": "购买失败",
     "restoreFailed": "恢复失败",
+    "loadFailed": "无法加载订阅信息",
+    "retry": "重试",
     "legalNote": "订阅确认后将从iTunes账户扣款。\n在当前周期结束前24小时自动续订。\n可随时在设置中取消。"
   },
   "customSticker": {

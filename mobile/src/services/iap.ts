@@ -42,6 +42,12 @@ export interface IAPProduct {
   period: 'monthly' | 'yearly';
   /** RevenueCat package reference */
   package: PurchasesPackage;
+  /** Introductory offer info — null이면 자격 없음 (이미 사용함) */
+  introPrice: {
+    priceString: string;
+    periodNumberOfUnits: number;
+    periodUnit: string;
+  } | null;
 }
 
 export interface IAPState {
@@ -135,7 +141,7 @@ class IAPService {
 
       const current = offerings.current;
       if (!current) {
-        console.warn('[IAP] No current offering available');
+        console.warn('[IAP] No current offering available. Check RevenueCat dashboard: Offerings → default → Packages');
         return [];
       }
 
@@ -162,9 +168,14 @@ class IAPService {
         }
       }
 
+      if (products.length === 0) {
+        console.warn('[IAP] No monthly/annual packages found in current offering. Available:',
+          current.availablePackages.map(p => `${p.identifier}: ${p.product.identifier}`));
+      }
+
       return products;
     } catch (error) {
-      console.warn('[IAP] Products not available (expected on simulator without StoreKit Config)');
+      console.warn('[IAP] Products not available:', error);
       return [];
     }
   }
@@ -238,14 +249,25 @@ class IAPService {
 
   private packageToProduct(pkg: PurchasesPackage, period: 'monthly' | 'yearly'): IAPProduct {
     const product = pkg.product;
+    console.log(`[IAP] packageToProduct: ${product.identifier}`, JSON.stringify({
+      title: product.title,
+      priceString: product.priceString,
+      price: product.price,
+      hasIntroPrice: !!product.introPrice,
+    }));
     return {
       identifier: product.identifier,
-      title: product.title,
-      description: product.description,
+      title: product.title || product.identifier,  // fallback for empty title
+      description: product.description || '',
       priceString: product.priceString,
       price: product.price,
       period,
       package: pkg,
+      introPrice: product.introPrice ? {
+        priceString: product.introPrice.priceString,
+        periodNumberOfUnits: product.introPrice.periodNumberOfUnits,
+        periodUnit: product.introPrice.periodUnit,
+      } : null,
     };
   }
 }

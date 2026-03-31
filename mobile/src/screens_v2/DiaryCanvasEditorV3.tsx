@@ -19,6 +19,7 @@ import {
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   colors, typography, shadows, spacing, borderRadius, layout,
@@ -91,7 +92,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
           || diary.emotion?.primarySticker?.category?.code;
         if (emo) setCurrentEmotion(emo as EmotionKey);
 
-        const canvasW = Dimensions.get('window').width - (CANVAS_PADDING_H * 2);
+        const canvasW = Dimensions.get('window').width;
         const loadedObjects: CanvasObjectData[] = [];
 
         // Photos — use photo API coordinates
@@ -102,7 +103,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
             const uri = (p.cdnUrl || p.url || '').startsWith('http')
               ? (p.cdnUrl || p.url)
               : `${SERVER}${p.cdnUrl || p.url || ''}`;
-            const photoW = p.displayWidth || Math.min(p.widthPx || 200, canvasW * 0.8);
+            const photoW = p.displayWidth || Math.min(canvasW * 0.85, 300);
             const photoH = p.displayHeight || (p.heightPx
               ? photoW * (p.heightPx / (p.widthPx || 1))
               : photoW * 0.75);
@@ -159,6 +160,22 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
     }).start();
   }, []);
 
+  // ── Focus 시 새 작성이면 state 초기화 ──
+  useFocusEffect(useCallback(() => {
+    if (!editDiaryId) {
+      setContent('');
+      setTitle('');
+      setObjects([]);
+      setSelectedObjectId(null);
+      setSelectedTheme('warm');
+      setCurrentEmotion(initialEmotion);
+      setSaving(false);
+      setShowEmotionPicker(false);
+      setShowThemeSheet(false);
+      setShowStickerSheet(false);
+    }
+  }, [editDiaryId, initialEmotion]));
+
   // ── Canvas measurement ──
   const handleCanvasLayout = useCallback((e: any) => {
     const { width, height } = e.nativeEvent.layout;
@@ -181,7 +198,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       });
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        const canvasW = canvasSize.width || SCREEN_W - (CANVAS_PADDING_H * 2);
+        const canvasW = canvasSize.width || SCREEN_W;
         const photoW = Math.min(asset.width || 200, canvasW * 0.8);
         const photoH = photoW * ((asset.height || 150) / (asset.width || 200));
 
@@ -206,7 +223,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const handleStickerSelect = useCallback((sticker: { code: string; category: string; customUri?: string }) => {
     if (sticker.customUri) {
       // Custom sticker from gallery
-      const canvasW = canvasSize.width || SCREEN_W - (CANVAS_PADDING_H * 2);
+      const canvasW = canvasSize.width || SCREEN_W;
       setObjects(prev => [...prev, {
         id: nextId(),
         type: 'sticker' as const,
@@ -225,7 +242,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
     const source = getStickerSource(sticker.code);
     if (!source) return;
 
-    const canvasW = canvasSize.width || SCREEN_W - (CANVAS_PADDING_H * 2);
+    const canvasW = canvasSize.width || SCREEN_W;
     setObjects(prev => [...prev, {
       id: nextId(),
       type: 'sticker' as const,
@@ -321,7 +338,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         : await diaryApiV3.createV3(diaryPayload);
 
       // 2. Upload photos + save positions (photo API)
-      const canvasW = canvasSize.width || SCREEN_W - (CANVAS_PADDING_H * 2);
+      const canvasW = canvasSize.width || SCREEN_W;
       const photoObjects = objects.filter(o => o.type === 'photo');
       for (const photo of photoObjects) {
         if (photo.photoUri) {
@@ -431,7 +448,14 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
     >
       {/* Header — transparent on paper */}
       <View style={[s.header, { borderBottomColor: borderColor }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerBtn}>
+        <TouchableOpacity onPress={() => {
+          // 취소: DiaryStack을 DiaryListHome으로 리셋
+          if (navigation.canGoBack()) {
+            navigation.popToTop();
+          } else {
+            navigation.reset({ index: 0, routes: [{ name: 'DiaryListHome' as any }] });
+          }
+        }} style={s.headerBtn}>
           <Text style={[s.headerBtnText, { color: textColor }]}>{t('editor.cancel')}</Text>
         </TouchableOpacity>
         <Text style={[s.headerDate, { color: isDark ? '#9898AC' : colors.textSecondary }]}>
@@ -456,6 +480,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
           contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          scrollEnabled={!selectedObjectId}
         >
           {/* Emotion Banner — paper memo card style */}
           <Animated.View style={{
@@ -528,14 +553,13 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
             textInputRef={textInputRef}
           />
         </ScrollView>
-      </KeyboardAvoidingView>
 
-      {/* Bottom Toolbar — glass scrapbook tool tray */}
-      <View style={[s.toolbar, {
-        paddingBottom: insets.bottom + 8,
-        backgroundColor: 'transparent',
-        borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-      }]}>
+        {/* Bottom Toolbar — KeyboardAvoidingView 안쪽에서 키보드와 함께 이동 */}
+        <View style={[s.toolbar, {
+          paddingBottom: insets.bottom + 8,
+          backgroundColor: themeEntry?.color || colors.bgWarm,
+          borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+        }]}>
         <TouchableOpacity style={s.toolBtn} onPress={handleAddPhoto}>
           <View style={s.toolIconView}>
             <View style={{ width: 18, height: 14, borderRadius: 3, borderWidth: 1.5, borderColor: colors.accentTerra, alignItems: 'center', justifyContent: 'flex-end' }}>
@@ -575,6 +599,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
           </Text>
         )}
       </View>
+      </KeyboardAvoidingView>
 
       {/* AI Feedback Toast placeholder */}
       {/* TODO: Show after save or specific conditions

@@ -67,6 +67,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [iapPremium, setIapPremium] = useState(false);
   const iapReady = useRef(false);
+  const productRetried = useRef(false);
 
   // ── 백엔드 상태 조회 ──
   const refreshServerStatus = useCallback(async () => {
@@ -86,6 +87,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       const prods = await iapService.getProducts();
       setProducts(prods);
       console.log(`[IAP] Loaded ${prods.length} products`);
+      if (prods.length === 0 && !productRetried.current) {
+        productRetried.current = true;
+        console.log('[IAP] Products empty, retrying in 3s...');
+        setTimeout(() => loadProducts(), 3000);
+      }
     } catch (error) {
       console.error('[IAP] Failed to load products:', error);
     } finally {
