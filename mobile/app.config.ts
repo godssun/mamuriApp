@@ -30,6 +30,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         backgroundColor: '#F4EFEA',
       },
       edgeToEdgeEnabled: true,
+      softwareKeyboardLayoutMode: 'resize',
       package: 'com.mamuri.app',
       googleServicesFile: './google-services.json',
     },

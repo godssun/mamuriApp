@@ -252,8 +252,8 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={insets.top}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : insets.top + 52}
       >
       <ScrollView
         ref={scrollRef}
