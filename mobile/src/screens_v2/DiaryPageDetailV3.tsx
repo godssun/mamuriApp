@@ -14,6 +14,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Animated, TextInput, ActivityIndicator, Alert, Dimensions, Platform,
+  KeyboardAvoidingView, Keyboard,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -66,6 +67,14 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
   const { hasCrisisFlag } = useSubscription();
   const contentAnim = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef<ScrollView>(null);
+
+  // 키보드가 올라올 때 대화 끝으로 스크롤
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+    });
+    return () => sub.remove();
+  }, []);
 
   const isLimitReached = limits !== null
     && limits.remainingReplies !== null
@@ -241,11 +250,17 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
         </TouchableOpacity>
       </View>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : insets.top + 52}
+      >
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <Animated.View style={{
           opacity: contentAnim,
@@ -346,7 +361,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
       )}
 
       <View style={[s.inputBar, {
-        paddingBottom: insets.bottom + 8,
+        paddingBottom: 4,
         backgroundColor: 'transparent',
       }]}>
         <View style={s.inputInner}>
@@ -377,6 +392,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
           </TouchableOpacity>
         </View>
       </View>
+      </KeyboardAvoidingView>
 
       <ReportModal
         visible={reportMessageId !== null}
@@ -491,8 +507,8 @@ const s = StyleSheet.create({
 
   // ── Input bar — warm paper ──
   inputBar: {
-    paddingTop: spacing.md,
-    paddingHorizontal: spacing.xl,
+    paddingTop: 6,
+    paddingHorizontal: spacing.lg,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.accentSand + '20',
     backgroundColor: colors.glassWhite,

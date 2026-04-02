@@ -472,12 +472,12 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={insets.top + 56}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : insets.top + 56}
       >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+          contentContainerStyle={{ paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           scrollEnabled={!selectedObjectId}
@@ -556,7 +556,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
 
         {/* Bottom Toolbar — KeyboardAvoidingView 안쪽에서 키보드와 함께 이동 */}
         <View style={[s.toolbar, {
-          paddingBottom: insets.bottom + 8,
+          paddingBottom: 4,
           backgroundColor: themeEntry?.color || colors.bgWarm,
           borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
         }]}>
@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
   // Bottom Toolbar — glass tool tray
   toolbar: {
     flexDirection: 'row', alignItems: 'center',
-    paddingTop: 10, paddingHorizontal: layout.screenPaddingH,
+    paddingTop: 6, paddingHorizontal: layout.screenPaddingH,
     borderTopWidth: 1, borderTopColor: colors.glassBorderSubtle,
     backgroundColor: colors.glassWhite,
     gap: spacing.xl,

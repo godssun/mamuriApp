@@ -118,6 +118,7 @@ export default function PaywallScreenV3() {
             { icon: '2', text: t('premium.benefit2') },
             { icon: '3', text: t('premium.benefit3') },
             { icon: '4', text: t('premium.benefit4') },
+            { icon: '5', text: t('premium.benefit5') },
           ].map((b, i) => (
             <View key={i} style={s.benefitRow}>
               <View style={s.benefitDot}>

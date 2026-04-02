@@ -5,7 +5,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: 'Mamuri',
     slug: 'mamuri',
-    version: '2.0.0',
+    version: '2.1.1',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
@@ -27,9 +27,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
-        backgroundColor: '#3B2D8B',
+        backgroundColor: '#F4EFEA',
       },
       edgeToEdgeEnabled: true,
+      softwareKeyboardLayoutMode: 'resize',
       package: 'com.mamuri.app',
       googleServicesFile: './google-services.json',
     },
@@ -59,6 +60,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       './plugins/withFirebaseModularHeaders',
+      [
+        'react-native-google-mobile-ads',
+        {
+          androidAppId: 'ca-app-pub-1553144894464526~3481227423',
+          iosAppId: 'ca-app-pub-1553144894464526~1709408384',
+        },
+      ],
     ],
   };
 };
