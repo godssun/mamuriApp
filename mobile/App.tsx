@@ -13,7 +13,11 @@ if (SCREENSHOT_MODE) {
 }
 // ──────────────────────────────────────────────────────────
 
+import mobileAds from 'react-native-google-mobile-ads';
 import { StatusBar } from 'expo-status-bar';
+
+// Google Mobile Ads SDK 초기화
+mobileAds().initialize();
 import { useFonts } from 'expo-font';
 import { NanumMyeongjo_400Regular, NanumMyeongjo_700Bold } from '@expo-google-fonts/nanum-myeongjo';
 import { buildFontAssets } from './src/design-system-v3';

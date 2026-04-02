@@ -28,6 +28,7 @@ import { getAvatarImageUri } from '../utils/avatar';
 import { Button } from './components/Button';
 import { Input } from './components/Input';
 import { RelationshipProgressBar } from './components/RelationshipProgressBar';
+import { AdBanner } from '../components/AdBanner';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -330,6 +331,7 @@ export default function CompanionChatV3() {
           </View>
         </Modal>
       </ScrollView>
+      <AdBanner />
     </PaperBackground>
   );
 }

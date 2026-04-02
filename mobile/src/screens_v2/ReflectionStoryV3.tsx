@@ -20,6 +20,7 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import type { CalendarDayEntry, EmotionKey } from '../types';
 import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
+import { AdBanner } from '../components/AdBanner';
 
 // Organic blob border radii for emotion day cells
 const blobRadii = [
@@ -233,6 +234,7 @@ export default function ReflectionStoryV3() {
 
         <View style={{ height: 48 }} />
       </ScrollView>
+      <AdBanner />
     </PaperBackground>
   );
 }

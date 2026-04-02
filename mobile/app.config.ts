@@ -60,6 +60,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       './plugins/withFirebaseModularHeaders',
+      [
+        'react-native-google-mobile-ads',
+        {
+          androidAppId: 'ca-app-pub-1553144894464526~3481227423',
+          iosAppId: 'ca-app-pub-1553144894464526~1709408384',
+        },
+      ],
     ],
   };
 };
