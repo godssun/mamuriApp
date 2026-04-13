@@ -344,7 +344,16 @@ export interface DiaryV3 extends Diary {
 export interface DiaryPhoto {
   id: number;
   cdnUrl: string;
+  url?: string;
   displayOrder: number;
+  displayWidth?: number;
+  displayHeight?: number;
+  widthPx?: number;
+  heightPx?: number;
+  positionX?: number;
+  positionY?: number;
+  rotation?: number;
+  zIndex?: number;
 }
 
 export interface DiaryDecorationPlacement {

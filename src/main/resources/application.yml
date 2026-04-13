@@ -59,6 +59,7 @@ feature:
 
 upload:
   dir: ${UPLOAD_DIR:uploads}
+  base-url: ${UPLOAD_BASE_URL:http://localhost:8080}
   max-file-size: 5242880  # 5MB
 
 admin:

@@ -206,6 +206,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
         width: photoW, height: photoH,
         rotation: p.rotation || 0, zIndex: p.zIndex ?? i,
         photoUri: resolvePhotoUrl(p),
+        photoId: p.id,
       };
     }),
     ...(diary.decorations || []).map(deco => {

@@ -117,6 +117,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
               rotation: p.rotation || 0,
               zIndex: p.zIndex ?? i,
               photoUri: uri,
+              photoId: p.id,
             });
           });
         }
@@ -337,10 +338,14 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         ? await diaryApiV3.updateV3(editDiaryId!, diaryPayload)
         : await diaryApiV3.createV3(diaryPayload);
 
-      // 2. Upload photos + save positions (photo API)
+      // 2. Upload new photos + update positions for all photos
       const canvasW = canvasSize.width || SCREEN_W;
       const photoObjects = objects.filter(o => o.type === 'photo');
-      for (const photo of photoObjects) {
+      const newPhotos = photoObjects.filter(o => !o.photoId);
+      const existingPhotos = photoObjects.filter(o => !!o.photoId);
+
+      // 2a. Upload new photos (local file URI)
+      for (const photo of newPhotos) {
         if (photo.photoUri) {
           try {
             const uploaded = await diaryPhotoApi.upload(diary.id, photo.photoUri);
@@ -355,8 +360,24 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
               });
             }
           } catch (e: any) {
-            console.warn('[DiaryCanvas] Photo save failed:', e?.message);
+            console.warn('[DiaryCanvas] New photo upload failed:', e?.message);
           }
+        }
+      }
+
+      // 2b. Update position only for existing photos (already on server)
+      for (const photo of existingPhotos) {
+        try {
+          await diaryPhotoApi.updatePosition(photo.photoId!, diary.id, {
+            positionX: canvasW > 0 ? photo.x / canvasW : 0,
+            positionY: canvasW > 0 ? photo.y / canvasW : 0,
+            displayWidth: Math.round(photo.width),
+            displayHeight: Math.round(photo.height),
+            zIndex: photo.zIndex,
+            rotation: photo.rotation || 0,
+          });
+        } catch (e: any) {
+          console.warn('[DiaryCanvas] Existing photo position update failed:', e?.message);
         }
       }
 
@@ -403,7 +424,8 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
 
       console.log('[DiaryCanvas] Save complete:', {
         diaryId: diary.id,
-        photosUploaded: photoObjects.length,
+        newPhotosUploaded: newPhotos.length,
+        existingPhotosUpdated: existingPhotos.length,
         stickersSaved: stickerObjects.length,
         customStickersSaved: customStickerObjects.length,
       });

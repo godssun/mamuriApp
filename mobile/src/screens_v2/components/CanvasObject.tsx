@@ -31,6 +31,7 @@ export interface CanvasObjectData {
   rotation: number;
   zIndex: number;
   photoUri?: string;
+  photoId?: number;
   stickerCode?: string;
   stickerSource?: ImageSourcePropType;
 }

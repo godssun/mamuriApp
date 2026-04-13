@@ -73,13 +73,12 @@ class IAPService {
 
     if (!apiKey) {
       console.warn('[IAP] RevenueCat API key not configured. IAP disabled.');
+      console.warn('[IAP] Platform:', Platform.OS, 'iOS key:', REVENUECAT_API_KEY_IOS ? 'SET' : 'EMPTY', 'Android key:', REVENUECAT_API_KEY_ANDROID ? 'SET' : 'EMPTY');
       return;
     }
 
     try {
-      if (__DEV__) {
-        Purchases.setLogLevel(LOG_LEVEL.DEBUG);
-      }
+      Purchases.setLogLevel(LOG_LEVEL.DEBUG);
 
       Purchases.configure({
         apiKey,
@@ -87,7 +86,7 @@ class IAPService {
       });
 
       this.initialized = true;
-      console.log('[IAP] RevenueCat initialized');
+      console.log('[IAP] RevenueCat initialized. Platform:', Platform.OS, 'Key prefix:', apiKey.substring(0, 8) + '...');
     } catch (error) {
       console.error('[IAP] Failed to initialize RevenueCat:', error);
     }
@@ -127,7 +126,10 @@ class IAPService {
    * 구독 상품 목록 조회
    */
   async getProducts(): Promise<IAPProduct[]> {
-    if (!this.initialized) return [];
+    if (!this.initialized) {
+      console.warn('[IAP] getProducts called but SDK not initialized. Platform:', Platform.OS);
+      return [];
+    }
 
     try {
       const offerings = await Purchases.getOfferings();
@@ -174,8 +176,8 @@ class IAPService {
       }
 
       return products;
-    } catch (error) {
-      console.warn('[IAP] Products not available:', error);
+    } catch (error: any) {
+      console.warn('[IAP] Products not available. Platform:', Platform.OS, 'Error:', error?.message || error);
       return [];
     }
   }
