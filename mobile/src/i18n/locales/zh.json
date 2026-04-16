@@ -349,7 +349,13 @@
     "home": "首页",
     "diary": "日记",
     "reflect": "回顾",
-    "companion": "朋友"
+    "companion": "朋友",
+    "schedule": "日程"
+  },
+  "schedule": {
+    "title": "日程",
+    "comingSoonTitle": "即将到来",
+    "comingSoonBody": "一个安静陪你守护每日节奏的日程空间正在筹备中。"
   },
   "editor": {
     "cancel": "取消",

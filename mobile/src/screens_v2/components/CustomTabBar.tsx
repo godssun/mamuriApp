@@ -1,7 +1,7 @@
 /**
  * Tab Bar v6 — Scrapbook / warm paper navigation
  *
- * Layout: [Home] [Diary] [+] [Companion] [Reflect]
+ * Layout: [Home] [Diary] [+] [Schedule] [Reflect]
  * Pure View-based icons — warm, rounded, paper-journal feel
  * Soft warm shadow, semi-transparent paper background
  */
@@ -70,7 +70,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         <View style={st.iconWrap}>
           {route.name === 'Home' && <HomeIcon color={color} filled={focused} />}
           {route.name === 'DiaryList' && <DiaryIcon color={color} filled={focused} />}
-          {route.name === 'Companion' && <CompanionIcon color={color} filled={focused} />}
+          {route.name === 'Schedule' && <ScheduleIcon color={color} filled={focused} />}
           {route.name === 'Reflect' && <ReflectIcon color={color} filled={focused} />}
         </View>
         <Text style={[st.label, { color, fontWeight: focused ? '600' : '400', fontFamily: fontFamily.sans }]}>{label}</Text>
@@ -140,28 +140,37 @@ function DiaryIcon({ color, filled }: { color: string; filled: boolean }) {
   );
 }
 
-/** Companion: Crescent character silhouette */
-function CompanionIcon({ color, filled }: { color: string; filled: boolean }) {
+/** Schedule: Calendar page with a subtle top strip */
+function ScheduleIcon({ color, filled }: { color: string; filled: boolean }) {
   return (
     <View style={ic.box}>
-      {/* Character face: rounded square with eyes */}
+      {/* Calendar body */}
       <View style={{
-        width: 18, height: 16, borderRadius: 8,
+        width: 18, height: 18, borderRadius: 4,
         backgroundColor: filled ? color : 'transparent',
         borderWidth: filled ? 0 : W,
         borderColor: color,
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'row',
-        gap: 4,
+        overflow: 'hidden',
       }}>
-        {/* Left eye */}
+        {/* Top strip */}
         <View style={{
+          width: '100%', height: 4,
+          backgroundColor: filled ? colors.surfacePure + '60' : color,
+          opacity: filled ? 0.6 : 1,
+        }} />
+        {/* Date dot */}
+        <View style={{
+          position: 'absolute', top: 8, left: 4,
           width: 3, height: 3, borderRadius: 1.5,
           backgroundColor: filled ? colors.surfacePure : color,
         }} />
-        {/* Right eye */}
         <View style={{
+          position: 'absolute', top: 8, right: 4,
+          width: 3, height: 3, borderRadius: 1.5,
+          backgroundColor: filled ? colors.surfacePure : color,
+        }} />
+        <View style={{
+          position: 'absolute', bottom: 4, left: 4,
           width: 3, height: 3, borderRadius: 1.5,
           backgroundColor: filled ? colors.surfacePure : color,
         }} />

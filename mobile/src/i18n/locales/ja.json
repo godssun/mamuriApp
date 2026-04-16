@@ -349,7 +349,13 @@
     "home": "ホーム",
     "diary": "日記",
     "reflect": "振り返り",
-    "companion": "友達"
+    "companion": "友達",
+    "schedule": "予定"
+  },
+  "schedule": {
+    "title": "予定",
+    "comingSoonTitle": "もうすぐ登場",
+    "comingSoonBody": "一日のリズムをそっと一緒に守る、静かな予定の場所を準備しています。"
   },
   "editor": {
     "cancel": "キャンセル",

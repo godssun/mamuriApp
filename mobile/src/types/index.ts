@@ -265,7 +265,7 @@ export type MainStackParamList = {
 export type MainTabParamList = {
   Home: undefined;
   DiaryList: undefined;
-  Companion: undefined;
+  Schedule: undefined;
   Reflect: undefined;
 };
 

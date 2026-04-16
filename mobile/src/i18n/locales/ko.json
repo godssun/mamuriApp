@@ -349,7 +349,13 @@
     "home": "홈",
     "diary": "일기",
     "reflect": "돌아보기",
-    "companion": "친구"
+    "companion": "친구",
+    "schedule": "일정"
+  },
+  "schedule": {
+    "title": "일정",
+    "comingSoonTitle": "곧 만나요",
+    "comingSoonBody": "오늘의 리듬을 함께 지켜주는 조용한 일정 공간을 준비하고 있어요."
   },
   "editor": {
     "cancel": "취소",
