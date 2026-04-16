@@ -431,7 +431,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       });
 
       refreshSubscription();
-      navigation.replace('DiaryDetail', { diaryId: diary.id });
+      navigation.replace('DiaryDetail', { diaryId: diary.id, filterDateOnBack: diaryDate });
     } catch (error: any) {
       if (error instanceof ApiError && error.status === 429) {
         Alert.alert(t('common.alert'), error.message || t('common.retry'));

@@ -373,7 +373,7 @@ export type DiaryStackParamListV3 = {
   DiaryListHome: { filterDate?: string } | undefined;
   EmotionPicker: { preselectedEmotion?: EmotionKey; returnTo?: string };
   WriteDiary: { editDiaryId?: number; selectedEmotion?: EmotionKey; selectedStickerId?: number; secondaryTags?: string[] };
-  DiaryDetail: { diaryId: number };
+  DiaryDetail: { diaryId: number; filterDateOnBack?: string };
   AIComment: { diaryId: number };
 };
 
