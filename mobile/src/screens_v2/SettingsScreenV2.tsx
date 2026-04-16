@@ -54,7 +54,7 @@ const FONT_FAMILY_OPTIONS = [
 export function SettingsScreenV2() {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { t } = useTranslation();
-  const { logout, forceLogout } = useAuth();
+  const { logout, forceLogout, setCompanionName } = useAuth();
   const { isPremium, openManagement } = useSubscription();
   const { theme: v1Theme, updateAppearance } = useTheme();
   const [companion, setCompanion] = useState<CompanionProfile | null>(null);
@@ -132,6 +132,8 @@ export function SettingsScreenV2() {
     try {
       const updated = await companionApi.updateName({ aiName: trimmed });
       setCompanion(updated);
+      // AuthContext SSoT 동기화 — 다른 화면(ChatBubble 등)이 즉시 새 이름을 반영
+      setCompanionName(updated.aiName || trimmed);
       setShowNameModal(false);
     } catch (error) {
       Alert.alert(t('common.error'), error instanceof ApiError ? error.message : t('companion.nameChangeFailed'));

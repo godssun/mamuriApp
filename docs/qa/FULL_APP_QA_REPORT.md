@@ -169,3 +169,74 @@
 11. `mobile/src/i18n/locales/en.json` — 동일 키 영어 번역
 12. `mobile/src/i18n/locales/ja.json` — 동일 키 일본어 번역
 13. `mobile/src/i18n/locales/zh.json` — 동일 키 중국어 번역
+
+---
+
+## Addendum (2026-04-16): 일기 저장→상세→뒤로가기 목록 누락 근본 수정
+
+### 증상
+저장 후 상세 진입 → 뒤로가기 시 "현재 날짜의 일기 목록이 비어 보이는" 문제.
+여러 번 국소 수정에도 재발해 왔음.
+
+### 근본 원인 (구조적 모순 3종)
+1. `DiaryCanvasEditorV3`에서 `diaryDate = new Date()` (오늘)로 저장하지만, 이 날짜를 상세로도 목록으로도 전달하지 않음.
+2. `DiaryListScreenV2.selectedDate`는 native-stack 최하단 + unmount 없음 → long-lived local state. 외부 유일 제어 통로는 `route.params.filterDate` 뿐인데 저장 플로우가 이를 세팅하지 않음.
+3. 상세 뒤로가기가 순수 `goBack()` → 목록은 stale selectedDate로 재-fetch, 오늘 저장분과 불일치.
+→ "저장된 일기의 날짜 = 복귀 후 목록의 선택 날짜" 불변식이 코드에 없어 경로가 늘 때마다 재발.
+
+### 구조적 수정
+- `types/index.ts`: `DiaryDetail` 파람에 `filterDateOnBack?: string` 추가.
+- `DiaryCanvasEditorV3.tsx`: 저장 후 `replace('DiaryDetail', { diaryId, filterDateOnBack: diaryDate })`.
+- `DiaryPageDetailV3.tsx`: `handleBack()` 단일 핸들러로 통일(헤더 2곳 + 삭제 후 이동), Android `BackHandler` 등록. `filterDateOnBack` 있으면 `navigate('DiaryListHome', { filterDate })`, 없으면 `goBack()`.
+- 목록의 기존 `useEffect([filterDate])` → `setSelectedDate` → `useFocusEffect(fetchDiaries)` 체인으로 자연스럽게 refetch.
+
+### 수정 파일
+14. `mobile/src/types/index.ts` — DiaryDetail 파람 확장
+15. `mobile/src/screens_v2/DiaryCanvasEditorV3.tsx` — 저장 후 날짜 전파
+16. `mobile/src/screens_v2/DiaryPageDetailV3.tsx` — handleBack + hardwareBack 통일
+
+### 재현 방지 체크포인트
+- 과거 날짜 선택 → 작성 → 저장 → 상세 → 뒤로가기 ⇒ 목록이 **저장한 일기의 날짜**로 자동 이동 + 새 일기 표시
+- 오늘 작성/저장 시 ⇒ 목록 그대로 오늘, 새 일기 표시
+- 일반 상세 진입(목록 탭/아카이브)은 `goBack()` 기존 동작 유지
+
+상세 분석은 `docs/qa/DIARY_BACK_NAVIGATION_ROOT_CAUSE.md` 참조.
+
+---
+
+## Addendum (2026-04-16): AI 친구 이름이 댓글 작성자에 반영되지 않는 문제 근본 수정
+
+### 증상
+사용자가 AI 친구 이름을 변경해도 일기 상세의 AI 말풍선 작성자 라벨이 기본값("마무리")로 남음. 앱 재시작 시에도 동일.
+
+### 근본 원인 (구조적 결함 3종)
+1. `ChatBubble.tsx:64`가 `companionName`을 읽지 않고 `t('companion.defaultName')`만 렌더 → SSoT 미구독.
+2. `SettingsScreenV2.handleSaveAiName`가 저장 성공 후 `AuthContext.setCompanionName` 호출을 누락 → Context가 stale.
+3. `AuthContext.companionName`이 영속화되지 않음 → 재실행 시마다 `''` → 비동기 fetch 전까지 fallback 렌더.
+
+→ "이름 표시는 반드시 `companionName || t('companion.defaultName')`" 라는 단일 규칙이 렌더 지점마다 달랐고, SSoT 자체도 안정적으로 공급되지 않았음.
+
+### 구조적 수정
+- `AuthContext.tsx`: AsyncStorage(`@react-native-async-storage/async-storage`)로 `companion_name` 영속화. mount hydrate / setter write / logout·forceLogout clear 3경로 모두 처리. `setCompanionName` 시그니처(`(name: string) => void`)는 유지하여 기존 호출자 무변경.
+- `ChatBubble.tsx`: `useAuth()`로 `companionName` 구독, `aiDisplayName = companionName || t('companion.defaultName')` 적용.
+- `SettingsScreenV2.tsx`: 이름 저장 성공 분기에서 `setCompanionName(updated.aiName || trimmed)` 호출 추가.
+
+### Fallback 우선순위 규칙
+1. `AuthContext.companionName` (AsyncStorage 복구값 → 사용자 설정·서버 반환값)
+2. 비어있을 때만 `t('companion.defaultName')` (ko:"마무리", en:"Mamuri", ja:"マムリ", zh:"Mamuri")
+
+### 수정 파일
+17. `mobile/src/contexts/AuthContext.tsx` — AsyncStorage 영속화 + setter useCallback
+18. `mobile/src/screens_v2/components/ChatBubble.tsx` — SSoT 구독 + fallback 패턴
+19. `mobile/src/screens_v2/SettingsScreenV2.tsx` — setCompanionName 누락 호출 추가
+
+### 재발 방지 포인트
+- 새로운 AI 이름 렌더 컴포넌트는 반드시 `useAuth().companionName || t('companion.defaultName')` 패턴 사용.
+- 이름 변경 API 성공 분기에서 `setCompanionName` 호출 필수. AsyncStorage 처리는 Context가 담당.
+- 로그아웃 경로 신설 시 `setCompanionName('')`로 Context/Storage 동시 초기화.
+
+### 정적 검증
+- `tsc --noEmit` exit=0
+- QA 체크리스트 8항목 전원 PASS (AsyncStorage hydrate/set/clear 3경로, 시그니처 유지, 훅 위치, fallback, 성공 분기 한정, v2 호환, 레거시 미영향)
+
+상세 분석은 `docs/qa/AI_COMPANION_NAME_RENDERING_FIX.md` 참조.

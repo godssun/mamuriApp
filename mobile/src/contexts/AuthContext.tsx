@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi, tokenStorage, consentStorage, setForceLogoutHandler, clearForceLogoutHandler } from '../api/client';
 import { SignupRequest, LoginRequest, SocialProvider } from '../types';
 import { signOutFromProviders } from '../services/socialAuth';
 
 const AUTH_PROVIDER_KEY = 'auth_provider';
+const COMPANION_NAME_KEY = 'companion_name';
 
 export async function getStoredAuthProvider(): Promise<string | null> {
   return SecureStore.getItemAsync(AUTH_PROVIDER_KEY);
@@ -31,13 +33,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);
-  const [companionName, setCompanionName] = useState('');
+  const [companionName, setCompanionNameState] = useState('');
+
+  // companionName SSoT — AsyncStorage에 영속화하여 재실행 시 first paint부터 값 공급.
+  // 서버 재조회(MainTabsNavigator)는 정합성 검증 용도로 유지.
+  const setCompanionName = useCallback((name: string) => {
+    setCompanionNameState(name);
+    if (name) {
+      AsyncStorage.setItem(COMPANION_NAME_KEY, name).catch(() => {});
+    } else {
+      AsyncStorage.removeItem(COMPANION_NAME_KEY).catch(() => {});
+    }
+  }, []);
+
+  // 앱 시작 시 저장된 companionName 복구 (서버 응답 전에 fallback race 제거)
+  useEffect(() => {
+    AsyncStorage.getItem(COMPANION_NAME_KEY)
+      .then((stored) => {
+        if (stored) setCompanionNameState(stored);
+      })
+      .catch(() => {});
+  }, []);
 
   // forceLogout: API client에서 TOKEN_REUSE_DETECTED 등 호출
   const forceLogout = useCallback(() => {
     tokenStorage.clear();
     SecureStore.deleteItemAsync(AUTH_PROVIDER_KEY);
     consentStorage.clear();
+    AsyncStorage.removeItem(COMPANION_NAME_KEY).catch(() => {});
+    setCompanionNameState('');
     setIsAuthenticated(false);
     setIsNewUser(false);
   }, []);
@@ -115,6 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 소셜 SDK 로그아웃
     await signOutFromProviders();
     await SecureStore.deleteItemAsync(AUTH_PROVIDER_KEY);
+    await AsyncStorage.removeItem(COMPANION_NAME_KEY).catch(() => {});
+    setCompanionNameState('');
     setIsAuthenticated(false);
     setIsNewUser(false);
   }, []);
