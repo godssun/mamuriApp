@@ -11,7 +11,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Alert,
-  ActivityIndicator, Modal, Image, Platform, Linking,
+  ActivityIndicator, Modal, Image, Platform, Linking, Switch,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -26,8 +26,8 @@ import {
   colors, fontFamily, shadows, spacing, borderRadius, layout,
   DIARY_FONT_OPTIONS,
 } from '../design-system-v3';
-import { companionApi, ApiError } from '../api/client';
-import { CompanionProfile, CompanionSettings, MainStackParamList } from '../types';
+import { companionApi, settingsApi, ApiError } from '../api/client';
+import { CompanionProfile, CompanionSettings, UserSettings, MainStackParamList } from '../types';
 import { getAvatarImageUri } from '../utils/avatar';
 import { ScreenContainer } from './components/ScreenContainer';
 import { Button } from './components/Button';
@@ -59,6 +59,8 @@ export function SettingsScreenV2() {
   const { theme: v1Theme, updateAppearance } = useTheme();
   const [companion, setCompanion] = useState<CompanionProfile | null>(null);
   const [companionSettings, setCompanionSettings] = useState<CompanionSettings | null>(null);
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
+  const [isSavingAiSettings, setIsSavingAiSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
@@ -69,13 +71,15 @@ export function SettingsScreenV2() {
 
   const loadData = useCallback(async () => {
     try {
-      const [companionData, companionSettingsData, authProvider] = await Promise.all([
+      const [companionData, companionSettingsData, userSettingsData, authProvider] = await Promise.all([
         companionApi.getProfile(),
         companionApi.getSettings(),
+        settingsApi.get(),
         getStoredAuthProvider(),
       ]);
       setCompanion(companionData);
       setCompanionSettings(companionSettingsData);
+      setUserSettings(userSettingsData);
       setIsSocialUser(authProvider !== null && authProvider !== 'EMAIL');
     } catch {} finally { setIsLoading(false); }
   }, []);
@@ -138,6 +142,42 @@ export function SettingsScreenV2() {
     } catch (error) {
       Alert.alert(t('common.error'), error instanceof ApiError ? error.message : t('companion.nameChangeFailed'));
     } finally { setIsSavingName(false); }
+  };
+
+  // CompanionSettings(톤/말투) — 낙관적 업데이트 + 실패 시 복원
+  const updateCompanionAiSettings = async (updates: Partial<CompanionSettings>) => {
+    if (!companionSettings) return;
+    const prev = companionSettings;
+    const next = { ...companionSettings, ...updates };
+    setCompanionSettings(next);
+    setIsSavingAiSettings(true);
+    try {
+      const result = await companionApi.updateSettings({
+        speechStyle: next.speechStyle,
+        aiTone: next.aiTone,
+      });
+      setCompanionSettings(result);
+    } catch (error) {
+      setCompanionSettings(prev);
+      Alert.alert(t('common.error'), error instanceof ApiError ? error.message : t('companion.nameChangeFailed'));
+    } finally {
+      setIsSavingAiSettings(false);
+    }
+  };
+
+  // UserSettings(aiEnabled) — settingsApi.update는 전체 UserSettings 요구
+  const updateUserAiEnabled = async (value: boolean) => {
+    if (!userSettings) return;
+    const prev = userSettings;
+    const next = { ...userSettings, aiEnabled: value };
+    setUserSettings(next);
+    try {
+      const result = await settingsApi.update(next);
+      setUserSettings(result);
+    } catch (error) {
+      setUserSettings(prev);
+      Alert.alert(t('common.error'), error instanceof ApiError ? error.message : t('companion.nameChangeFailed'));
+    }
   };
 
   const handleLogout = () => {
@@ -223,6 +263,85 @@ export function SettingsScreenV2() {
             {!isPremium && <View style={{ backgroundColor: colors.accentPrimary + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}><Text style={{ fontFamily: fontFamily.sansSemiBold, fontSize: 8, color: colors.accentPrimary }}>PRO</Text></View>}
           </View>
         </TouchableOpacity>
+      </View>
+
+      {/* ── AI 친구 ── */}
+      <View style={s.section}>
+        <Text style={s.sectionLabel}>{t('settings.aiCompanion')}</Text>
+
+        {/* AI 응답 받기 토글 */}
+        <View style={s.settingCard}>
+          <View style={s.aiToggleRow}>
+            <View style={{ flex: 1, paddingRight: spacing.md }}>
+              <Text style={s.settingTitle}>{t('companion.aiCommentToggle')}</Text>
+              <Text style={s.aiToggleDesc}>{t('companion.aiCommentDesc')}</Text>
+            </View>
+            <Switch
+              value={userSettings?.aiEnabled ?? true}
+              onValueChange={updateUserAiEnabled}
+              trackColor={{ false: colors.accentSand + '40', true: colors.accentPrimaryLight }}
+              thumbColor={userSettings?.aiEnabled ? colors.accentPrimary : colors.textTertiary}
+            />
+          </View>
+        </View>
+
+        {/* AI 톤 선택 */}
+        <View style={s.settingCard}>
+          <Text style={s.settingTitle}>{t('companion.aiTone')}</Text>
+          <View style={s.optionRow}>
+            {([
+              { value: 'warm' as const, labelKey: 'companion.toneWarm', descKey: 'companion.toneWarmDesc' },
+              { value: 'calm' as const, labelKey: 'companion.toneCalm', descKey: 'companion.toneCalmDesc' },
+              { value: 'cheerful' as const, labelKey: 'companion.toneCheerful', descKey: 'companion.toneCheerfulDesc' },
+              { value: 'realistic' as const, labelKey: 'companion.toneRealistic', descKey: 'companion.toneRealisticDesc' },
+            ]).map((opt) => {
+              const sel = companionSettings?.aiTone === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[s.optionCard, sel ? s.optionSelected : s.optionDefault]}
+                  onPress={() => updateCompanionAiSettings({ aiTone: opt.value })}
+                  disabled={isSavingAiSettings}
+                >
+                  <Text style={[s.optionCaption, sel && { color: colors.accentPrimary }]}>
+                    {t(opt.labelKey)}
+                  </Text>
+                  <Text style={[s.optionHint, sel && { color: colors.accentPrimary }]}>
+                    {t(opt.descKey)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* 말투 선택 */}
+        <View style={s.settingCard}>
+          <Text style={s.settingTitle}>{t('companion.speechStyle')}</Text>
+          <View style={s.optionRow}>
+            {([
+              { value: 'formal' as const, labelKey: 'companion.speechFormal', descKey: 'companion.speechFormalDesc' },
+              { value: 'casual' as const, labelKey: 'companion.speechCasual', descKey: 'companion.speechCasualDesc' },
+            ]).map((opt) => {
+              const sel = companionSettings?.speechStyle === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[s.optionCard, sel ? s.optionSelected : s.optionDefault]}
+                  onPress={() => updateCompanionAiSettings({ speechStyle: opt.value })}
+                  disabled={isSavingAiSettings}
+                >
+                  <Text style={[s.optionCaption, sel && { color: colors.accentPrimary }]}>
+                    {t(opt.labelKey)}
+                  </Text>
+                  <Text style={[s.optionHint, sel && { color: colors.accentPrimary }]}>
+                    {t(opt.descKey)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
       </View>
 
       {/* ── 외관 ── */}
@@ -537,8 +656,20 @@ const s = StyleSheet.create({
   optionCaption: {
     fontFamily: fontFamily.sans, fontSize: 11, color: colors.textSecondary,
   },
+  optionHint: {
+    fontFamily: fontFamily.sans, fontSize: 10, color: colors.textTertiary,
+    textAlign: 'center', marginTop: 2, lineHeight: 13,
+  },
   optionPreview: {
     fontSize: 15, color: colors.textPrimary,
+  },
+
+  aiToggleRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  aiToggleDesc: {
+    fontFamily: fontFamily.sans, fontSize: 12, color: colors.textSecondary,
+    marginTop: 4, lineHeight: 17,
   },
 
   diaryFontCard: {
