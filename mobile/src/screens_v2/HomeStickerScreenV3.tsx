@@ -12,7 +12,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Animated, RefreshControl, Dimensions,
+  Animated, RefreshControl, Dimensions, Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
@@ -21,9 +21,12 @@ import {
 } from '../design-system-v3';
 import { PaperBackground } from '../design-system-v3/components/PaperBackground';
 import { diaryApi, emotionApi, companionApi } from '../api/client';
-import type { Diary, CompanionProfile, EmotionKey } from '../types';
+import type { Diary, CompanionProfile, CompanionSettings, EmotionKey } from '../types';
 import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
+import { RelationshipProgressBar } from './components/RelationshipProgressBar';
+import { getAvatarImageUri } from '../utils/avatar';
+import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -58,7 +61,9 @@ export default function HomeStickerScreenV3() {
     }
   }, [route.params?.selectedEmotion, route.params?.selectedTag]);
 
+  const { companionName } = useAuth();
   const [profile, setProfile] = useState<CompanionProfile | null>(null);
+  const [companionSettings, setCompanionSettings] = useState<CompanionSettings | null>(null);
   const [diaries, setDiaries] = useState<Diary[]>([]);
   const [weekly, setWeekly] = useState<any>(null);
   const [msg, setMsg] = useState<any>(null);
@@ -66,13 +71,15 @@ export default function HomeStickerScreenV3() {
   const fade = useState(new Animated.Value(0))[0];
 
   const load = useCallback(async () => {
-    const [p, d, w, m] = await Promise.all([
+    const [p, cs, d, w, m] = await Promise.all([
       companionApi.getProfile().catch(() => null),
+      companionApi.getSettings().catch(() => null),
       diaryApi.getList().catch(() => []),
       emotionApi.getWeeklySummary().catch(() => null),
       companionApi.getMessage().catch(() => null),
     ]);
     setProfile(p);
+    setCompanionSettings(cs);
     setDiaries((d || []).slice(0, 5));
     setWeekly(w);
     setMsg(m);
@@ -106,24 +113,60 @@ export default function HomeStickerScreenV3() {
               tintColor={colors.accentPrimary} />
           }
         >
-          {/* ═══ Companion Greeting — paper note card ═══ */}
-          {profile && (
-            <TouchableOpacity
-              style={styles.greetingCard}
-              onPress={() => nav.navigate('Companion')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.greetingAvatar}>
-                <Text style={styles.greetingAvatarText}>{(profile.aiName || '마')[0]}</Text>
-              </View>
-              <View style={styles.greetingBody}>
-                <Text style={styles.greetingName}>{profile.aiName || '마음이'}</Text>
-                <Text style={styles.greetingMsg} numberOfLines={2}>
-                  {msg?.type ? t(`companionMsg.${msg.type}`, { days: msg.message?.match(/\d+/)?.[0] || '', defaultValue: msg.message }) : greet}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          {/* ═══ Companion Ambient Card — avatar, name, relationship, settings ═══ */}
+          {profile && (() => {
+            const displayName = companionName || profile.aiName || t('companion.defaultName');
+            const avatarUri = getAvatarImageUri(companionSettings?.avatar);
+            const relationshipStage = Math.min(7, Math.ceil(profile.level / 2));
+            const openSettings = () => nav.getParent()?.navigate('Settings' as never);
+            return (
+              <TouchableOpacity
+                style={styles.companionCard}
+                onPress={openSettings}
+                activeOpacity={0.85}
+              >
+                <View style={styles.companionTopRow}>
+                  {avatarUri ? (
+                    <Image source={{ uri: avatarUri }} style={styles.companionAvatarImg} />
+                  ) : (
+                    <View style={styles.greetingAvatar}>
+                      <Text style={styles.greetingAvatarText}>{displayName[0]}</Text>
+                    </View>
+                  )}
+                  <View style={styles.greetingBody}>
+                    <Text style={styles.greetingName}>{displayName}</Text>
+                    <Text style={styles.greetingMsg} numberOfLines={2}>
+                      {msg?.type
+                        ? t(`companionMsg.${msg.type}`, { days: msg.message?.match(/\d+/)?.[0] || '', defaultValue: msg.message })
+                        : greet}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={openSettings}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={styles.companionGearBtn}
+                  >
+                    <View style={styles.gearIcon}>
+                      <View style={styles.gearCenter} />
+                      {[0, 60, 120, 180, 240, 300].map((deg) => (
+                        <View
+                          key={deg}
+                          style={[styles.gearTooth, { transform: [{ rotate: `${deg}deg` }, { translateY: -7 }] }]}
+                        />
+                      ))}
+                    </View>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.companionProgressWrap}>
+                  <RelationshipProgressBar
+                    currentStage={relationshipStage}
+                    currentLevel={profile.level}
+                    maxLevel={profile.maxLevel ? profile.level : profile.level + 1}
+                  />
+                </View>
+              </TouchableOpacity>
+            );
+          })()}
 
           {/* ═══ Hero Question — editorial feel ═══ */}
           <View style={styles.heroSection}>
@@ -276,7 +319,45 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   scroll: { paddingHorizontal: spacing['2xl'], paddingBottom: 120 },
 
-  // Greeting Card — paper note feel
+  // Companion ambient card — avatar, name, recent AI line, relationship bar, settings gear
+  companionCard: {
+    backgroundColor: colors.bgIvory,
+    borderRadius: borderRadius.sm,
+    paddingVertical: 16, paddingHorizontal: spacing.xl,
+    marginTop: spacing.xl,
+    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.5)',
+    ...shadows.crisp,
+  },
+  companionTopRow: {
+    flexDirection: 'row', alignItems: 'center',
+  },
+  companionAvatarImg: {
+    width: 40, height: 40,
+    borderTopLeftRadius: 14, borderTopRightRadius: 18,
+    borderBottomRightRadius: 16, borderBottomLeftRadius: 20,
+    marginRight: spacing.lg,
+    backgroundColor: colors.accentSand + '20',
+  },
+  companionGearBtn: {
+    marginLeft: spacing.md,
+    padding: 4,
+  },
+  companionProgressWrap: {
+    marginTop: spacing.md,
+  },
+  gearIcon: {
+    width: 22, height: 22, alignItems: 'center', justifyContent: 'center',
+  },
+  gearCenter: {
+    width: 7, height: 7, borderRadius: 4,
+    backgroundColor: colors.textTertiary,
+  },
+  gearTooth: {
+    position: 'absolute',
+    width: 3, height: 5, borderRadius: 1,
+    backgroundColor: colors.textTertiary,
+  },
+  // Legacy greeting card (kept for style reference; not rendered after step 2)
   greetingCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.bgIvory,
