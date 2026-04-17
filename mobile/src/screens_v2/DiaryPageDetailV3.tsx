@@ -323,6 +323,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
             shadowOpacity: 0,
             elevation: 0,
             marginHorizontal: 0,
+            overflow: 'visible',
           }]}>
             <DiaryPageRenderer
               title={diary.title || ''}

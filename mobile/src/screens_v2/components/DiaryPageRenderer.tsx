@@ -175,6 +175,13 @@ export function DiaryPageRenderer({
 
   const sortedObjects = [...objects].sort((a, b) => a.zIndex - b.zIndex);
 
+  // Calculate minimum height to contain all objects
+  const objectsMaxBottom = objects.reduce((max, obj) => {
+    const bottom = obj.y + obj.height + (obj.rotation ? obj.height * 0.2 : 0);
+    return Math.max(max, bottom);
+  }, 0);
+  const dynamicMinHeight = Math.max(400, objectsMaxBottom + LINE_HEIGHT);
+
   // 본문 폰트 오버라이드
   const contentFont = contentFontFamily
     ? { fontFamily: contentFontFamily }
@@ -182,7 +189,7 @@ export function DiaryPageRenderer({
 
   return (
     <View
-      style={[styles.pageContainer, bgColor ? { backgroundColor: bgColor } : undefined]}
+      style={[styles.pageContainer, { minHeight: dynamicMinHeight }, bgColor ? { backgroundColor: bgColor } : undefined]}
       onLayout={handleLayout}
       onStartShouldSetResponder={() => {
         if (editable && selectedObjectId) {
