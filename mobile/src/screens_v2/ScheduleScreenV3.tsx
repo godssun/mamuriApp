@@ -28,6 +28,7 @@ import {
 } from '../design-system-v3';
 import { PaperBackground } from '../design-system-v3/components/PaperBackground';
 import { scheduleApi } from '../api/client';
+import { AdBanner } from '../components/AdBanner';
 import type { Schedule } from '../types';
 
 const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
@@ -456,6 +457,7 @@ export default function ScheduleScreenV3() {
             </View>
           )}
         </ScrollView>
+        <AdBanner />
 
         {/* FAB */}
         <TouchableOpacity
