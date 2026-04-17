@@ -25,10 +25,12 @@ WORKDIR /app
 
 COPY --from=builder /app/build/libs/*.jar app.jar
 
-# Create ALL upload subdirectories before switching to unprivileged user
+# Create upload directories and set base ownership
 RUN mkdir -p /app/uploads/avatars /app/uploads/diary-photos \
     && chown -R app:app /app
-USER app
+
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8080
 
@@ -38,4 +40,5 @@ ENV JAVA_OPTS="-XX:MaxRAMPercentage=65.0 \
   -XX:+UseStringDeduplication \
   -Djava.security.egd=file:/dev/./urandom"
 
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
+# Entrypoint runs as root: fixes volume permissions, then drops to app user
+ENTRYPOINT ["/app/entrypoint.sh"]
