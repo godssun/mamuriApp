@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import {
   colors, fontFamily, shadows, spacing, borderRadius, duration,
 } from '../../design-system-v3';
+import { useAuth } from '../../contexts/AuthContext';
 
 type BubbleSender = 'ai' | 'user';
 
@@ -34,6 +35,9 @@ export function ChatBubble({
   animated = true, messageId, onReport,
 }: ChatBubbleProps) {
   const { t } = useTranslation();
+  const { companionName } = useAuth();
+  // SSoT: 사용자 설정값(companionName)이 있으면 그것을, 없을 때만 i18n 기본값.
+  const aiDisplayName = companionName || t('companion.defaultName');
   const fadeAnim = useRef(new Animated.Value(animated ? 0 : 1)).current;
   const slideAnim = useRef(new Animated.Value(animated ? 12 : 0)).current;
 
@@ -61,7 +65,7 @@ export function ChatBubble({
       {isAI && (
         <View style={styles.aiIndicator}>
           <View style={styles.aiDot} />
-          <Text style={styles.aiName}>{t('companion.defaultName')}</Text>
+          <Text style={styles.aiName}>{aiDisplayName}</Text>
         </View>
       )}
 

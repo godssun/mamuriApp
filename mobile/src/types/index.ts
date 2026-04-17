@@ -265,9 +265,33 @@ export type MainStackParamList = {
 export type MainTabParamList = {
   Home: undefined;
   DiaryList: undefined;
-  Companion: undefined;
+  Schedule: undefined;
   Reflect: undefined;
 };
+
+// ── Schedule (lightweight calendar / rhythm helper) ──
+export interface Schedule {
+  id: number;
+  title: string;
+  startAt: string;          // ISO 8601
+  endAt?: string | null;
+  note?: string | null;
+  isAllDay: boolean;
+  linkedDiaryId?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScheduleCreateRequest {
+  title: string;
+  startAt: string;          // ISO 8601
+  endAt?: string | null;
+  note?: string | null;
+  isAllDay?: boolean;
+  linkedDiaryId?: number | null;
+}
+
+export type ScheduleUpdateRequest = ScheduleCreateRequest;
 
 export type DiaryStackParamList = {
   DiaryListHome: undefined;
@@ -373,7 +397,7 @@ export type DiaryStackParamListV3 = {
   DiaryListHome: { filterDate?: string } | undefined;
   EmotionPicker: { preselectedEmotion?: EmotionKey; returnTo?: string };
   WriteDiary: { editDiaryId?: number; selectedEmotion?: EmotionKey; selectedStickerId?: number; secondaryTags?: string[] };
-  DiaryDetail: { diaryId: number };
+  DiaryDetail: { diaryId: number; filterDateOnBack?: string };
   AIComment: { diaryId: number };
 };
 

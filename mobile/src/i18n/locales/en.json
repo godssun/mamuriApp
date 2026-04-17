@@ -331,6 +331,7 @@
     "daysSuffix": " days"
   },
   "home": {
+    "todaySchedule": "Today's schedule",
     "greetingDawn": "A quiet night",
     "greetingMorning": "Good morning",
     "greetingAfternoon": "Good afternoon",
@@ -349,7 +350,39 @@
     "home": "Home",
     "diary": "Diary",
     "reflect": "Reflect",
-    "companion": "Friend"
+    "companion": "Friend",
+    "schedule": "Schedule"
+  },
+  "schedule": {
+    "title": "Schedule",
+    "comingSoonTitle": "Coming soon",
+    "comingSoonBody": "A quiet place to keep the rhythm of your day is on the way.",
+    "monthLabel": "{{month}} {{year}}",
+    "dayHeader": "{{month}}/{{day}}",
+    "emptyDay": "No plans recorded for this day.",
+    "allDay": "All day",
+    "linkedBadge": "Linked to diary",
+    "new": "New plan",
+    "edit": "Edit plan",
+    "fieldTitle": "Title",
+    "fieldStart": "Starts",
+    "fieldEnd": "Ends",
+    "fieldNote": "Note",
+    "titlePlaceholder": "What would you like to keep?",
+    "notePlaceholder": "Leave a quiet note",
+    "noEnd": "No end time",
+    "clear": "Clear",
+    "titleRequired": "Please enter a title.",
+    "invalidRange": "End time must be after start time.",
+    "reminderBody": "Starting in 5 minutes. Take a breath and get ready.",
+    "deleteTitle": "Delete this plan?",
+    "deleteConfirm": "Are you sure you want to remove this plan?",
+    "openLinkedDiary": "Open linked diary",
+    "writeDiaryForThis": "Write how you felt",
+    "weekday": {
+      "sun": "Sun", "mon": "Mon", "tue": "Tue", "wed": "Wed",
+      "thu": "Thu", "fri": "Fri", "sat": "Sat"
+    }
   },
   "editor": {
     "cancel": "Cancel",
@@ -622,6 +655,7 @@
     "previewText": "How was your day today?",
     "previewLong": "Today was a really good day.\nTomorrow will be even better.",
     "subscription": "Subscription",
+    "aiCompanion": "AI companion",
     "subscriptionManage": "Manage subscription",
     "premiumActive": "Premium active",
     "freePlan": "Free plan",

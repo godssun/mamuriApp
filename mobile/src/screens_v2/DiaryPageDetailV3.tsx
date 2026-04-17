@@ -14,7 +14,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Animated, TextInput, ActivityIndicator, Alert, Dimensions, Platform,
-  KeyboardAvoidingView, Keyboard,
+  KeyboardAvoidingView, Keyboard, BackHandler,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -51,7 +51,30 @@ type Props = NativeStackScreenProps<DiaryStackParamListV3, 'DiaryDetail'>;
 
 export default function DiaryPageDetailV3({ navigation, route }: Props) {
   const { diaryId } = route.params;
+  const filterDateOnBack = (route.params as { filterDateOnBack?: string }).filterDateOnBack;
   const insets = useSafeAreaInsets();
+
+  // 저장 직후 진입한 상세 화면(replace로 들어옴)에서는 뒤로가기 시
+  // 목록의 선택 날짜를 "방금 저장한 일기의 날짜"로 맞춰 복귀한다.
+  // filterDateOnBack이 없으면 일반 상세 진입이므로 기본 goBack.
+  const handleBack = useCallback(() => {
+    if (filterDateOnBack) {
+      // native-stack: 같은 route가 스택 하단에 있으면 그쪽까지 pop하며 params 병합
+      (navigation as any).navigate('DiaryListHome', { filterDate: filterDateOnBack });
+    } else {
+      navigation.goBack();
+    }
+  }, [navigation, filterDateOnBack]);
+
+  // Android 하드웨어 뒤로가기도 동일 경로로
+  useEffect(() => {
+    if (!filterDateOnBack) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      (navigation as any).navigate('DiaryListHome', { filterDate: filterDateOnBack });
+      return true;
+    });
+    return () => sub.remove();
+  }, [navigation, filterDateOnBack]);
   const { theme: appTheme } = useTheme();
   const { t } = useTranslation();
   const { stickers: customStickers } = useCustomStickers();
@@ -146,7 +169,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
         Alert.alert(t('detail.deleteDiary'), t('detail.deleteConfirm'), [
           { text: t('common.cancel'), style: 'cancel' },
           { text: t('common.delete'), style: 'destructive', onPress: async () => {
-            try { await diaryApi.delete(diaryId); navigation.goBack(); } catch {}
+            try { await diaryApi.delete(diaryId); handleBack(); } catch {}
           }},
         ]);
       }},
@@ -159,7 +182,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
     return (
       <PaperBackground variant="plain" color="cream" style={[s.root, { paddingTop: insets.top }]}>
         <View style={s.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerSideBtn}>
+          <TouchableOpacity onPress={handleBack} style={s.headerSideBtn}>
             <Text style={s.backArrow}>←</Text>
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
@@ -240,7 +263,7 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
     >
       {/* ══ Header — transparent, minimal ══ */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerSideBtn}>
+        <TouchableOpacity onPress={handleBack} style={s.headerSideBtn}>
           <Text style={s.backArrow}>←</Text>
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center' }}>

@@ -548,6 +548,41 @@ export const settingsApi = {
   },
 };
 
+// 일정 API (MVP — PUT-style update, range 조회)
+import type { Schedule, ScheduleCreateRequest, ScheduleUpdateRequest } from '../types';
+
+export const scheduleApi = {
+  async list(from?: string, to?: string): Promise<Schedule[]> {
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    const qs = params.toString();
+    return request<Schedule[]>(`/schedules${qs ? `?${qs}` : ''}`);
+  },
+
+  async today(): Promise<Schedule[]> {
+    return request<Schedule[]>('/schedules/today');
+  },
+
+  async create(data: ScheduleCreateRequest): Promise<Schedule> {
+    return request<Schedule>('/schedules', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async update(id: number, data: ScheduleUpdateRequest): Promise<Schedule> {
+    return request<Schedule>(`/schedules/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async delete(id: number): Promise<void> {
+    await request<void>(`/schedules/${id}`, { method: 'DELETE' });
+  },
+};
+
 // 감정 API
 export const emotionApi = {
   async record(diaryId: number, data: { primaryEmotion: string; secondaryEmotions?: string[]; emotionScore?: number }): Promise<any> {

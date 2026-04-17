@@ -36,7 +36,7 @@ import EmotionPickerScreenV3 from '../screens_v2/EmotionPickerScreenV3';
 import EmotionCalendarV3 from '../screens_v2/EmotionCalendarV3';
 import DiaryCanvasEditorV3 from '../screens_v2/DiaryCanvasEditorV3';
 import DiaryPageDetailV3 from '../screens_v2/DiaryPageDetailV3';
-import CompanionChatV3 from '../screens_v2/CompanionChatV3';
+import ScheduleScreenV3 from '../screens_v2/ScheduleScreenV3';
 import PaywallScreenV3 from '../screens_v2/PaywallScreenV3';
 import CustomStickerScreenV3 from '../screens_v2/CustomStickerScreenV3';
 import ReflectionStoryV3 from '../screens_v2/ReflectionStoryV3';
@@ -76,6 +76,7 @@ function MainTabsNavigator() {
   const { t } = useTranslation();
   const { companionName, setCompanionName } = useAuth();
 
+  // companionName SSoT 하이드레이트 — Home 카드·ChatBubble 등이 즉시 사용
   React.useEffect(() => {
     if (!companionName) {
       companionApi.getProfile()
@@ -83,8 +84,6 @@ function MainTabsNavigator() {
         .catch(() => {});
     }
   }, []);
-
-  const tabLabel = companionName || t('tabs.companion');
 
   return (
     <MainTab.Navigator
@@ -121,14 +120,14 @@ function MainTabsNavigator() {
         })}
       />
       <MainTab.Screen
+        name="Schedule"
+        component={ScheduleScreenV3}
+        options={{ title: t('tabs.schedule') }}
+      />
+      <MainTab.Screen
         name="Reflect"
         component={ReflectionStoryV3}
         options={{ title: t('tabs.reflect') }}
-      />
-      <MainTab.Screen
-        name="Companion"
-        component={CompanionChatV3}
-        options={{ title: tabLabel }}
       />
     </MainTab.Navigator>
   );

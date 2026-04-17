@@ -29,6 +29,11 @@ public enum ErrorCode {
     DIARY_NOT_FOUND(HttpStatus.NOT_FOUND, "일기를 찾을 수 없습니다."),
     DIARY_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 일기에 접근할 수 없습니다."),
 
+    // Schedule
+    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "일정을 찾을 수 없습니다."),
+    SCHEDULE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 일정에 접근할 수 없습니다."),
+    SCHEDULE_INVALID_RANGE(HttpStatus.BAD_REQUEST, "종료 시각은 시작 시각보다 이후여야 합니다."),
+
     // AI
     AI_SERVICE_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "AI 서비스에 일시적인 문제가 발생했습니다."),
     AI_COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "AI 코멘트를 찾을 수 없습니다."),

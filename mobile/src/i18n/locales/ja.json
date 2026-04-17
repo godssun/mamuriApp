@@ -331,6 +331,7 @@
     "daysSuffix": "日目"
   },
   "home": {
+    "todaySchedule": "今日の予定",
     "greetingDawn": "静かな夜ですね",
     "greetingMorning": "おはようございます",
     "greetingAfternoon": "こんにちは",
@@ -349,7 +350,39 @@
     "home": "ホーム",
     "diary": "日記",
     "reflect": "振り返り",
-    "companion": "友達"
+    "companion": "友達",
+    "schedule": "予定"
+  },
+  "schedule": {
+    "title": "予定",
+    "comingSoonTitle": "もうすぐ登場",
+    "comingSoonBody": "一日のリズムをそっと一緒に守る、静かな予定の場所を準備しています。",
+    "monthLabel": "{{year}}年{{month}}月",
+    "dayHeader": "{{month}}月{{day}}日",
+    "emptyDay": "今日は記録された予定がありません。",
+    "allDay": "終日",
+    "linkedBadge": "日記と連携",
+    "new": "新しい予定",
+    "edit": "予定を編集",
+    "fieldTitle": "タイトル",
+    "fieldStart": "開始",
+    "fieldEnd": "終了",
+    "fieldNote": "メモ",
+    "titlePlaceholder": "何を一緒に守りますか?",
+    "notePlaceholder": "短いメモを残せます",
+    "noEnd": "終了時刻なし",
+    "clear": "消す",
+    "titleRequired": "タイトルを入力してください。",
+    "invalidRange": "終了時刻は開始時刻より後にしてください。",
+    "reminderBody": "5分後に始まります。ひと息ついて準備しましょう。",
+    "deleteTitle": "この予定を削除しますか?",
+    "deleteConfirm": "この予定を本当に消しますか?",
+    "openLinkedDiary": "連携した日記を開く",
+    "writeDiaryForThis": "この予定での気持ちを書く",
+    "weekday": {
+      "sun": "日", "mon": "月", "tue": "火", "wed": "水",
+      "thu": "木", "fri": "金", "sat": "土"
+    }
   },
   "editor": {
     "cancel": "キャンセル",
@@ -622,6 +655,7 @@
     "previewText": "今日一日はいかがでしたか",
     "previewLong": "今日はとても良い一日でした。\n明日はもっと素敵な一日になりますように。",
     "subscription": "サブスクリプション",
+    "aiCompanion": "AI フレンド",
     "subscriptionManage": "サブスクリプション管理",
     "premiumActive": "プレミアムご利用中",
     "freePlan": "無料プラン",
