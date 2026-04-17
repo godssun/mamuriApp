@@ -403,7 +403,8 @@
     "photoError": "写真を読み込めませんでした。",
     "noContent": "テキスト、写真、またはステッカーを追加してください。",
     "saveFailed": "保存に失敗しました",
-    "themeSelect": "紙の選択"
+    "themeSelect": "紙の選択",
+    "hintLongPress": "長押しで自由にデコってみよう"
   },
   "diaryList": {
     "myRecords": "わたしの記録",

@@ -403,7 +403,8 @@
     "photoError": "无法加载照片。",
     "noContent": "请添加文字、照片或贴纸。",
     "saveFailed": "保存失败",
-    "themeSelect": "纸张选择"
+    "themeSelect": "纸张选择",
+    "hintLongPress": "长按即可自由装饰"
   },
   "diaryList": {
     "myRecords": "我的记录",

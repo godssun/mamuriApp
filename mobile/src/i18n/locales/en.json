@@ -403,7 +403,8 @@
     "photoError": "Could not load photo.",
     "noContent": "Please add text, a photo, or a sticker.",
     "saveFailed": "Save failed",
-    "themeSelect": "Paper style"
+    "themeSelect": "Paper style",
+    "hintLongPress": "Long press to decorate freely"
   },
   "diaryList": {
     "myRecords": "My Records",

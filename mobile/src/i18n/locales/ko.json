@@ -403,7 +403,8 @@
     "photoError": "사진을 불러올 수 없습니다.",
     "noContent": "텍스트, 사진, 또는 스티커를 추가해주세요.",
     "saveFailed": "저장 실패",
-    "themeSelect": "종이 선택"
+    "themeSelect": "종이 선택",
+    "hintLongPress": "꾹 눌러 자유롭게 꾸며보세요"
   },
   "diaryList": {
     "myRecords": "나의 기록",
