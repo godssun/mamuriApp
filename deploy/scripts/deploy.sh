@@ -1,20 +1,4 @@
 #!/usr/bin/env bash
-# deploy.sh — Blue-Green deployment for Mamuri backend
-#
-# Flow:
-#   1. Detect current active color (blue or green)
-#   2. Build new Docker image
-#   3. Start inactive container with new image
-#   4. Health check inactive container
-#   5. Switch nginx upstream to inactive container
-#   6. Reload nginx (zero downtime)
-#   7. Stop old container
-#
-# Usage:
-#   ./deploy.sh              # Auto-detect and deploy
-#   ./deploy.sh --no-build   # Skip Docker build (use existing image)
-#   ./deploy.sh --keep-old   # Don't stop the old container after switch
-
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -29,6 +13,9 @@ FIREBASE_SECRET="$PROJECT_DIR/secrets/firebase-service-account.json"
 SKIP_BUILD=false
 KEEP_OLD=false
 
+# Jenkins 등 외부에서 주입 가능
+IMAGE_NAME="${IMAGE_OVERRIDE:-mamuri-backend:latest}"
+
 for arg in "$@"; do
     case "$arg" in
         --no-build) SKIP_BUILD=true ;;
@@ -36,14 +23,13 @@ for arg in "$@"; do
     esac
 done
 
-# ---- Step 1: Detect active color ----
 detect_active_color() {
     if grep -q "mamuri-blue" "$UPSTREAM_FILE" 2>/dev/null; then
         echo "blue"
     elif grep -q "mamuri-green" "$UPSTREAM_FILE" 2>/dev/null; then
         echo "green"
     else
-        echo "blue"  # default: assume blue is active on first deploy
+        echo "blue"
     fi
 }
 
@@ -62,30 +48,26 @@ echo "  Mamuri Blue-Green Deployment"
 echo "============================================"
 echo "  Active:    $ACTIVE ($ACTIVE_CONTAINER)"
 echo "  Deploying: $INACTIVE ($INACTIVE_CONTAINER)"
+echo "  Image:     $IMAGE_NAME"
 echo "============================================"
 
-# ---- Step 2: Build Docker image ----
 if [ "$SKIP_BUILD" = false ]; then
     echo ""
     echo "[deploy] Building Docker image..."
-    docker build -t mamuri-backend:latest "$PROJECT_DIR"
+    docker build -t "$IMAGE_NAME" "$PROJECT_DIR"
     echo "[deploy] Build complete."
 else
     echo ""
     echo "[deploy] Skipping build (--no-build)"
 fi
 
-# ---- Step 3: Start inactive container ----
 echo ""
 echo "[deploy] Starting $INACTIVE_CONTAINER..."
 
-# Remove old container if exists
 docker rm -f "$INACTIVE_CONTAINER" 2>/dev/null || true
 
-# Read POSTGRES_DB from env file for DATABASE_URL
 POSTGRES_DB=$(grep '^POSTGRES_DB=' "$ENV_FILE" | cut -d'=' -f2)
 
-# Build volume args
 VOLUME_ARGS="-v uploads:/app/uploads"
 if [ -f "$FIREBASE_SECRET" ]; then
     VOLUME_ARGS="$VOLUME_ARGS -v $FIREBASE_SECRET:/app/secrets/firebase-service-account.json:ro"
@@ -100,11 +82,10 @@ docker run -d \
     $VOLUME_ARGS \
     --memory=768m \
     --restart unless-stopped \
-    mamuri-backend:latest
+    "$IMAGE_NAME"
 
 echo "[deploy] $INACTIVE_CONTAINER started."
 
-# ---- Step 4: Health check ----
 echo ""
 echo "[deploy] Waiting for $INACTIVE_CONTAINER to be healthy..."
 
@@ -128,7 +109,6 @@ for i in $(seq 1 $MAX_RETRIES); do
     sleep $RETRY_INTERVAL
 done
 
-# ---- Step 5: Switch nginx upstream ----
 echo ""
 echo "[deploy] Switching nginx upstream to $INACTIVE_CONTAINER..."
 
@@ -140,13 +120,11 @@ upstream backend {
 }
 EOF
 
-# ---- Step 6: Reload nginx ----
 echo "[deploy] Reloading nginx..."
 docker exec mamuri-nginx nginx -s reload
 
 echo "[deploy] Traffic now routed to $INACTIVE_CONTAINER"
 
-# ---- Step 7: Stop old container ----
 if [ "$KEEP_OLD" = false ]; then
     echo ""
     echo "[deploy] Stopping old container $ACTIVE_CONTAINER..."
