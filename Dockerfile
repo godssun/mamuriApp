@@ -1,5 +1,5 @@
 # ---- Build Stage ----
-FROM eclipse-temurin:17-jdk-alpine AS builder
+FROM eclipse-temurin:17-jdk-jammy AS builder
 
 WORKDIR /app
 
@@ -17,9 +17,9 @@ COPY src/ src/
 RUN ./gradlew bootJar --no-daemon -x test
 
 # ---- Runtime Stage ----
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:17-jre-jammy
 
-RUN addgroup -S app && adduser -S app -G app
+RUN groupadd -r app && useradd -r -g app app
 
 WORKDIR /app
 
@@ -32,8 +32,6 @@ USER app
 EXPOSE 8080
 
 # JVM tuning for 2GB Lightsail (container memory limit: 768M)
-# -XX:MaxRAMPercentage=65 limits heap to ~499MB, leaving ~269MB for off-heap
-# (Metaspace, thread stacks, GC, NIO buffers)
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=65.0 \
   -XX:+UseG1GC \
   -XX:+UseStringDeduplication \
