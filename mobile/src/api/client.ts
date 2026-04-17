@@ -581,6 +581,12 @@ export const scheduleApi = {
   async delete(id: number): Promise<void> {
     await request<void>(`/schedules/${id}`, { method: 'DELETE' });
   },
+
+  async toggleComplete(id: number): Promise<Schedule> {
+    return request<Schedule>(`/schedules/${id}/toggle-complete`, {
+      method: 'PATCH',
+    });
+  },
 };
 
 // 감정 API

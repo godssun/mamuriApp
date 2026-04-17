@@ -46,6 +46,13 @@ function getScheduleColor(colorKey?: string) {
   return SCHEDULE_COLORS.find(c => c.key === colorKey) || SCHEDULE_COLORS[0];
 }
 
+function sortSchedules(list: Schedule[]): Schedule[] {
+  return [...list].sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    return new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
+  });
+}
+
 const MAX_PILLS_PER_CELL = 2;
 
 function fmtDateKey(d: Date): string {
@@ -147,7 +154,7 @@ export default function ScheduleScreenV3() {
       }
       setSchedulesByDay(map);
       const dayKey = fmtDateKey(selectedDate);
-      setSelectedDaySchedules(map[dayKey] || []);
+      setSelectedDaySchedules(sortSchedules(map[dayKey] || []));
     } catch {
       // 조용히 무시 — 빈 상태로 놔둠
     } finally {
@@ -170,7 +177,7 @@ export default function ScheduleScreenV3() {
 
   const handleSelectDay = (d: Date) => {
     setSelectedDate(d);
-    setSelectedDaySchedules(schedulesByDay[fmtDateKey(d)] || []);
+    setSelectedDaySchedules(sortSchedules(schedulesByDay[fmtDateKey(d)] || []));
   };
 
   const openCreate = () => {
@@ -261,6 +268,32 @@ export default function ScheduleScreenV3() {
     ]);
   };
 
+  const handleToggleComplete = async (s: Schedule) => {
+    // Optimistic update
+    const toggled = { ...s, completed: !s.completed };
+    setSchedulesByDay(prev => {
+      const dayKey = fmtDateKey(new Date(s.startAt));
+      const updated = (prev[dayKey] || []).map(item => item.id === s.id ? toggled : item);
+      return { ...prev, [dayKey]: updated };
+    });
+    setSelectedDaySchedules(prev =>
+      sortSchedules(prev.map(item => item.id === s.id ? toggled : item))
+    );
+    try {
+      await scheduleApi.toggleComplete(s.id);
+    } catch {
+      // Rollback on failure
+      setSchedulesByDay(prev => {
+        const dayKey = fmtDateKey(new Date(s.startAt));
+        const rolledBack = (prev[dayKey] || []).map(item => item.id === s.id ? s : item);
+        return { ...prev, [dayKey]: rolledBack };
+      });
+      setSelectedDaySchedules(prev =>
+        sortSchedules(prev.map(item => item.id === s.id ? s : item))
+      );
+    }
+  };
+
   const openLinkedDiary = () => {
     if (!editing?.linkedDiaryId) return;
     closeModal();
@@ -331,8 +364,9 @@ export default function ScheduleScreenV3() {
                 const daySchedules = schedulesByDay[dayKey] || [];
                 const selected = isSameDay(cell, selectedDate);
                 const isToday = isSameDay(cell, today);
-                const visiblePills = daySchedules.slice(0, MAX_PILLS_PER_CELL);
-                const overflow = daySchedules.length - MAX_PILLS_PER_CELL;
+                const sortedDay = sortSchedules(daySchedules);
+                const visiblePills = sortedDay.slice(0, MAX_PILLS_PER_CELL);
+                const overflow = sortedDay.length - MAX_PILLS_PER_CELL;
                 return (
                   <TouchableOpacity
                     key={idx}
@@ -351,9 +385,9 @@ export default function ScheduleScreenV3() {
                         {visiblePills.map((s) => {
                           const sc = getScheduleColor(s.color);
                           return (
-                            <View key={s.id} style={[styles.pill, { backgroundColor: sc.bg }]}>
-                              <Text style={[styles.pillText, { color: sc.text }]} numberOfLines={1}>
-                                {s.title}
+                            <View key={s.id} style={[styles.pill, { backgroundColor: sc.bg }, s.completed && styles.pillCompleted]}>
+                              <Text style={[styles.pillText, { color: sc.text }, s.completed && styles.pillTextCompleted]} numberOfLines={1}>
+                                {s.completed ? '✓ ' : ''}{s.title}
                               </Text>
                             </View>
                           );
@@ -388,11 +422,18 @@ export default function ScheduleScreenV3() {
               {selectedDaySchedules.map((s) => (
                 <TouchableOpacity
                   key={s.id}
-                  style={styles.itemCard}
+                  style={[styles.itemCard, s.completed && styles.itemCardCompleted]}
                   onPress={() => openEdit(s)}
                   activeOpacity={0.75}
                 >
-                  <View style={[styles.itemColorBar, { backgroundColor: getScheduleColor(s.color).bg }]} />
+                  <TouchableOpacity
+                    style={[styles.checkBox, s.completed && styles.checkBoxChecked]}
+                    onPress={() => handleToggleComplete(s)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    {s.completed && <Text style={styles.checkMark}>✓</Text>}
+                  </TouchableOpacity>
+                  <View style={[styles.itemColorBar, { backgroundColor: getScheduleColor(s.color).bg }, s.completed && { opacity: 0.4 }]} />
                   <View style={styles.itemTimeCol}>
                     <Text style={styles.itemTime}>
                       {s.isAllDay ? t('schedule.allDay') : fmtTime(s.startAt)}
@@ -402,7 +443,7 @@ export default function ScheduleScreenV3() {
                     )}
                   </View>
                   <View style={styles.itemBody}>
-                    <Text style={styles.itemTitle} numberOfLines={1}>{s.title}</Text>
+                    <Text style={[styles.itemTitle, s.completed && styles.itemTitleCompleted]} numberOfLines={1}>{s.title}</Text>
                     {s.note ? (
                       <Text style={styles.itemNote} numberOfLines={2}>{s.note}</Text>
                     ) : null}
@@ -797,5 +838,32 @@ const styles = StyleSheet.create({
   },
   colorSwatchSelected: {
     borderWidth: 3, borderColor: colors.textPrimary,
+  },
+  pillCompleted: {
+    opacity: 0.45,
+  },
+  pillTextCompleted: {
+    textDecorationLine: 'line-through',
+  },
+  itemCardCompleted: {
+    opacity: 0.7,
+  },
+  itemTitleCompleted: {
+    textDecorationLine: 'line-through',
+    color: colors.textTertiary,
+  },
+  checkBox: {
+    width: 22, height: 22, borderRadius: 11,
+    borderWidth: 1.5, borderColor: colors.accentSand,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  checkBoxChecked: {
+    backgroundColor: colors.accentPrimary,
+    borderColor: colors.accentPrimary,
+  },
+  checkMark: {
+    fontSize: 12, color: colors.surfacePure, fontWeight: '700',
+    marginTop: -1,
   },
 });

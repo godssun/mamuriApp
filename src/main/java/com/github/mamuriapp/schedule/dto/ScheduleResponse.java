@@ -22,6 +22,7 @@ public class ScheduleResponse {
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
     private final String color;
+    private final boolean completed;
 
     public static ScheduleResponse from(Schedule schedule) {
         return ScheduleResponse.builder()
@@ -35,6 +36,7 @@ public class ScheduleResponse {
                 .createdAt(schedule.getCreatedAt())
                 .updatedAt(schedule.getUpdatedAt())
                 .color(schedule.getColor())
+                .completed(schedule.isCompleted())
                 .build();
     }
 }

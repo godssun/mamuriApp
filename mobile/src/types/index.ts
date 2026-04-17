@@ -279,6 +279,7 @@ export interface Schedule {
   isAllDay: boolean;
   linkedDiaryId?: number | null;
   color?: string;
+  completed?: boolean;
   createdAt: string;
   updatedAt: string;
 }

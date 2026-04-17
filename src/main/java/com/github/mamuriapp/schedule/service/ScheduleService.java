@@ -78,6 +78,14 @@ public class ScheduleService {
         scheduleRepository.delete(schedule);
     }
 
+    @Transactional
+    public ScheduleResponse toggleComplete(Long userId, Long scheduleId) {
+        Schedule schedule = scheduleRepository.findByIdAndUserId(scheduleId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
+        schedule.toggleComplete();
+        return ScheduleResponse.from(schedule);
+    }
+
     public List<ScheduleResponse> listInRange(Long userId, LocalDate from, LocalDate to) {
         LocalDate start = from != null ? from : LocalDate.now(KST);
         LocalDate endExclusive = (to != null ? to : start).plusDays(1);

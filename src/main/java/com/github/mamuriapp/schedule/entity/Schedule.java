@@ -60,6 +60,9 @@ public class Schedule {
     @Column(length = 20, nullable = false)
     private String color = "sage";
 
+    @Column(nullable = false)
+    private boolean completed = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -90,5 +93,9 @@ public class Schedule {
         if (isAllDay != null) this.isAllDay = isAllDay;
         this.linkedDiaryId = linkedDiaryId;
         if (color != null) this.color = color;
+    }
+
+    public void toggleComplete() {
+        this.completed = !this.completed;
     }
 }

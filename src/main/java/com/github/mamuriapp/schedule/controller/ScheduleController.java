@@ -67,4 +67,12 @@ public class ScheduleController {
         scheduleService.delete(userId, scheduleId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
+
+    @PatchMapping("/{scheduleId}/toggle-complete")
+    public ResponseEntity<ScheduleResponse> toggleComplete(
+            Authentication auth,
+            @PathVariable Long scheduleId) {
+        Long userId = (Long) auth.getPrincipal();
+        return ResponseEntity.ok(scheduleService.toggleComplete(userId, scheduleId));
+    }
 }
