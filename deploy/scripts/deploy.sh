@@ -63,8 +63,8 @@ fi
 
 echo ""
 echo "[deploy] Ensuring upload volume permissions..."
-docker run --rm -u root -v uploads:/app/uploads "$IMAGE_NAME" \
-    sh -c 'mkdir -p /app/uploads/avatars /app/uploads/diary-photos && chown -R app:app /app/uploads'
+docker run --rm -u root -v uploads:/app/uploads --entrypoint sh "$IMAGE_NAME" \
+    -c 'mkdir -p /app/uploads/avatars /app/uploads/diary-photos && chown -R app:app /app/uploads'
 
 echo ""
 echo "[deploy] Starting $INACTIVE_CONTAINER..."
