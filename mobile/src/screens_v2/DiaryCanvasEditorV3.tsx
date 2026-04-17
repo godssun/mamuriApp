@@ -38,6 +38,8 @@ import { StickerPickerSheet } from './components/StickerPickerSheet';
 import { DiaryPageRenderer, CANVAS_PADDING_H } from './components/DiaryPageRenderer';
 import type { CanvasObjectData } from './components/CanvasObject';
 import { getStickerSource } from '../constants/stickerSources';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CanvasHintToast } from './components/CanvasHintToast';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -79,6 +81,15 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const textInputRef = useRef<TextInput>(null);
   const savingRef = useRef(false);
   const [initialPhotoIds, setInitialPhotoIds] = useState<number[]>([]);
+  const [showCanvasHint, setShowCanvasHint] = useState(false);
+  const canvasHintNeededRef = useRef(false);
+
+  // ── Canvas hint: check if first-time user ──
+  useEffect(() => {
+    AsyncStorage.getItem('canvas_object_hint_v1').then(val => {
+      if (!val) canvasHintNeededRef.current = true;
+    }).catch(() => {});
+  }, []);
 
   // ── Edit mode: load existing diary ──
   useEffect(() => {
@@ -206,8 +217,9 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         const photoW = Math.min(asset.width || 200, canvasW * 0.8);
         const photoH = photoW * ((asset.height || 150) / (asset.width || 200));
 
+        const newId = nextId();
         setObjects(prev => [...prev, {
-          id: nextId(),
+          id: newId,
           type: 'photo' as const,
           x: (canvasW - photoW) / 2,
           y: 20,
@@ -217,6 +229,12 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
           zIndex: prev.length,
           photoUri: asset.uri,
         }]);
+        if (canvasHintNeededRef.current) {
+          setSelectedObjectId(newId);
+          setShowCanvasHint(true);
+          canvasHintNeededRef.current = false;
+          AsyncStorage.setItem('canvas_object_hint_v1', 'shown').catch(() => {});
+        }
       }
     } catch {
       Alert.alert(t('common.error'), t('editor.photoError'));
@@ -228,8 +246,9 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
     if (sticker.customUri) {
       // Custom sticker from gallery
       const canvasW = canvasSize.width || SCREEN_W;
+      const newId = nextId();
       setObjects(prev => [...prev, {
-        id: nextId(),
+        id: newId,
         type: 'sticker' as const,
         x: canvasW / 2 - 30,
         y: 100,
@@ -241,14 +260,21 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         stickerSource: { uri: sticker.customUri! },
       }]);
       setShowStickerSheet(false);
+      if (canvasHintNeededRef.current) {
+        setSelectedObjectId(newId);
+        setShowCanvasHint(true);
+        canvasHintNeededRef.current = false;
+        AsyncStorage.setItem('canvas_object_hint_v1', 'shown').catch(() => {});
+      }
       return;
     }
     const source = getStickerSource(sticker.code);
     if (!source) return;
 
     const canvasW = canvasSize.width || SCREEN_W;
+    const newSId = nextId();
     setObjects(prev => [...prev, {
-      id: nextId(),
+      id: newSId,
       type: 'sticker' as const,
       x: canvasW / 2 - 30,
       y: 100,
@@ -260,6 +286,12 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       stickerSource: source,
     }]);
     setShowStickerSheet(false);
+    if (canvasHintNeededRef.current) {
+      setSelectedObjectId(newSId);
+      setShowCanvasHint(true);
+      canvasHintNeededRef.current = false;
+      AsyncStorage.setItem('canvas_object_hint_v1', 'shown').catch(() => {});
+    }
   }, [canvasSize]);
 
   // ── Object manipulation ──
@@ -650,6 +682,13 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         <Text style={s.aiToastText}>오늘 하루도 수고했어요 ✿</Text>
       </View>
       */}
+
+      {/* Canvas interaction hint toast */}
+      <CanvasHintToast
+        visible={showCanvasHint}
+        message={t('editor.hintLongPress')}
+        onDismiss={() => setShowCanvasHint(false)}
+      />
 
       {/* Sticker Picker Sheet */}
       <StickerPickerSheet

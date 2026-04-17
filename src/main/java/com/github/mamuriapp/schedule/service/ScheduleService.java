@@ -45,6 +45,7 @@ public class ScheduleService {
                 .note(request.getNote())
                 .isAllDay(request.getIsAllDay())
                 .linkedDiaryId(request.getLinkedDiaryId())
+                .color(request.getColor())
                 .build();
 
         scheduleRepository.save(schedule);
@@ -64,7 +65,8 @@ public class ScheduleService {
                 request.getEndAt(),
                 request.getNote(),
                 request.getIsAllDay(),
-                request.getLinkedDiaryId()
+                request.getLinkedDiaryId(),
+                request.getColor()
         );
         return ScheduleResponse.from(schedule);
     }
@@ -74,6 +76,14 @@ public class ScheduleService {
         Schedule schedule = scheduleRepository.findByIdAndUserId(scheduleId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
         scheduleRepository.delete(schedule);
+    }
+
+    @Transactional
+    public ScheduleResponse toggleComplete(Long userId, Long scheduleId) {
+        Schedule schedule = scheduleRepository.findByIdAndUserId(scheduleId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
+        schedule.toggleComplete();
+        return ScheduleResponse.from(schedule);
     }
 
     public List<ScheduleResponse> listInRange(Long userId, LocalDate from, LocalDate to) {

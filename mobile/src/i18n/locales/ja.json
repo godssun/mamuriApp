@@ -368,6 +368,7 @@
     "fieldStart": "開始",
     "fieldEnd": "終了",
     "fieldNote": "メモ",
+    "fieldColor": "カラー",
     "titlePlaceholder": "何を一緒に守りますか?",
     "notePlaceholder": "短いメモを残せます",
     "noEnd": "終了時刻なし",
@@ -402,7 +403,8 @@
     "photoError": "写真を読み込めませんでした。",
     "noContent": "テキスト、写真、またはステッカーを追加してください。",
     "saveFailed": "保存に失敗しました",
-    "themeSelect": "紙の選択"
+    "themeSelect": "紙の選択",
+    "hintLongPress": "長押しで自由にデコってみよう"
   },
   "diaryList": {
     "myRecords": "わたしの記録",

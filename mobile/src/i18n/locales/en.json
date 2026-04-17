@@ -368,6 +368,7 @@
     "fieldStart": "Starts",
     "fieldEnd": "Ends",
     "fieldNote": "Note",
+    "fieldColor": "Color",
     "titlePlaceholder": "What would you like to keep?",
     "notePlaceholder": "Leave a quiet note",
     "noEnd": "No end time",
@@ -402,7 +403,8 @@
     "photoError": "Could not load photo.",
     "noContent": "Please add text, a photo, or a sticker.",
     "saveFailed": "Save failed",
-    "themeSelect": "Paper style"
+    "themeSelect": "Paper style",
+    "hintLongPress": "Long press to decorate freely"
   },
   "diaryList": {
     "myRecords": "My Records",

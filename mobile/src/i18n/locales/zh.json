@@ -368,6 +368,7 @@
     "fieldStart": "开始",
     "fieldEnd": "结束",
     "fieldNote": "备注",
+    "fieldColor": "颜色",
     "titlePlaceholder": "想一起守护什么?",
     "notePlaceholder": "留下一段简短的备注",
     "noEnd": "不设结束时间",
@@ -402,7 +403,8 @@
     "photoError": "无法加载照片。",
     "noContent": "请添加文字、照片或贴纸。",
     "saveFailed": "保存失败",
-    "themeSelect": "纸张选择"
+    "themeSelect": "纸张选择",
+    "hintLongPress": "长按即可自由装饰"
   },
   "diaryList": {
     "myRecords": "我的记录",

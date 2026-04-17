@@ -57,6 +57,12 @@ public class Schedule {
     @Column(name = "linked_diary_id")
     private Long linkedDiaryId;
 
+    @Column(length = 20, nullable = false)
+    private String color = "sage";
+
+    @Column(nullable = false)
+    private boolean completed = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -67,7 +73,7 @@ public class Schedule {
 
     @Builder
     public Schedule(User user, String title, LocalDateTime startAt, LocalDateTime endAt,
-                    String note, Boolean isAllDay, Long linkedDiaryId) {
+                    String note, Boolean isAllDay, Long linkedDiaryId, String color) {
         this.user = user;
         this.title = title;
         this.startAt = startAt;
@@ -75,15 +81,21 @@ public class Schedule {
         this.note = note;
         this.isAllDay = isAllDay != null && isAllDay;
         this.linkedDiaryId = linkedDiaryId;
+        this.color = color != null ? color : "sage";
     }
 
     public void update(String title, LocalDateTime startAt, LocalDateTime endAt,
-                       String note, Boolean isAllDay, Long linkedDiaryId) {
+                       String note, Boolean isAllDay, Long linkedDiaryId, String color) {
         if (title != null) this.title = title;
         if (startAt != null) this.startAt = startAt;
         this.endAt = endAt;
         this.note = note;
         if (isAllDay != null) this.isAllDay = isAllDay;
         this.linkedDiaryId = linkedDiaryId;
+        if (color != null) this.color = color;
+    }
+
+    public void toggleComplete() {
+        this.completed = !this.completed;
     }
 }
