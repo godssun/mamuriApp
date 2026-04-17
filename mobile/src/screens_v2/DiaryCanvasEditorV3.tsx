@@ -81,6 +81,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
   const textInputRef = useRef<TextInput>(null);
   const savingRef = useRef(false);
   const [initialPhotoIds, setInitialPhotoIds] = useState<number[]>([]);
+  const photoUriToIdRef = useRef<Record<string, number>>({});
   const [showCanvasHint, setShowCanvasHint] = useState(false);
   const canvasHintNeededRef = useRef(false);
 
@@ -134,7 +135,16 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
             });
           });
         }
-        setInitialPhotoIds((diary.photos || []).map((p: any) => p.id).filter(Boolean));
+        const photoIds = (diary.photos || []).map((p: any) => p.id).filter(Boolean);
+        setInitialPhotoIds(photoIds);
+        // Build URI → photoId map for fallback during save
+        const uriMap: Record<string, number> = {};
+        loadedObjects.forEach(o => {
+          if (o.type === 'photo' && o.photoId && o.photoUri) {
+            uriMap[o.photoUri] = o.photoId;
+          }
+        });
+        photoUriToIdRef.current = uriMap;
 
         // Stickers only from decorations
         if (diary.decorations && diary.decorations.length > 0) {
@@ -379,8 +389,18 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       // 2. Upload new photos + update positions for all photos
       const canvasW = canvasSize.width || SCREEN_W;
       const photoObjects = objects.filter(o => o.type === 'photo');
-      const newPhotos = photoObjects.filter(o => !o.photoId && o.photoUri && !o.photoUri.startsWith('http'));
-      const existingPhotos = photoObjects.filter(o => !!o.photoId);
+
+      // Resolve photoId from URI map for photos that lost their photoId
+      const resolved = photoObjects.map(o => {
+        if (o.photoId) return o;
+        if (o.photoUri && photoUriToIdRef.current[o.photoUri]) {
+          return { ...o, photoId: photoUriToIdRef.current[o.photoUri] };
+        }
+        return o;
+      });
+
+      const newPhotos = resolved.filter(o => !o.photoId && o.photoUri && !o.photoUri.startsWith('http'));
+      const existingPhotos = resolved.filter(o => !!o.photoId);
 
       // 2a. Upload new photos (local file URI)
       for (const photo of newPhotos) {
@@ -476,8 +496,12 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
 
       console.log('[DiaryCanvas] Save complete:', {
         diaryId: diary.id,
+        isEditMode,
+        totalPhotos: photoObjects.length,
+        resolvedFromUriMap: resolved.filter(o => o.photoId && !photoObjects.find(p => p.id === o.id)?.photoId).length,
         newPhotosUploaded: newPhotos.length,
         existingPhotosUpdated: existingPhotos.length,
+        existingPhotoIds: existingPhotos.map(p => p.photoId),
         stickersSaved: stickerObjects.length,
         customStickersSaved: customStickerObjects.length,
       });
