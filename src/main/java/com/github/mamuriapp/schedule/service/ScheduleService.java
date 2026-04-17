@@ -45,6 +45,7 @@ public class ScheduleService {
                 .note(request.getNote())
                 .isAllDay(request.getIsAllDay())
                 .linkedDiaryId(request.getLinkedDiaryId())
+                .color(request.getColor())
                 .build();
 
         scheduleRepository.save(schedule);
@@ -64,7 +65,8 @@ public class ScheduleService {
                 request.getEndAt(),
                 request.getNote(),
                 request.getIsAllDay(),
-                request.getLinkedDiaryId()
+                request.getLinkedDiaryId(),
+                request.getColor()
         );
         return ScheduleResponse.from(schedule);
     }

@@ -368,6 +368,7 @@
     "fieldStart": "开始",
     "fieldEnd": "结束",
     "fieldNote": "备注",
+    "fieldColor": "颜色",
     "titlePlaceholder": "想一起守护什么?",
     "notePlaceholder": "留下一段简短的备注",
     "noEnd": "不设结束时间",

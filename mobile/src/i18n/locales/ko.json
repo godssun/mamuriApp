@@ -368,6 +368,7 @@
     "fieldStart": "시작",
     "fieldEnd": "종료",
     "fieldNote": "메모",
+    "fieldColor": "색상",
     "titlePlaceholder": "무엇을 함께 지킬까요?",
     "notePlaceholder": "짧은 메모를 남겨두세요",
     "noEnd": "시간만 지정",

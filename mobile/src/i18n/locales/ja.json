@@ -368,6 +368,7 @@
     "fieldStart": "開始",
     "fieldEnd": "終了",
     "fieldNote": "メモ",
+    "fieldColor": "カラー",
     "titlePlaceholder": "何を一緒に守りますか?",
     "notePlaceholder": "短いメモを残せます",
     "noEnd": "終了時刻なし",

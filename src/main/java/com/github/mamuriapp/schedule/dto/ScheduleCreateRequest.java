@@ -27,4 +27,7 @@ public class ScheduleCreateRequest {
     private Boolean isAllDay;
 
     private Long linkedDiaryId;
+
+    @Size(max = 20)
+    private String color;
 }

@@ -368,6 +368,7 @@
     "fieldStart": "Starts",
     "fieldEnd": "Ends",
     "fieldNote": "Note",
+    "fieldColor": "Color",
     "titlePlaceholder": "What would you like to keep?",
     "notePlaceholder": "Leave a quiet note",
     "noEnd": "No end time",

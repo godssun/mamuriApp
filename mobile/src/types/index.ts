@@ -278,6 +278,7 @@ export interface Schedule {
   note?: string | null;
   isAllDay: boolean;
   linkedDiaryId?: number | null;
+  color?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -289,6 +290,7 @@ export interface ScheduleCreateRequest {
   note?: string | null;
   isAllDay?: boolean;
   linkedDiaryId?: number | null;
+  color?: string;
 }
 
 export type ScheduleUpdateRequest = ScheduleCreateRequest;

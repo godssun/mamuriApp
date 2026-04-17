@@ -32,6 +32,22 @@ import type { Schedule } from '../types';
 
 const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
+const SCHEDULE_COLORS: { key: string; bg: string; text: string }[] = [
+  { key: 'sage',    bg: '#9CAD98', text: '#FFFFFF' },
+  { key: 'rose',    bg: '#D9A7A7', text: '#FFFFFF' },
+  { key: 'sky',     bg: '#8BB8D0', text: '#FFFFFF' },
+  { key: 'mustard', bg: '#D4B96A', text: '#FFFFFF' },
+  { key: 'plum',    bg: '#B59BC8', text: '#FFFFFF' },
+  { key: 'coral',   bg: '#E0907E', text: '#FFFFFF' },
+  { key: 'stone',   bg: '#A8A29E', text: '#FFFFFF' },
+];
+
+function getScheduleColor(colorKey?: string) {
+  return SCHEDULE_COLORS.find(c => c.key === colorKey) || SCHEDULE_COLORS[0];
+}
+
+const MAX_PILLS_PER_CELL = 2;
+
 function fmtDateKey(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -107,6 +123,7 @@ export default function ScheduleScreenV3() {
   const [formNote, setFormNote] = useState('');
   const [formAllDay, setFormAllDay] = useState(false);
   const [formLinkedDiaryId, setFormLinkedDiaryId] = useState<number | null>(null);
+  const [formColor, setFormColor] = useState('sage');
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -168,6 +185,7 @@ export default function ScheduleScreenV3() {
     setFormNote('');
     setFormAllDay(false);
     setFormLinkedDiaryId(null);
+    setFormColor('sage');
     setModalOpen(true);
   };
 
@@ -179,6 +197,7 @@ export default function ScheduleScreenV3() {
     setFormNote(s.note || '');
     setFormAllDay(s.isAllDay);
     setFormLinkedDiaryId(s.linkedDiaryId ?? null);
+    setFormColor(s.color || 'sage');
     setModalOpen(true);
   };
 
@@ -207,6 +226,7 @@ export default function ScheduleScreenV3() {
         note: formNote.trim() || null,
         isAllDay: formAllDay,
         linkedDiaryId: formLinkedDiaryId,
+        color: formColor,
       };
       const saved = editing
         ? await scheduleApi.update(editing.id, payload)
@@ -308,9 +328,11 @@ export default function ScheduleScreenV3() {
               {monthCells.map((cell, idx) => {
                 if (!cell) return <View key={idx} style={styles.cellEmpty} />;
                 const dayKey = fmtDateKey(cell);
-                const hasSchedule = !!schedulesByDay[dayKey]?.length;
+                const daySchedules = schedulesByDay[dayKey] || [];
                 const selected = isSameDay(cell, selectedDate);
                 const isToday = isSameDay(cell, today);
+                const visiblePills = daySchedules.slice(0, MAX_PILLS_PER_CELL);
+                const overflow = daySchedules.length - MAX_PILLS_PER_CELL;
                 return (
                   <TouchableOpacity
                     key={idx}
@@ -322,9 +344,25 @@ export default function ScheduleScreenV3() {
                       styles.cellNum,
                       isToday && styles.cellNumToday,
                       selected && styles.cellNumSelected,
-                      cell.getDay() === 0 && { color: colors.accentRose },
+                      cell.getDay() === 0 && !selected && !isToday && { color: colors.accentRose },
                     ]}>{cell.getDate()}</Text>
-                    {hasSchedule && <View style={styles.cellDot} />}
+                    {visiblePills.length > 0 && (
+                      <View style={styles.pillContainer}>
+                        {visiblePills.map((s) => {
+                          const sc = getScheduleColor(s.color);
+                          return (
+                            <View key={s.id} style={[styles.pill, { backgroundColor: sc.bg }]}>
+                              <Text style={[styles.pillText, { color: sc.text }]} numberOfLines={1}>
+                                {s.title}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                        {overflow > 0 && (
+                          <Text style={styles.pillOverflow}>+{overflow}</Text>
+                        )}
+                      </View>
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -354,6 +392,7 @@ export default function ScheduleScreenV3() {
                   onPress={() => openEdit(s)}
                   activeOpacity={0.75}
                 >
+                  <View style={[styles.itemColorBar, { backgroundColor: getScheduleColor(s.color).bg }]} />
                   <View style={styles.itemTimeCol}>
                     <Text style={styles.itemTime}>
                       {s.isAllDay ? t('schedule.allDay') : fmtTime(s.startAt)}
@@ -484,6 +523,22 @@ export default function ScheduleScreenV3() {
                 </TouchableOpacity>
               )}
 
+              <Text style={styles.fieldLabel}>{t('schedule.fieldColor')}</Text>
+              <View style={styles.colorPickerRow}>
+                {SCHEDULE_COLORS.map((c) => (
+                  <TouchableOpacity
+                    key={c.key}
+                    style={[
+                      styles.colorSwatch,
+                      { backgroundColor: c.bg },
+                      formColor === c.key && styles.colorSwatchSelected,
+                    ]}
+                    onPress={() => setFormColor(c.key)}
+                    activeOpacity={0.7}
+                  />
+                ))}
+              </View>
+
               <View style={styles.modalActions}>
                 {editing && (
                   <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={handleDelete}>
@@ -550,25 +605,39 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   cell: {
-    width: '14.2857%', aspectRatio: 1,
-    alignItems: 'center', justifyContent: 'center',
+    width: '14.2857%',
+    minHeight: 52,
+    alignItems: 'center',
+    paddingTop: 6,
     borderRadius: borderRadius.sm,
   },
-  cellEmpty: { width: '14.2857%', aspectRatio: 1 },
+  cellEmpty: { width: '14.2857%', minHeight: 52 },
   cellSelected: {
     backgroundColor: colors.accentPrimaryLight + '25',
   },
   cellNum: {
-    fontFamily: fontFamily.sans, fontSize: 14, color: colors.textPrimary,
+    fontFamily: fontFamily.sans, fontSize: 13, color: colors.textPrimary,
+    marginBottom: 2,
   },
   cellNumToday: {
     fontFamily: fontFamily.sansMedium, color: colors.accentPrimary, fontWeight: '700',
   },
   cellNumSelected: { color: colors.accentPrimary, fontWeight: '700' },
-  cellDot: {
-    position: 'absolute', bottom: 6,
-    width: 4, height: 4, borderRadius: 2,
-    backgroundColor: colors.accentPrimary,
+  pillContainer: {
+    width: '100%', paddingHorizontal: 2, gap: 1,
+    alignItems: 'center',
+  },
+  pill: {
+    width: '100%', borderRadius: 3,
+    paddingHorizontal: 2, paddingVertical: 1,
+  },
+  pillText: {
+    fontFamily: fontFamily.sans, fontSize: 8, lineHeight: 10,
+    textAlign: 'center',
+  },
+  pillOverflow: {
+    fontFamily: fontFamily.sans, fontSize: 8,
+    color: colors.textTertiary,
   },
 
   listHeader: {
@@ -714,5 +783,19 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     fontFamily: fontFamily.sansMedium, fontSize: 14, color: colors.surfacePure, fontWeight: '600',
+  },
+  itemColorBar: {
+    width: 4, borderRadius: 2,
+    alignSelf: 'stretch', marginRight: spacing.md,
+  },
+  colorPickerRow: {
+    flexDirection: 'row', gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  colorSwatch: {
+    width: 32, height: 32, borderRadius: 16,
+  },
+  colorSwatchSelected: {
+    borderWidth: 3, borderColor: colors.textPrimary,
   },
 });
