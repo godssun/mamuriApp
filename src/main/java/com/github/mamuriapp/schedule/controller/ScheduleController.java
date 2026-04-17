@@ -69,10 +69,10 @@ public class ScheduleController {
     }
 
     @PatchMapping("/{scheduleId}/toggle-complete")
-    public ResponseEntity<ScheduleResponse> toggleComplete(
+    public ResponseEntity<ApiResponse<ScheduleResponse>> toggleComplete(
             Authentication auth,
             @PathVariable Long scheduleId) {
         Long userId = (Long) auth.getPrincipal();
-        return ResponseEntity.ok(scheduleService.toggleComplete(userId, scheduleId));
+        return ResponseEntity.ok(ApiResponse.success(scheduleService.toggleComplete(userId, scheduleId)));
     }
 }
