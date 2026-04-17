@@ -355,7 +355,33 @@
   "schedule": {
     "title": "日程",
     "comingSoonTitle": "即将到来",
-    "comingSoonBody": "一个安静陪你守护每日节奏的日程空间正在筹备中。"
+    "comingSoonBody": "一个安静陪你守护每日节奏的日程空间正在筹备中。",
+    "monthLabel": "{{year}}年{{month}}月",
+    "dayHeader": "{{month}}月{{day}}日",
+    "emptyDay": "今天没有记录任何日程。",
+    "allDay": "全天",
+    "linkedBadge": "已关联日记",
+    "new": "新日程",
+    "edit": "编辑日程",
+    "fieldTitle": "标题",
+    "fieldStart": "开始",
+    "fieldEnd": "结束",
+    "fieldNote": "备注",
+    "titlePlaceholder": "想一起守护什么?",
+    "notePlaceholder": "留下一段简短的备注",
+    "noEnd": "不设结束时间",
+    "clear": "清除",
+    "titleRequired": "请输入标题。",
+    "invalidRange": "结束时间必须晚于开始时间。",
+    "reminderBody": "5 分钟后开始。深呼吸一下,做好准备。",
+    "deleteTitle": "删除此日程?",
+    "deleteConfirm": "确定要删除这个日程吗?",
+    "openLinkedDiary": "打开关联日记",
+    "writeDiaryForThis": "记录此日程的心情",
+    "weekday": {
+      "sun": "日", "mon": "一", "tue": "二", "wed": "三",
+      "thu": "四", "fri": "五", "sat": "六"
+    }
   },
   "editor": {
     "cancel": "取消",

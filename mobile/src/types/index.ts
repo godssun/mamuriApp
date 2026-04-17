@@ -269,6 +269,30 @@ export type MainTabParamList = {
   Reflect: undefined;
 };
 
+// ── Schedule (lightweight calendar / rhythm helper) ──
+export interface Schedule {
+  id: number;
+  title: string;
+  startAt: string;          // ISO 8601
+  endAt?: string | null;
+  note?: string | null;
+  isAllDay: boolean;
+  linkedDiaryId?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScheduleCreateRequest {
+  title: string;
+  startAt: string;          // ISO 8601
+  endAt?: string | null;
+  note?: string | null;
+  isAllDay?: boolean;
+  linkedDiaryId?: number | null;
+}
+
+export type ScheduleUpdateRequest = ScheduleCreateRequest;
+
 export type DiaryStackParamList = {
   DiaryListHome: undefined;
   WriteDiary: { editDiaryId: number } | undefined;
