@@ -331,6 +331,7 @@
     "daysSuffix": " days"
   },
   "home": {
+    "todaySchedule": "Today's schedule",
     "greetingDawn": "A quiet night",
     "greetingMorning": "Good morning",
     "greetingAfternoon": "Good afternoon",

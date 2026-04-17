@@ -20,8 +20,8 @@ import {
   colors, fontFamily, shadows, spacing, borderRadius,
 } from '../design-system-v3';
 import { PaperBackground } from '../design-system-v3/components/PaperBackground';
-import { diaryApi, emotionApi, companionApi } from '../api/client';
-import type { Diary, CompanionProfile, CompanionSettings, EmotionKey } from '../types';
+import { diaryApi, emotionApi, companionApi, scheduleApi } from '../api/client';
+import type { Diary, CompanionProfile, CompanionSettings, Schedule, EmotionKey } from '../types';
 import { EMOTION_COLORS, EMOTION_LABELS, EMOTION_KEYS } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
 import { RelationshipProgressBar } from './components/RelationshipProgressBar';
@@ -65,24 +65,27 @@ export default function HomeStickerScreenV3() {
   const [profile, setProfile] = useState<CompanionProfile | null>(null);
   const [companionSettings, setCompanionSettings] = useState<CompanionSettings | null>(null);
   const [diaries, setDiaries] = useState<Diary[]>([]);
+  const [todaySchedules, setTodaySchedules] = useState<Schedule[]>([]);
   const [weekly, setWeekly] = useState<any>(null);
   const [msg, setMsg] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
   const fade = useState(new Animated.Value(0))[0];
 
   const load = useCallback(async () => {
-    const [p, cs, d, w, m] = await Promise.all([
+    const [p, cs, d, w, m, ts] = await Promise.all([
       companionApi.getProfile().catch(() => null),
       companionApi.getSettings().catch(() => null),
       diaryApi.getList().catch(() => []),
       emotionApi.getWeeklySummary().catch(() => null),
       companionApi.getMessage().catch(() => null),
+      scheduleApi.today().catch(() => []),
     ]);
     setProfile(p);
     setCompanionSettings(cs);
     setDiaries((d || []).slice(0, 5));
     setWeekly(w);
     setMsg(m);
+    setTodaySchedules((ts || []).slice(0, 3));
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -258,6 +261,38 @@ export default function HomeStickerScreenV3() {
           >
             <Text style={styles.ctaText}>{t('home.startRecord')}</Text>
           </TouchableOpacity>
+
+          {/* ═══ Today's Schedule Mini-Cards ═══ */}
+          {todaySchedules.length > 0 && (
+            <View style={styles.scheduleMiniSection}>
+              <View style={styles.recentHeader}>
+                <Text style={styles.sectionLabel}>{t('home.todaySchedule')}</Text>
+                <TouchableOpacity
+                  onPress={() => nav.navigate('Schedule')}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Text style={styles.linkText}>{t('home.viewAll')}</Text>
+                </TouchableOpacity>
+              </View>
+              {todaySchedules.map((s) => {
+                const isAllDay = s.isAllDay;
+                const startTime = !isAllDay && s.startAt
+                  ? `${String(new Date(s.startAt).getHours()).padStart(2, '0')}:${String(new Date(s.startAt).getMinutes()).padStart(2, '0')}`
+                  : t('schedule.allDay');
+                return (
+                  <TouchableOpacity
+                    key={s.id}
+                    style={styles.scheduleMiniCard}
+                    onPress={() => nav.navigate('Schedule')}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={styles.scheduleMiniTime}>{startTime}</Text>
+                    <Text style={styles.scheduleMiniTitle} numberOfLines={1}>{s.title}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
 
           {/* ═══ Recent Entries — paper cards ═══ */}
           {diaries.length > 0 && (
@@ -493,6 +528,24 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.sans,
     fontSize: 12, color: colors.accentPrimary,
   },
+  scheduleMiniSection: { marginBottom: spacing['3xl'] },
+  scheduleMiniCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.bgIvory, borderRadius: borderRadius.sm,
+    paddingVertical: 12, paddingHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.5)',
+    gap: spacing.md,
+  },
+  scheduleMiniTime: {
+    fontFamily: fontFamily.sansMedium, fontSize: 13,
+    color: colors.accentPrimary, fontWeight: '600', width: 50,
+  },
+  scheduleMiniTitle: {
+    fontFamily: fontFamily.sans, fontSize: 13,
+    color: colors.textPrimary, flex: 1,
+  },
+
   recentScroll: { gap: spacing.md },
   recentCard: {
     width: 160, backgroundColor: colors.bgIvory,

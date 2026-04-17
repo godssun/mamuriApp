@@ -331,6 +331,7 @@
     "daysSuffix": "日目"
   },
   "home": {
+    "todaySchedule": "今日の予定",
     "greetingDawn": "静かな夜ですね",
     "greetingMorning": "おはようございます",
     "greetingAfternoon": "こんにちは",

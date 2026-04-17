@@ -331,6 +331,7 @@
     "daysSuffix": "일째"
   },
   "home": {
+    "todaySchedule": "오늘의 일정",
     "greetingDawn": "고요한 밤이에요",
     "greetingMorning": "좋은 아침이에요",
     "greetingAfternoon": "좋은 오후예요",
