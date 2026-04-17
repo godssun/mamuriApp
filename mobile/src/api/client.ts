@@ -704,6 +704,12 @@ export const diaryPhotoApi = {
       body: JSON.stringify(data),
     });
   },
+
+  async delete(photoId: number, diaryId: number): Promise<void> {
+    await request<void>(`/diaries/${diaryId}/photos/${photoId}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // 일기 데코레이션 API

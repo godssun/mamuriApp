@@ -77,6 +77,8 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
 
   const contentAnim = useRef(new Animated.Value(0)).current;
   const textInputRef = useRef<TextInput>(null);
+  const savingRef = useRef(false);
+  const [initialPhotoIds, setInitialPhotoIds] = useState<number[]>([]);
 
   // ── Edit mode: load existing diary ──
   useEffect(() => {
@@ -121,6 +123,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
             });
           });
         }
+        setInitialPhotoIds((diary.photos || []).map((p: any) => p.id).filter(Boolean));
 
         // Stickers only from decorations
         if (diary.decorations && diary.decorations.length > 0) {
@@ -313,9 +316,12 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
 
   // ── Save ──
   const handleSave = useCallback(async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     const hasPhotos = objects.some(o => o.type === 'photo');
     if (!content.trim() && objects.length === 0) {
       Alert.alert(t('common.alert'), t('editor.noContent'));
+      savingRef.current = false;
       return;
     }
     setSaving(true);
@@ -341,7 +347,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       // 2. Upload new photos + update positions for all photos
       const canvasW = canvasSize.width || SCREEN_W;
       const photoObjects = objects.filter(o => o.type === 'photo');
-      const newPhotos = photoObjects.filter(o => !o.photoId);
+      const newPhotos = photoObjects.filter(o => !o.photoId && o.photoUri && !o.photoUri.startsWith('http'));
       const existingPhotos = photoObjects.filter(o => !!o.photoId);
 
       // 2a. Upload new photos (local file URI)
@@ -381,6 +387,20 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         }
       }
 
+      // 2c. Delete photos removed from canvas during editing
+      if (isEditMode && initialPhotoIds.length > 0) {
+        const currentPhotoIds = new Set(existingPhotos.map(p => p.photoId!));
+        for (const oldId of initialPhotoIds) {
+          if (!currentPhotoIds.has(oldId)) {
+            try {
+              await diaryPhotoApi.delete(oldId, diary.id);
+            } catch (e: any) {
+              console.warn('[DiaryCanvas] Photo delete failed:', e?.message);
+            }
+          }
+        }
+      }
+
       // 3. Save standard stickers via decoration API (exclude custom stickers)
       const stickerObjects = objects.filter(o => o.type === 'sticker' && !o.stickerCode?.startsWith('cs_'));
       if (stickerObjects.length > 0) {
@@ -403,7 +423,7 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       const customStickerObjects = objects.filter(o => o.type === 'sticker' && o.stickerCode?.startsWith('cs_'));
       for (const cs of customStickerObjects) {
         const csSource = cs.stickerSource as any;
-        if (csSource?.uri) {
+        if (csSource?.uri && !csSource.uri.startsWith('http')) {
           try {
             const uploaded = await diaryPhotoApi.upload(diary.id, csSource.uri);
             if (uploaded?.id) {
@@ -439,9 +459,10 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         Alert.alert(t('editor.saveFailed'), error?.message || t('common.retry'));
       }
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
-  }, [content, title, objects, currentEmotion, secondaryTags, selectedTheme, canvasSize, navigation, isEditMode, editDiaryId]);
+  }, [content, title, objects, currentEmotion, secondaryTags, selectedTheme, canvasSize, navigation, isEditMode, editDiaryId, initialPhotoIds]);
 
   const { refresh: refreshSubscription, entitlements } = useSubscription();
   const { theme: appTheme } = useTheme();
