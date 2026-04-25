@@ -13,7 +13,7 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 
 const BANNER_AD_UNIT_ID = Platform.select({
   ios: 'ca-app-pub-1553144894464526/2429998078',
-  android: 'ca-app-pub-1553144894464526/2220116646',
+  android: 'ca-app-pub-1553144894464526/8875293366',
 }) ?? '';
 
 export function AdBanner() {
