@@ -57,6 +57,18 @@ feature:
   quota-enforcement-enabled: ${FEATURE_QUOTA_ENABLED:false}
   conversation-enabled: ${FEATURE_CONVERSATION_ENABLED:true}
 
+# 앱 강제 업데이트 정책 — 플랫폼별 최소 지원 버전. 기본 0.0.0 은 "아무도 막지 않음".
+# 운영 시 env 로 덮어써서 관리한다. 예: APP_FORCE_UPDATE_IOS_MIN=2.3.0
+app:
+  force-update:
+    message: ${APP_FORCE_UPDATE_MESSAGE:}
+    ios:
+      minimum-supported-version: ${APP_FORCE_UPDATE_IOS_MIN:0.0.0}
+      store-url: ${APP_IOS_STORE_URL:itms-apps://apps.apple.com/app/id6760908812}
+    android:
+      minimum-supported-version: ${APP_FORCE_UPDATE_ANDROID_MIN:0.0.0}
+      store-url: ${APP_ANDROID_STORE_URL:market://details?id=com.mamuri.app}
+
 upload:
   dir: ${UPLOAD_DIR:uploads}
   base-url: ${UPLOAD_BASE_URL:http://localhost:8080}

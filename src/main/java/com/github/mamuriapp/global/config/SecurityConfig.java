@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/refresh", "/api/auth/social", "/api/stripe/webhook", "/api/stickers/**").permitAll()
+                        .requestMatchers("/api/app/version-check").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/api/admin/**").permitAll()

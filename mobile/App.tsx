@@ -27,6 +27,7 @@ import { SubscriptionProvider } from './src/contexts/SubscriptionContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { ThemeSyncBridge } from './src/contexts/ThemeSyncBridge';
 import { CustomStickerProvider } from './src/contexts/CustomStickerContext';
+import { VersionGateProvider } from './src/contexts/VersionGateContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import Navigation from './src/navigation';
 
@@ -43,20 +44,23 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <SubscriptionProvider>
-          <ThemeProvider>
-            <ThemeSyncBridge>
-              <CustomStickerProvider>
-                <SafeAreaProvider>
-                  <StatusBar style="auto" />
-                  <Navigation />
-                </SafeAreaProvider>
-              </CustomStickerProvider>
-            </ThemeSyncBridge>
-          </ThemeProvider>
-        </SubscriptionProvider>
-      </AuthProvider>
+      {/* VersionGate는 auth/subscription과 독립. 인증 전이라도 먼저 차단할 수 있어야 함. */}
+      <VersionGateProvider>
+        <AuthProvider>
+          <SubscriptionProvider>
+            <ThemeProvider>
+              <ThemeSyncBridge>
+                <CustomStickerProvider>
+                  <SafeAreaProvider>
+                    <StatusBar style="auto" />
+                    <Navigation />
+                  </SafeAreaProvider>
+                </CustomStickerProvider>
+              </ThemeSyncBridge>
+            </ThemeProvider>
+          </SubscriptionProvider>
+        </AuthProvider>
+      </VersionGateProvider>
     </ErrorBoundary>
   );
 }

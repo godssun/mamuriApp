@@ -5,6 +5,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
+import { useVersionGate } from '../contexts/VersionGateContext';
+import ForceUpdateScreenV3 from '../screens_v2/ForceUpdateScreenV3';
 import { colors as v3Colors, fontFamily as v3FontFamily } from '../design-system-v3';
 import { companionApi } from '../api/client';
 import {
@@ -162,14 +164,21 @@ function MainNavigator() {
 export default function Navigation() {
   const { t } = useTranslation();
   const { isAuthenticated, isLoading } = useAuth();
+  const { isChecking, forceUpdateRequired } = useVersionGate();
 
-  if (isLoading) {
+  // 1) 버전 체크 or 인증 로딩 중: 스플래시
+  if (isChecking || isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: v3Colors.bgCream }]}>
         <Text style={[styles.loadingText, { color: v3Colors.textPrimary, fontFamily: v3FontFamily.serifItalic }]}>{t('auth.appName')}</Text>
         <ActivityIndicator color={v3Colors.accentPrimary} style={{ marginTop: 16 }} />
       </View>
     );
+  }
+
+  // 2) 강제 업데이트: 어떤 화면도 진입 불가. NavigationContainer 자체를 띄우지 않음.
+  if (forceUpdateRequired) {
+    return <ForceUpdateScreenV3 />;
   }
 
   return (

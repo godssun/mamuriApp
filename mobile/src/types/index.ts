@@ -5,6 +5,14 @@ export interface ApiResponse<T> {
   message: string | null;
 }
 
+// 앱 강제 업데이트 버전 체크
+export interface VersionCheckResponse {
+  minimumSupportedVersion: string;
+  forceUpdate: boolean;
+  storeUrl: string;
+  message: string;
+}
+
 // 인증
 export interface TokenResponse {
   accessToken: string;

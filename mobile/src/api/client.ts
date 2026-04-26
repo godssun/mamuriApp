@@ -29,6 +29,7 @@ import {
   ReportRequest,
   EmotionCategory,
   EmotionSticker,
+  VersionCheckResponse,
 } from '../types';
 
 // Android 에뮬레이터에서는 10.0.2.2가 호스트 머신의 localhost
@@ -314,6 +315,14 @@ async function requestMultipart<T>(
 
   return json.data as T;
 }
+
+// 앱 메타 API (인증 불필요)
+export const appApi = {
+  async checkVersion(platform: 'ios' | 'android', currentVersion: string): Promise<VersionCheckResponse> {
+    const query = `?platform=${encodeURIComponent(platform)}&currentVersion=${encodeURIComponent(currentVersion)}`;
+    return request<VersionCheckResponse>(`/app/version-check${query}`, { method: 'GET' }, false);
+  },
+};
 
 // 인증 API
 export const authApi = {

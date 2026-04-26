@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal,
   TextInput, Switch, Alert, Platform, ActivityIndicator, RefreshControl,
+  KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -471,136 +472,155 @@ export default function ScheduleScreenV3() {
 
         {/* Create/Edit modal */}
         <Modal visible={modalOpen} animationType="slide" transparent onRequestClose={closeModal}>
-          <View style={styles.modalBackdrop}>
-            <View style={[styles.modalSheet, { paddingBottom: insets.bottom + spacing.xl }]}>
-              <View style={styles.modalHandle} />
-              <Text style={styles.modalTitle}>
-                {editing ? t('schedule.edit') : t('schedule.new')}
-              </Text>
+          <KeyboardAvoidingView
+            style={styles.modalKav}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            {/* backdrop 탭: 키보드만 내림 (모달은 유지) */}
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View style={styles.modalBackdrop}>
+                {/* 시트 본체: 버블링 차단하여 모달 유지 */}
+                <TouchableWithoutFeedback accessible={false}>
+                  <View style={[styles.modalSheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+                    <View style={styles.modalHandle} />
+                    <Text style={styles.modalTitle}>
+                      {editing ? t('schedule.edit') : t('schedule.new')}
+                    </Text>
 
-              <Text style={styles.fieldLabel}>{t('schedule.fieldTitle')}</Text>
-              <TextInput
-                value={formTitle}
-                onChangeText={setFormTitle}
-                placeholder={t('schedule.titlePlaceholder')}
-                placeholderTextColor={colors.textTertiary}
-                style={styles.input}
-                maxLength={100}
-              />
+                    <ScrollView
+                      keyboardShouldPersistTaps="handled"
+                      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+                      showsVerticalScrollIndicator={false}
+                      contentContainerStyle={styles.modalScrollContent}
+                    >
+                      <Text style={styles.fieldLabel}>{t('schedule.fieldTitle')}</Text>
+                      <TextInput
+                        value={formTitle}
+                        onChangeText={setFormTitle}
+                        placeholder={t('schedule.titlePlaceholder')}
+                        placeholderTextColor={colors.textTertiary}
+                        style={styles.input}
+                        maxLength={100}
+                      />
 
-              <View style={styles.toggleRow}>
-                <Text style={styles.fieldLabel}>{t('schedule.allDay')}</Text>
-                <Switch
-                  value={formAllDay}
-                  onValueChange={setFormAllDay}
-                  trackColor={{ false: colors.accentSand + '40', true: colors.accentPrimaryLight }}
-                  thumbColor={formAllDay ? colors.accentPrimary : colors.textTertiary}
-                />
+                      <View style={styles.toggleRow}>
+                        <Text style={styles.fieldLabel}>{t('schedule.allDay')}</Text>
+                        <Switch
+                          value={formAllDay}
+                          onValueChange={setFormAllDay}
+                          trackColor={{ false: colors.accentSand + '40', true: colors.accentPrimaryLight }}
+                          thumbColor={formAllDay ? colors.accentPrimary : colors.textTertiary}
+                        />
+                      </View>
+
+                      <Text style={styles.fieldLabel}>{t('schedule.fieldStart')}</Text>
+                      <TouchableOpacity style={styles.pickerRow} onPress={() => setShowStartPicker(true)}>
+                        <Text style={styles.pickerText}>
+                          {formStart.toLocaleString()}
+                        </Text>
+                      </TouchableOpacity>
+                      {showStartPicker && (
+                        <DateTimePicker
+                          value={formStart}
+                          mode={formAllDay ? 'date' : 'datetime'}
+                          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                          onChange={(_, d) => {
+                            if (Platform.OS === 'android') setShowStartPicker(false);
+                            if (d) setFormStart(d);
+                          }}
+                        />
+                      )}
+
+                      <Text style={styles.fieldLabel}>{t('schedule.fieldEnd')}</Text>
+                      <TouchableOpacity
+                        style={styles.pickerRow}
+                        onPress={() => setShowEndPicker(true)}
+                      >
+                        <Text style={[styles.pickerText, !formEnd && { color: colors.textTertiary }]}>
+                          {formEnd ? formEnd.toLocaleString() : t('schedule.noEnd')}
+                        </Text>
+                        {formEnd && (
+                          <TouchableOpacity
+                            onPress={(e) => { e.stopPropagation(); setFormEnd(null); }}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Text style={styles.clearText}>{t('schedule.clear')}</Text>
+                          </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+                      {showEndPicker && (
+                        <DateTimePicker
+                          value={formEnd ?? formStart}
+                          mode={formAllDay ? 'date' : 'datetime'}
+                          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                          onChange={(_, d) => {
+                            if (Platform.OS === 'android') setShowEndPicker(false);
+                            if (d) setFormEnd(d);
+                          }}
+                        />
+                      )}
+
+                      <Text style={styles.fieldLabel}>{t('schedule.fieldNote')}</Text>
+                      <TextInput
+                        value={formNote}
+                        onChangeText={setFormNote}
+                        placeholder={t('schedule.notePlaceholder')}
+                        placeholderTextColor={colors.textTertiary}
+                        style={[styles.input, styles.inputMultiline]}
+                        multiline
+                        maxLength={2000}
+                      />
+
+                      {editing?.linkedDiaryId ? (
+                        <TouchableOpacity style={styles.linkRow} onPress={openLinkedDiary}>
+                          <Text style={styles.linkRowText}>{t('schedule.openLinkedDiary')}</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity style={styles.linkRow} onPress={openWriteDiaryForSchedule}>
+                          <Text style={styles.linkRowText}>{t('schedule.writeDiaryForThis')}</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      <Text style={styles.fieldLabel}>{t('schedule.fieldColor')}</Text>
+                      <View style={styles.colorPickerRow}>
+                        {SCHEDULE_COLORS.map((c) => (
+                          <TouchableOpacity
+                            key={c.key}
+                            style={[
+                              styles.colorSwatch,
+                              { backgroundColor: c.bg },
+                              formColor === c.key && styles.colorSwatchSelected,
+                            ]}
+                            onPress={() => setFormColor(c.key)}
+                            activeOpacity={0.7}
+                          />
+                        ))}
+                      </View>
+                    </ScrollView>
+
+                    {/* 액션바는 ScrollView 바깥에 두어 키보드 위에 항상 노출 */}
+                    <View style={styles.modalActions}>
+                      {editing && (
+                        <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={handleDelete}>
+                          <Text style={styles.deleteBtnText}>{t('common.delete')}</Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity style={[styles.actionBtn, styles.cancelBtn]} onPress={closeModal}>
+                        <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.actionBtn, styles.saveBtn, saving && { opacity: 0.6 }]}
+                        onPress={handleSave}
+                        disabled={saving}
+                      >
+                        <Text style={styles.saveBtnText}>{t('common.save')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableWithoutFeedback>
               </View>
-
-              <Text style={styles.fieldLabel}>{t('schedule.fieldStart')}</Text>
-              <TouchableOpacity style={styles.pickerRow} onPress={() => setShowStartPicker(true)}>
-                <Text style={styles.pickerText}>
-                  {formStart.toLocaleString()}
-                </Text>
-              </TouchableOpacity>
-              {showStartPicker && (
-                <DateTimePicker
-                  value={formStart}
-                  mode={formAllDay ? 'date' : 'datetime'}
-                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                  onChange={(_, d) => {
-                    if (Platform.OS === 'android') setShowStartPicker(false);
-                    if (d) setFormStart(d);
-                  }}
-                />
-              )}
-
-              <Text style={styles.fieldLabel}>{t('schedule.fieldEnd')}</Text>
-              <TouchableOpacity
-                style={styles.pickerRow}
-                onPress={() => setShowEndPicker(true)}
-              >
-                <Text style={[styles.pickerText, !formEnd && { color: colors.textTertiary }]}>
-                  {formEnd ? formEnd.toLocaleString() : t('schedule.noEnd')}
-                </Text>
-                {formEnd && (
-                  <TouchableOpacity
-                    onPress={(e) => { e.stopPropagation(); setFormEnd(null); }}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Text style={styles.clearText}>{t('schedule.clear')}</Text>
-                  </TouchableOpacity>
-                )}
-              </TouchableOpacity>
-              {showEndPicker && (
-                <DateTimePicker
-                  value={formEnd ?? formStart}
-                  mode={formAllDay ? 'date' : 'datetime'}
-                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                  onChange={(_, d) => {
-                    if (Platform.OS === 'android') setShowEndPicker(false);
-                    if (d) setFormEnd(d);
-                  }}
-                />
-              )}
-
-              <Text style={styles.fieldLabel}>{t('schedule.fieldNote')}</Text>
-              <TextInput
-                value={formNote}
-                onChangeText={setFormNote}
-                placeholder={t('schedule.notePlaceholder')}
-                placeholderTextColor={colors.textTertiary}
-                style={[styles.input, styles.inputMultiline]}
-                multiline
-                maxLength={2000}
-              />
-
-              {editing?.linkedDiaryId ? (
-                <TouchableOpacity style={styles.linkRow} onPress={openLinkedDiary}>
-                  <Text style={styles.linkRowText}>{t('schedule.openLinkedDiary')}</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity style={styles.linkRow} onPress={openWriteDiaryForSchedule}>
-                  <Text style={styles.linkRowText}>{t('schedule.writeDiaryForThis')}</Text>
-                </TouchableOpacity>
-              )}
-
-              <Text style={styles.fieldLabel}>{t('schedule.fieldColor')}</Text>
-              <View style={styles.colorPickerRow}>
-                {SCHEDULE_COLORS.map((c) => (
-                  <TouchableOpacity
-                    key={c.key}
-                    style={[
-                      styles.colorSwatch,
-                      { backgroundColor: c.bg },
-                      formColor === c.key && styles.colorSwatchSelected,
-                    ]}
-                    onPress={() => setFormColor(c.key)}
-                    activeOpacity={0.7}
-                  />
-                ))}
-              </View>
-
-              <View style={styles.modalActions}>
-                {editing && (
-                  <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={handleDelete}>
-                    <Text style={styles.deleteBtnText}>{t('common.delete')}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity style={[styles.actionBtn, styles.cancelBtn]} onPress={closeModal}>
-                  <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.saveBtn, saving && { opacity: 0.6 }]}
-                  onPress={handleSave}
-                  disabled={saving}
-                >
-                  <Text style={styles.saveBtnText}>{t('common.save')}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
         </Modal>
       </View>
     </PaperBackground>
@@ -741,6 +761,9 @@ const styles = StyleSheet.create({
   fabPlusV: { position: 'absolute', width: 2, height: 18, backgroundColor: colors.surfacePure, borderRadius: 1 },
 
   // Modal
+  modalKav: {
+    flex: 1,
+  },
   modalBackdrop: {
     flex: 1, justifyContent: 'flex-end',
     backgroundColor: 'rgba(30, 25, 20, 0.35)',
@@ -749,6 +772,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgCream,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: spacing['2xl'], paddingTop: spacing.md,
+    maxHeight: '90%',
+  },
+  modalScrollContent: {
+    paddingBottom: spacing.lg,
   },
   modalHandle: {
     alignSelf: 'center',
