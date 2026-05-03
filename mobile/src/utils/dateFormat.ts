@@ -58,3 +58,39 @@ export function formatYearMonth(year: number, month: number): string {
   const date = new Date(year, month, 1);
   return date.toLocaleDateString(getLocale(), { year: 'numeric', month: 'long' });
 }
+
+/**
+ * 일정 화면에서 사용할 datetime 라벨 포맷.
+ * Hermes Android 일부 단말은 ICU 데이터가 부족해 인자 없는 toLocaleString이
+ * RangeError를 던지므로, 항상 인자를 명시하고 catch에서 직접 조립한다.
+ *
+ * allDay=false → 'YYYY. M. D. (요일) HH:mm'
+ * allDay=true  → 'YYYY. M. D. (요일)'
+ */
+export function formatScheduleDateTime(date: Date, allDay: boolean): string {
+  const opts: Intl.DateTimeFormatOptions = allDay
+    ? { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }
+    : {
+        year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
+        hour: '2-digit', minute: '2-digit',
+      };
+  try {
+    return date.toLocaleString(getLocale(), opts);
+  } catch {
+    return formatScheduleDateTimeFallback(date, allDay);
+  }
+}
+
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+
+function formatScheduleDateTimeFallback(date: Date, allDay: boolean): string {
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  const dow = i18n.t(`schedule.weekday.${WEEKDAY_KEYS[date.getDay()]}`);
+  const datePart = `${y}. ${m}. ${d}. (${dow})`;
+  if (allDay) return datePart;
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  return `${datePart} ${hh}:${mm}`;
+}

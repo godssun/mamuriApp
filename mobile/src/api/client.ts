@@ -29,6 +29,7 @@ import {
   ReportRequest,
   EmotionCategory,
   EmotionSticker,
+  VersionCheckResponse,
 } from '../types';
 
 // Android 에뮬레이터에서는 10.0.2.2가 호스트 머신의 localhost
@@ -94,10 +95,26 @@ export class ApiError extends Error {
   }
 }
 
-// forceLogout 콜백 (React 트리 바깥에서 인증 상태 제어)
-let forceLogoutHandler: (() => void) | null = null;
+// 인증 실패와 네트워크 실패를 구분한다.
+// fetch가 throw한 TypeError/AbortError 등은 ApiError가 아니므로 false → 네트워크로 분류.
+// 토큰 삭제·forceLogout은 인증 실패에서만 트리거해서, 비행기모드/일시 단절에서
+// 사용자가 강제 로그아웃되지 않게 한다.
+export function isAuthError(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    return error.isUnauthorized || error.status === 401 || error.code === 'TOKEN_REUSE_DETECTED';
+  }
+  return false;
+}
 
-export function setForceLogoutHandler(handler: () => void): void {
+export type ForceLogoutReason =
+  | 'token_reuse_detected'
+  | 'refresh_auth_failed'
+  | 'retry_401';
+
+// forceLogout 콜백 (React 트리 바깥에서 인증 상태 제어)
+let forceLogoutHandler: ((reason?: ForceLogoutReason) => void) | null = null;
+
+export function setForceLogoutHandler(handler: (reason?: ForceLogoutReason) => void): void {
   forceLogoutHandler = handler;
 }
 
@@ -131,10 +148,12 @@ async function refreshAccessToken(): Promise<TokenResponse> {
         : { success: false, data: null, message: null };
 
       if (!response.ok || !json.success || !json.data) {
+        // status===401일 때만 인증 실패로 표시. 5xx는 네트워크/서버 오류로 분류해
+        // 호출자가 토큰을 즉시 삭제하지 않도록 한다.
         throw new ApiError(
           json.message || i18n.t('error.tokenRefreshFailed'),
           response.status,
-          true
+          response.status === 401
         );
       }
 
@@ -209,7 +228,7 @@ async function request<T>(
     // TOKEN_REUSE_DETECTED → 즉시 로그아웃
     if (message.includes('재사용')) {
       await tokenStorage.clear();
-      forceLogoutHandler?.();
+      forceLogoutHandler?.('token_reuse_detected');
       throw new ApiError(message, 401, true, 'TOKEN_REUSE_DETECTED');
     }
 
@@ -218,20 +237,29 @@ async function request<T>(
       try {
         await refreshAccessToken();
         return request<T>(endpoint, options, requireAuth, true);
-      } catch {
-        await tokenStorage.clear();
-        forceLogoutHandler?.();
-        throw new ApiError(
-          message || i18n.t('error.authExpired'),
-          401,
-          true
-        );
+      } catch (refreshError) {
+        if (isAuthError(refreshError)) {
+          // 진짜 인증 실패(401/만료/재사용) — 토큰 삭제 + 로그아웃.
+          await tokenStorage.clear();
+          forceLogoutHandler?.('refresh_auth_failed');
+          throw new ApiError(
+            message || i18n.t('error.authExpired'),
+            401,
+            true
+          );
+        }
+        // 네트워크/타임아웃/5xx — 토큰 보존, 호출자에 그대로 throw.
+        // 다음 살아난 네트워크에서 lazy refresh가 재처리한다.
+        if (__DEV__) {
+          console.warn('[client] refresh network error, keeping tokens', refreshError);
+        }
+        throw refreshError;
       }
     }
 
     // 재시도 후에도 401 → 로그아웃
     await tokenStorage.clear();
-    forceLogoutHandler?.();
+    forceLogoutHandler?.('retry_401');
     throw new ApiError(
       message || i18n.t('error.authExpired'),
       401,
@@ -297,10 +325,16 @@ async function requestMultipart<T>(
     try {
       await refreshAccessToken();
       return requestMultipart<T>(endpoint, formData, true);
-    } catch {
-      await tokenStorage.clear();
-      forceLogoutHandler?.();
-      throw new ApiError(i18n.t('error.authExpired'), 401, true);
+    } catch (refreshError) {
+      if (isAuthError(refreshError)) {
+        await tokenStorage.clear();
+        forceLogoutHandler?.('refresh_auth_failed');
+        throw new ApiError(i18n.t('error.authExpired'), 401, true);
+      }
+      if (__DEV__) {
+        console.warn('[client] multipart refresh network error, keeping tokens', refreshError);
+      }
+      throw refreshError;
     }
   }
 
@@ -314,6 +348,14 @@ async function requestMultipart<T>(
 
   return json.data as T;
 }
+
+// 앱 메타 API (인증 불필요)
+export const appApi = {
+  async checkVersion(platform: 'ios' | 'android', currentVersion: string): Promise<VersionCheckResponse> {
+    const query = `?platform=${encodeURIComponent(platform)}&currentVersion=${encodeURIComponent(currentVersion)}`;
+    return request<VersionCheckResponse>(`/app/version-check${query}`, { method: 'GET' }, false);
+  },
+};
 
 // 인증 API
 export const authApi = {

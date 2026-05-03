@@ -17,10 +17,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal,
   TextInput, Switch, Alert, Platform, ActivityIndicator, RefreshControl,
+  KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, {
+  DateTimePickerAndroid,
+  type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import * as Notifications from 'expo-notifications';
 import { useTranslation } from 'react-i18next';
 import {
@@ -30,6 +34,8 @@ import { PaperBackground } from '../design-system-v3/components/PaperBackground'
 import { scheduleApi } from '../api/client';
 import { AdBanner } from '../components/AdBanner';
 import type { Schedule } from '../types';
+import { formatScheduleDateTime } from '../utils/dateFormat';
+import { getKAVBehavior } from '../utils/keyboard';
 
 const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
@@ -215,6 +221,70 @@ export default function ScheduleScreenV3() {
     setShowEndPicker(false);
   };
 
+  // mode prop이 mount 중 바뀌면 native picker가 충돌할 수 있어
+  // allDay 토글 시 열려있는 picker는 모두 닫는다.
+  const handleToggleAllDay = (next: boolean) => {
+    setShowStartPicker(false);
+    setShowEndPicker(false);
+    setFormAllDay(next);
+  };
+
+  /**
+   * Android 전용: datetimepicker 8.x의 mode='datetime' 컴포넌트 경로는
+   * 두 번째 단계(time picker) 마운트 직전 native 이벤트가 누락되며
+   * 렌더 경로 throw로 이어지는 사례가 보고된다.
+   * 공식 권장대로 명령형 API로 date → time을 분리해 호출한다.
+   */
+  const openDateTimePickerAndroid = (
+    initial: Date,
+    allDay: boolean,
+    onDone: (next: Date) => void,
+  ) => {
+    const onDateChange = (event: DateTimePickerEvent, picked?: Date) => {
+      if (event.type !== 'set' || !picked) return;
+      if (allDay) {
+        onDone(picked);
+        return;
+      }
+      // date 확정 → time picker 체이닝
+      DateTimePickerAndroid.open({
+        value: picked,
+        mode: 'time',
+        is24Hour: true,
+        onChange: (timeEvent, timePicked) => {
+          if (timeEvent.type !== 'set' || !timePicked) return;
+          const merged = new Date(picked);
+          merged.setHours(timePicked.getHours());
+          merged.setMinutes(timePicked.getMinutes());
+          merged.setSeconds(0);
+          merged.setMilliseconds(0);
+          onDone(merged);
+        },
+      });
+    };
+    DateTimePickerAndroid.open({
+      value: initial,
+      mode: 'date',
+      onChange: onDateChange,
+    });
+  };
+
+  const openStartPicker = () => {
+    if (Platform.OS === 'android') {
+      openDateTimePickerAndroid(formStart, formAllDay, setFormStart);
+    } else {
+      setShowStartPicker(true);
+    }
+  };
+
+  const openEndPicker = () => {
+    if (Platform.OS === 'android') {
+      openDateTimePickerAndroid(formEnd ?? formStart, formAllDay, setFormEnd);
+    } else {
+      setShowEndPicker(true);
+    }
+  };
+
   const handleSave = async () => {
     const title = formTitle.trim();
     if (!title) {
@@ -243,6 +313,10 @@ export default function ScheduleScreenV3() {
       closeModal();
       await loadMonth();
     } catch (error: any) {
+      if (__DEV__) {
+        // 실기기 디버깅 시 root cause 즉시 식별 가능하게.
+        console.error('[ScheduleScreenV3] save error:', error);
+      }
       Alert.alert(t('common.alert'), error?.message || t('common.retry'));
     } finally {
       setSaving(false);
@@ -471,136 +545,162 @@ export default function ScheduleScreenV3() {
 
         {/* Create/Edit modal */}
         <Modal visible={modalOpen} animationType="slide" transparent onRequestClose={closeModal}>
-          <View style={styles.modalBackdrop}>
-            <View style={[styles.modalSheet, { paddingBottom: insets.bottom + spacing.xl }]}>
-              <View style={styles.modalHandle} />
-              <Text style={styles.modalTitle}>
-                {editing ? t('schedule.edit') : t('schedule.new')}
-              </Text>
+          <KeyboardAvoidingView
+            style={styles.modalKav}
+            behavior={getKAVBehavior(true)}
+            keyboardVerticalOffset={0}
+          >
+            {/* backdrop 탭: 키보드만 내림 (모달은 유지) */}
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View style={styles.modalBackdrop}>
+                {/* 시트 본체: 버블링 차단하여 모달 유지 */}
+                <TouchableWithoutFeedback accessible={false}>
+                  <View style={[styles.modalSheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+                    <View style={styles.modalHandle} />
+                    <Text style={styles.modalTitle}>
+                      {editing ? t('schedule.edit') : t('schedule.new')}
+                    </Text>
 
-              <Text style={styles.fieldLabel}>{t('schedule.fieldTitle')}</Text>
-              <TextInput
-                value={formTitle}
-                onChangeText={setFormTitle}
-                placeholder={t('schedule.titlePlaceholder')}
-                placeholderTextColor={colors.textTertiary}
-                style={styles.input}
-                maxLength={100}
-              />
+                    <ScrollView
+                      keyboardShouldPersistTaps="handled"
+                      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+                      showsVerticalScrollIndicator={false}
+                      contentContainerStyle={styles.modalScrollContent}
+                    >
+                      <Text style={styles.fieldLabel}>{t('schedule.fieldTitle')}</Text>
+                      <TextInput
+                        value={formTitle}
+                        onChangeText={setFormTitle}
+                        placeholder={t('schedule.titlePlaceholder')}
+                        placeholderTextColor={colors.textTertiary}
+                        style={styles.input}
+                        maxLength={100}
+                      />
 
-              <View style={styles.toggleRow}>
-                <Text style={styles.fieldLabel}>{t('schedule.allDay')}</Text>
-                <Switch
-                  value={formAllDay}
-                  onValueChange={setFormAllDay}
-                  trackColor={{ false: colors.accentSand + '40', true: colors.accentPrimaryLight }}
-                  thumbColor={formAllDay ? colors.accentPrimary : colors.textTertiary}
-                />
+                      <View style={styles.toggleRow}>
+                        <Text style={styles.fieldLabel}>{t('schedule.allDay')}</Text>
+                        <Switch
+                          value={formAllDay}
+                          onValueChange={handleToggleAllDay}
+                          trackColor={{ false: colors.accentSand + '40', true: colors.accentPrimaryLight }}
+                          thumbColor={formAllDay ? colors.accentPrimary : colors.textTertiary}
+                        />
+                      </View>
+
+                      <Text style={styles.fieldLabel}>{t('schedule.fieldStart')}</Text>
+                      <TouchableOpacity style={styles.pickerRow} onPress={openStartPicker}>
+                        <Text style={styles.pickerText}>
+                          {formatScheduleDateTime(formStart, formAllDay)}
+                        </Text>
+                      </TouchableOpacity>
+                      {Platform.OS === 'ios' && showStartPicker && (
+                        <DateTimePicker
+                          value={formStart}
+                          mode={formAllDay ? 'date' : 'datetime'}
+                          display="inline"
+                          onChange={(event, d) => {
+                            if (event.type === 'dismissed') {
+                              setShowStartPicker(false);
+                              return;
+                            }
+                            if (d) setFormStart(d);
+                          }}
+                        />
+                      )}
+
+                      <Text style={styles.fieldLabel}>{t('schedule.fieldEnd')}</Text>
+                      <TouchableOpacity
+                        style={styles.pickerRow}
+                        onPress={openEndPicker}
+                      >
+                        <Text style={[styles.pickerText, !formEnd && { color: colors.textTertiary }]}>
+                          {formEnd ? formatScheduleDateTime(formEnd, formAllDay) : t('schedule.noEnd')}
+                        </Text>
+                        {formEnd && (
+                          <TouchableOpacity
+                            onPress={(e) => { e.stopPropagation(); setFormEnd(null); }}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Text style={styles.clearText}>{t('schedule.clear')}</Text>
+                          </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+                      {Platform.OS === 'ios' && showEndPicker && (
+                        <DateTimePicker
+                          value={formEnd ?? formStart}
+                          mode={formAllDay ? 'date' : 'datetime'}
+                          display="inline"
+                          onChange={(event, d) => {
+                            if (event.type === 'dismissed') {
+                              setShowEndPicker(false);
+                              return;
+                            }
+                            if (d) setFormEnd(d);
+                          }}
+                        />
+                      )}
+
+                      <Text style={styles.fieldLabel}>{t('schedule.fieldNote')}</Text>
+                      <TextInput
+                        value={formNote}
+                        onChangeText={setFormNote}
+                        placeholder={t('schedule.notePlaceholder')}
+                        placeholderTextColor={colors.textTertiary}
+                        style={[styles.input, styles.inputMultiline]}
+                        multiline
+                        maxLength={2000}
+                      />
+
+                      {editing?.linkedDiaryId ? (
+                        <TouchableOpacity style={styles.linkRow} onPress={openLinkedDiary}>
+                          <Text style={styles.linkRowText}>{t('schedule.openLinkedDiary')}</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity style={styles.linkRow} onPress={openWriteDiaryForSchedule}>
+                          <Text style={styles.linkRowText}>{t('schedule.writeDiaryForThis')}</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      <Text style={styles.fieldLabel}>{t('schedule.fieldColor')}</Text>
+                      <View style={styles.colorPickerRow}>
+                        {SCHEDULE_COLORS.map((c) => (
+                          <TouchableOpacity
+                            key={c.key}
+                            style={[
+                              styles.colorSwatch,
+                              { backgroundColor: c.bg },
+                              formColor === c.key && styles.colorSwatchSelected,
+                            ]}
+                            onPress={() => setFormColor(c.key)}
+                            activeOpacity={0.7}
+                          />
+                        ))}
+                      </View>
+                    </ScrollView>
+
+                    {/* 액션바는 ScrollView 바깥에 두어 키보드 위에 항상 노출 */}
+                    <View style={styles.modalActions}>
+                      {editing && (
+                        <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={handleDelete}>
+                          <Text style={styles.deleteBtnText}>{t('common.delete')}</Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity style={[styles.actionBtn, styles.cancelBtn]} onPress={closeModal}>
+                        <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.actionBtn, styles.saveBtn, saving && { opacity: 0.6 }]}
+                        onPress={handleSave}
+                        disabled={saving}
+                      >
+                        <Text style={styles.saveBtnText}>{t('common.save')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableWithoutFeedback>
               </View>
-
-              <Text style={styles.fieldLabel}>{t('schedule.fieldStart')}</Text>
-              <TouchableOpacity style={styles.pickerRow} onPress={() => setShowStartPicker(true)}>
-                <Text style={styles.pickerText}>
-                  {formStart.toLocaleString()}
-                </Text>
-              </TouchableOpacity>
-              {showStartPicker && (
-                <DateTimePicker
-                  value={formStart}
-                  mode={formAllDay ? 'date' : 'datetime'}
-                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                  onChange={(_, d) => {
-                    if (Platform.OS === 'android') setShowStartPicker(false);
-                    if (d) setFormStart(d);
-                  }}
-                />
-              )}
-
-              <Text style={styles.fieldLabel}>{t('schedule.fieldEnd')}</Text>
-              <TouchableOpacity
-                style={styles.pickerRow}
-                onPress={() => setShowEndPicker(true)}
-              >
-                <Text style={[styles.pickerText, !formEnd && { color: colors.textTertiary }]}>
-                  {formEnd ? formEnd.toLocaleString() : t('schedule.noEnd')}
-                </Text>
-                {formEnd && (
-                  <TouchableOpacity
-                    onPress={(e) => { e.stopPropagation(); setFormEnd(null); }}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Text style={styles.clearText}>{t('schedule.clear')}</Text>
-                  </TouchableOpacity>
-                )}
-              </TouchableOpacity>
-              {showEndPicker && (
-                <DateTimePicker
-                  value={formEnd ?? formStart}
-                  mode={formAllDay ? 'date' : 'datetime'}
-                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                  onChange={(_, d) => {
-                    if (Platform.OS === 'android') setShowEndPicker(false);
-                    if (d) setFormEnd(d);
-                  }}
-                />
-              )}
-
-              <Text style={styles.fieldLabel}>{t('schedule.fieldNote')}</Text>
-              <TextInput
-                value={formNote}
-                onChangeText={setFormNote}
-                placeholder={t('schedule.notePlaceholder')}
-                placeholderTextColor={colors.textTertiary}
-                style={[styles.input, styles.inputMultiline]}
-                multiline
-                maxLength={2000}
-              />
-
-              {editing?.linkedDiaryId ? (
-                <TouchableOpacity style={styles.linkRow} onPress={openLinkedDiary}>
-                  <Text style={styles.linkRowText}>{t('schedule.openLinkedDiary')}</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity style={styles.linkRow} onPress={openWriteDiaryForSchedule}>
-                  <Text style={styles.linkRowText}>{t('schedule.writeDiaryForThis')}</Text>
-                </TouchableOpacity>
-              )}
-
-              <Text style={styles.fieldLabel}>{t('schedule.fieldColor')}</Text>
-              <View style={styles.colorPickerRow}>
-                {SCHEDULE_COLORS.map((c) => (
-                  <TouchableOpacity
-                    key={c.key}
-                    style={[
-                      styles.colorSwatch,
-                      { backgroundColor: c.bg },
-                      formColor === c.key && styles.colorSwatchSelected,
-                    ]}
-                    onPress={() => setFormColor(c.key)}
-                    activeOpacity={0.7}
-                  />
-                ))}
-              </View>
-
-              <View style={styles.modalActions}>
-                {editing && (
-                  <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={handleDelete}>
-                    <Text style={styles.deleteBtnText}>{t('common.delete')}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity style={[styles.actionBtn, styles.cancelBtn]} onPress={closeModal}>
-                  <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.saveBtn, saving && { opacity: 0.6 }]}
-                  onPress={handleSave}
-                  disabled={saving}
-                >
-                  <Text style={styles.saveBtnText}>{t('common.save')}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
         </Modal>
       </View>
     </PaperBackground>
@@ -741,6 +841,9 @@ const styles = StyleSheet.create({
   fabPlusV: { position: 'absolute', width: 2, height: 18, backgroundColor: colors.surfacePure, borderRadius: 1 },
 
   // Modal
+  modalKav: {
+    flex: 1,
+  },
   modalBackdrop: {
     flex: 1, justifyContent: 'flex-end',
     backgroundColor: 'rgba(30, 25, 20, 0.35)',
@@ -749,6 +852,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgCream,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: spacing['2xl'], paddingTop: spacing.md,
+    maxHeight: '90%',
+  },
+  modalScrollContent: {
+    paddingBottom: spacing.lg,
   },
   modalHandle: {
     alignSelf: 'center',

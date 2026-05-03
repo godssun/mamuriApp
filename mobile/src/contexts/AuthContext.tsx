@@ -1,7 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authApi, tokenStorage, consentStorage, setForceLogoutHandler, clearForceLogoutHandler } from '../api/client';
+import {
+  authApi, tokenStorage, consentStorage,
+  setForceLogoutHandler, clearForceLogoutHandler,
+  isAuthError,
+  type ForceLogoutReason,
+} from '../api/client';
 import { SignupRequest, LoginRequest, SocialProvider } from '../types';
 import { signOutFromProviders } from '../services/socialAuth';
 
@@ -56,7 +61,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // forceLogout: API client에서 TOKEN_REUSE_DETECTED 등 호출
-  const forceLogout = useCallback(() => {
+  const forceLogout = useCallback((reason?: ForceLogoutReason) => {
+    if (__DEV__) {
+      console.warn('[AuthContext] forceLogout', { reason });
+    }
     tokenStorage.clear();
     SecureStore.deleteItemAsync(AUTH_PROVIDER_KEY);
     consentStorage.clear();
@@ -78,19 +86,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const checkAuth = async () => {
+    // 1) 저장소 자체 실패는 별도 처리 — SecureStore 손상/잠금 등.
+    let tokens;
     try {
-      const tokens = await tokenStorage.get();
-      if (!tokens?.refreshToken) {
-        setIsAuthenticated(false);
-        return;
+      tokens = await tokenStorage.get();
+    } catch (storageErr) {
+      if (__DEV__) {
+        console.warn('[checkAuth] storage error', storageErr);
       }
+      await tokenStorage.clear().catch(() => {});
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      return;
+    }
 
-      // refreshToken으로 실제 서버 검증
+    if (!tokens?.refreshToken) {
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      return;
+    }
+
+    // 2) refresh 실패는 인증/네트워크 분리.
+    //    - 인증 실패(401/만료/재사용): 토큰 삭제 + 로그인 화면.
+    //    - 네트워크/타임아웃/5xx: 토큰 보존, 일단 인증된 상태로 진입.
+    //      다음 API 호출에서 lazy refresh가 살아난 네트워크에서 재처리한다.
+    try {
       await authApi.refresh();
       setIsAuthenticated(true);
-    } catch {
-      await tokenStorage.clear();
-      setIsAuthenticated(false);
+    } catch (refreshErr) {
+      if (isAuthError(refreshErr)) {
+        if (__DEV__) {
+          console.warn('[checkAuth] auth failure, clearing tokens', refreshErr);
+        }
+        await tokenStorage.clear();
+        setIsAuthenticated(false);
+      } else {
+        if (__DEV__) {
+          console.warn('[checkAuth] network error, keeping tokens', refreshErr);
+        }
+        setIsAuthenticated(true);
+      }
     } finally {
       setIsLoading(false);
     }

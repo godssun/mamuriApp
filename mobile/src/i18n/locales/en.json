@@ -687,5 +687,12 @@
       { "name": "National Suicide Prevention Lifeline", "number": "988" },
       { "name": "Crisis Text Line", "number": "741741" }
     ]
+  },
+  "forceUpdate": {
+    "title": "A new version is ready",
+    "defaultMessage": "Mamuri has become a little calmer. Please update the app to keep going together.",
+    "button": "Update now",
+    "errorTitle": "Couldn't open the store",
+    "errorBody": "Please try again in a moment."
   }
 }

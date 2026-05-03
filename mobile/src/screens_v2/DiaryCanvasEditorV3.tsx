@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Alert, Animated, Image, Modal, Dimensions,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -40,6 +40,7 @@ import type { CanvasObjectData } from './components/CanvasObject';
 import { getStickerSource } from '../constants/stickerSources';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CanvasHintToast } from './components/CanvasHintToast';
+import { getKAVBehavior } from '../utils/keyboard';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -557,9 +558,20 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
         }} style={s.headerBtn}>
           <Text style={[s.headerBtnText, { color: textColor }]}>{t('editor.cancel')}</Text>
         </TouchableOpacity>
-        <Text style={[s.headerDate, { color: isDark ? '#9898AC' : colors.textSecondary }]}>
-          {new Date().toLocaleDateString(i18n.language === 'ko' ? 'ko-KR' : i18n.language === 'ja' ? 'ja-JP' : i18n.language === 'zh' ? 'zh-CN' : 'en-US', { month: 'long', day: 'numeric' })}
-        </Text>
+        {/* 헤더 중앙 날짜 탭 → 키보드 내리기 (오브젝트 선택 중에는 무시) */}
+        <TouchableWithoutFeedback
+          onPress={() => { if (!selectedObjectId) Keyboard.dismiss(); }}
+          accessible={false}
+        >
+          <View
+            style={s.headerDateHit}
+            hitSlop={{ top: 8, bottom: 8, left: 24, right: 24 }}
+          >
+            <Text style={[s.headerDate, { color: isDark ? '#9898AC' : colors.textSecondary }]}>
+              {new Date().toLocaleDateString(i18n.language === 'ko' ? 'ko-KR' : i18n.language === 'ja' ? 'ja-JP' : i18n.language === 'zh' ? 'zh-CN' : 'en-US', { month: 'long', day: 'numeric' })}
+            </Text>
+          </View>
+        </TouchableWithoutFeedback>
         <TouchableOpacity onPress={handleSave} disabled={saving || !canHaveSomething} style={s.headerBtn}>
           <Text style={[s.headerSaveText, {
             color: canHaveSomething ? colors.accentPrimary : colors.textTertiary,
@@ -571,13 +583,14 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior="padding"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : insets.top + 56}
+        behavior={getKAVBehavior(false)}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       >
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           showsVerticalScrollIndicator={false}
           scrollEnabled={!selectedObjectId}
         >
@@ -817,6 +830,9 @@ const styles = StyleSheet.create({
   headerBtnText: {
     fontFamily: fontFamily.sans,
     fontSize: 15, fontWeight: '500',
+  },
+  headerDateHit: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', height: 44,
   },
   headerDate: {
     fontFamily: fontFamily.serifItalic,

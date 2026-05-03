@@ -5,7 +5,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: 'Mamuri',
     slug: 'mamuri',
-    version: '2.1.2',
+    version: '2.2.1',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
@@ -31,7 +31,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       },
       edgeToEdgeEnabled: true,
       softwareKeyboardLayoutMode: 'resize',
-      package: 'com.mamuri.app',
+      package: 'com.junsapps.mamuri',
       googleServicesFile: './google-services.json',
     },
     web: {
@@ -63,7 +63,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'react-native-google-mobile-ads',
         {
-          androidAppId: 'ca-app-pub-1553144894464526~3481227423',
+          androidAppId: 'ca-app-pub-1553144894464526~4110051841',
           iosAppId: 'ca-app-pub-1553144894464526~1709408384',
         },
       ],

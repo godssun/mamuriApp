@@ -30,6 +30,7 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import CrisisBanner from '../components/CrisisBanner';
 import type { DiaryV3, ConversationMessage, ConversationLimits, DiaryStackParamListV3, EmotionKey } from '../types';
 import { formatDiaryDate, formatTime } from '../utils/dateFormat';
+import { getKAVBehavior } from '../utils/keyboard';
 import { ChatBubble } from './components/ChatBubble';
 import { ReportModal } from './components/ReportModal';
 import { EMOTION_COLORS, EMOTION_LABELS } from '../constants/stickers';
@@ -276,8 +277,8 @@ export default function DiaryPageDetailV3({ navigation, route }: Props) {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior="padding"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : insets.top + 52}
+        behavior={getKAVBehavior(false)}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       >
       <ScrollView
         ref={scrollRef}

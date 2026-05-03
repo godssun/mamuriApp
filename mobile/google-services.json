@@ -7,6 +7,66 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:908613731863:android:3ecc62be8be5cf984abe52",
+        "android_client_info": {
+          "package_name": "com.junsapps.mamuri"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "908613731863-3jh0hla6fi9akaggevdeid362dkapacs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.junsapps.mamuri",
+            "certificate_hash": "37d93bfd01d960f67cdb40b22f6c388ebc3ba1c3"
+          }
+        },
+        {
+          "client_id": "908613731863-jni19anqe0lv5p7k992bc8ohjs5majvj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.junsapps.mamuri",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "908613731863-poo75o9ab3rm4r1gi3avdl4uj70nlsq4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.junsapps.mamuri",
+            "certificate_hash": "cf5f29016060af5958a35209b196555f2de83a9e"
+          }
+        },
+        {
+          "client_id": "908613731863-qfgpuffbveivnde0n8p6gs83qr07hgf5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAN8HIs8g0qZTg56IMNqRrIjRdJNKJA_xI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "908613731863-qfgpuffbveivnde0n8p6gs83qr07hgf5.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "908613731863-oav8u9a4d3vne4kcp1kobmr6g63hgeud.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mamuri.app"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:908613731863:android:d7bd35b5e872cc8d4abe52",
         "android_client_info": {
           "package_name": "com.mamuri.app"
