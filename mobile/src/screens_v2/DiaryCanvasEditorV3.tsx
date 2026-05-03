@@ -40,6 +40,7 @@ import type { CanvasObjectData } from './components/CanvasObject';
 import { getStickerSource } from '../constants/stickerSources';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CanvasHintToast } from './components/CanvasHintToast';
+import { getKAVBehavior } from '../utils/keyboard';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -582,8 +583,8 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior="padding"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : insets.top + 56}
+        behavior={getKAVBehavior(false)}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       >
         <ScrollView
           style={{ flex: 1 }}

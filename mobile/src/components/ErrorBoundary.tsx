@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 
 interface Props {
   children: ReactNode;
@@ -21,6 +21,15 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error('ErrorBoundary caught:', error, errorInfo);
+    if (__DEV__) {
+      // 실기기 디버깅 시 root cause 즉시 식별 가능하게.
+      // 사용자에게 노출되는 fallback 카피는 유지하고, dev 빌드에서만 추가 alert.
+      const stack = errorInfo.componentStack?.slice(0, 400) ?? '';
+      Alert.alert(
+        'DEV ErrorBoundary',
+        `${error.name}: ${error.message}\n\n${stack}`,
+      );
+    }
   }
 
   handleRetry = () => {

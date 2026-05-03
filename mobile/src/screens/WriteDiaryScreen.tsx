@@ -12,6 +12,8 @@ import {
   Platform,
   ScrollView,
   Modal,
+  Pressable,
+  Keyboard,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -160,6 +162,7 @@ export default function WriteDiaryScreen({ navigation }: Props) {
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       >
         {/* 날짜 선택 */}
         <TouchableOpacity
@@ -189,6 +192,13 @@ export default function WriteDiaryScreen({ navigation }: Props) {
           onChangeText={setContent}
           multiline
           textAlignVertical="top"
+        />
+
+        {/* 본문 아래 빈 여백 탭으로 키보드 dismiss — TextInput 위 탭은 keyboardShouldPersistTaps='handled'가 막아줌 */}
+        <Pressable
+          accessible={false}
+          onPress={Keyboard.dismiss}
+          style={styles.dismissSpacer}
         />
       </ScrollView>
 
@@ -291,6 +301,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 100,
+    flexGrow: 1,
+  },
+  dismissSpacer: {
+    flexGrow: 1,
+    minHeight: 80,
   },
   dateSelector: {
     flexDirection: 'row',
