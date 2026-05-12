@@ -53,3 +53,9 @@ app:
 admin:
   cors:
     allowed-origins: ${ADMIN_CORS_ORIGINS:https://admin.mamuri.app}
+
+# 프로덕션 Feature Flag — 기본 ON, env 변수로 즉시 롤백 가능
+feature:
+  premium-enabled: ${FEATURE_PREMIUM_ENABLED:true}
+  quota-enforcement-enabled: ${FEATURE_QUOTA_ENABLED:true}
+  conversation-enabled: ${FEATURE_CONVERSATION_ENABLED:true}

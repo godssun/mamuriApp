@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -44,6 +45,9 @@ public class AiCommentService {
 
     /** gpt-4o-mini 기준: ~$0.15/1M input + $0.60/1M output, 환율 1350원 */
     private static final BigDecimal COST_PER_TOKEN_KRW = new BigDecimal("0.0005");
+
+    /** FREE 사용자 월별 AI 코멘트 쿼터 — DiaryService와 동일하게 유지 */
+    private static final int FREE_MONTHLY_QUOTA = 20;
 
     private static final List<String> FALLBACK_QUESTIONS = List.of(
             "오늘 하루 중 가장 기억에 남는 순간이 있다면 무엇인가요?",
@@ -168,6 +172,22 @@ public class AiCommentService {
      */
     @Transactional
     public AiCommentResponse retryComment(Long diaryId, Diary diary, User user) {
+        // QuotaCheck (Feature Flag ON + 비프리미엄 + 비위기 사용자만)
+        // 재시도도 LLM 호출 비용이 발생하므로 동일하게 쿼터를 차감한다.
+        boolean shouldEnforceQuota = featureFlags.isQuotaEnforcementEnabled()
+                && !user.isPremium()
+                && !user.hasCrisisFlag();
+        if (shouldEnforceQuota) {
+            // Lazy Reset: quotaResetDate가 과거이면 자동 리셋
+            if (user.getQuotaResetDate() != null
+                    && user.getQuotaResetDate().isBefore(LocalDate.now())) {
+                user.resetQuota();
+            }
+            if (user.getQuotaUsed() >= FREE_MONTHLY_QUOTA) {
+                throw new CustomException(ErrorCode.QUOTA_EXCEEDED);
+            }
+        }
+
         LlmResponse response;
         try {
             response = callLlm(diary, user);
@@ -193,6 +213,11 @@ public class AiCommentService {
                         .build());
 
         aiCommentRepository.save(aiComment);
+
+        // 성공 후 쿼터 증가
+        if (shouldEnforceQuota) {
+            user.incrementQuotaUsed();
+        }
 
         // 대화 기능 활성화 시 conversation_messages도 업데이트 (dual-write)
         if (featureFlags.isConversationEnabled()) {

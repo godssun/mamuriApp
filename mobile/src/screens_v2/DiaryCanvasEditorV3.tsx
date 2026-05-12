@@ -511,7 +511,8 @@ export default function DiaryCanvasEditorV3({ navigation, route }: Props) {
       navigation.replace('DiaryDetail', { diaryId: diary.id, filterDateOnBack: diaryDate });
     } catch (error: any) {
       if (error instanceof ApiError && error.status === 429) {
-        Alert.alert(t('common.alert'), error.message || t('common.retry'));
+        // 쿼터 초과 → Paywall 화면으로 라우팅 (AI 코멘트 한도 안전망)
+        navigation.navigate('Paywall' as any);
       } else {
         Alert.alert(t('editor.saveFailed'), error?.message || t('common.retry'));
       }
