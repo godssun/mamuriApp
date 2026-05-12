@@ -5,9 +5,14 @@
 # Build output
 build/
 .gradle/
+builds/
+generated_imgs/
 
-# Mobile app
+# 다른 워크스페이스 (백엔드 이미지에 불필요)
 mobile/
+web/
+deploy/
+assets/
 
 # IDE
 .idea/
@@ -28,17 +33,25 @@ docs/
 # Claude config
 .claude/
 
-# Secrets
+# Secrets (절대 이미지에 포함되면 안 됨)
+secrets/
 *.pem
 *.key
 *.p8
 *.p12
 
+# Local config / tool output
+local.properties
+node_modules/
+
 # OS files
 .DS_Store
 Thumbs.db
+# macOS resource-fork (AppleDouble) 더미들
+._*
+.AppleDouble
 
-# Screenshots
+# Screenshots / 모바일 자산
 *.png
 *.jpg
 *.jpeg
