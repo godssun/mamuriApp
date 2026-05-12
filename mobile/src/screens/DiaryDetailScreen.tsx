@@ -149,6 +149,11 @@ export default function DiaryDetailScreen({ navigation, route }: Props) {
       // 대화 이력도 새로고침
       loadConversation();
     } catch (error) {
+      // 쿼터 초과(429) 또는 권한 부족(403) → Paywall 안내
+      if (error instanceof ApiError && (error.status === 429 || error.status === 403)) {
+        setShowUpgradeModal(true);
+        return;
+      }
       const message = error instanceof ApiError
         ? error.message
         : 'AI 코멘트 생성에 실패했습니다.';

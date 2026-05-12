@@ -67,7 +67,7 @@ app:
       store-url: ${APP_IOS_STORE_URL:itms-apps://apps.apple.com/app/id6760908812}
     android:
       minimum-supported-version: ${APP_FORCE_UPDATE_ANDROID_MIN:0.0.0}
-      store-url: ${APP_ANDROID_STORE_URL:market://details?id=com.mamuri.app}
+      store-url: ${APP_ANDROID_STORE_URL:market://details?id=com.junsapps.mamuri}
 
 upload:
   dir: ${UPLOAD_DIR:uploads}
