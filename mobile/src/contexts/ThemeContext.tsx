@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { settingsApi } from '../api/client';
 import { useAuth } from './AuthContext';
+import { useSubscription } from './SubscriptionContext';
 import { UserSettings } from '../types';
 import { DIARY_FONT_OPTIONS } from '../design-system-v3';
 import type { DiaryFontKey } from '../design-system-v3';
@@ -80,9 +81,14 @@ const ThemeContext = createContext<ThemeContextType>({
 
 type AppearanceSettings = Pick<UserSettings, 'backgroundTheme' | 'fontFamily' | 'fontSize'> & { diaryFont?: string };
 
-function buildTheme(settings: AppearanceSettings): Theme {
+function buildTheme(settings: AppearanceSettings, canUsePremiumFonts: boolean): Theme {
   const diaryFontKey = (settings.diaryFont || 'default') as DiaryFontKey;
-  const diaryOption = DIARY_FONT_OPTIONS.find(o => o.key === diaryFontKey) || DIARY_FONT_OPTIONS[0];
+  let diaryOption = DIARY_FONT_OPTIONS.find(o => o.key === diaryFontKey) || DIARY_FONT_OPTIONS[0];
+  // 프리미엄 폰트인데 권한이 없으면(구독 해지 등) 기본 폰트로 폴백.
+  // 저장된 diaryFont 설정 자체는 유지하므로 재구독 시 자동으로 다시 적용된다.
+  if (diaryOption.premium && !canUsePremiumFonts) {
+    diaryOption = DIARY_FONT_OPTIONS[0];
+  }
   return {
     colors: THEME_MAP[settings.backgroundTheme] ?? WARM_THEME,
     fontFamily: settings.fontFamily === 'serif' ? 'NanumMyeongjo_400Regular' : undefined,
@@ -95,6 +101,7 @@ function buildTheme(settings: AppearanceSettings): Theme {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
+  const { entitlements } = useSubscription();
   const [appearance, setAppearance] = useState<AppearanceSettings>({
     backgroundTheme: 'warm',
     fontFamily: 'system',
@@ -120,7 +127,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [isAuthenticated]);
 
-  const theme = useMemo(() => buildTheme(appearance), [appearance]);
+  const theme = useMemo(
+    () => buildTheme(appearance, entitlements.canUsePremiumFonts),
+    [appearance, entitlements.canUsePremiumFonts],
+  );
 
   const updateAppearance = useCallback(async (
     updates: Partial<Pick<UserSettings, 'backgroundTheme' | 'fontFamily' | 'fontSize' | 'diaryFont'>>

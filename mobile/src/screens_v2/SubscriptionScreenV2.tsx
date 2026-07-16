@@ -32,6 +32,9 @@ type Props = {
 type PlanTier = 'deluxe' | 'premium';
 type PlanPeriod = 'monthly' | 'yearly';
 
+// 결제 문제(PAST_DUE) 배너용 경고 색상 (테마에 전용 위험 색상이 없어 상수로 고정)
+const WARN_COLOR = '#C2603F';
+
 interface Plan {
   tier: PlanTier;
   period: PlanPeriod;
@@ -45,14 +48,14 @@ interface Plan {
 
 export function SubscriptionScreenV2({ navigation }: Props) {
   const { t } = useTranslation();
-  const { info, isSubscribed, refresh } = useSubscription();
+  const { info, isSubscribed, refresh, openManagement } = useSubscription();
   const { theme } = useThemeV2();
 
   const plans: Plan[] = [
     { tier: 'deluxe', period: 'monthly', name: t('subscription.deluxeMonthly'), price: '4,900원', periodLabel: t('subscription.perMonth'), priceId: 'price_deluxe_monthly', features: [t('subscription.feature3Replies'), t('subscription.featurePersonalize'), t('subscription.featureStreak')] },
-    { tier: 'deluxe', period: 'yearly', name: t('subscription.deluxeYearly'), price: '49,000원', periodLabel: t('subscription.perYear'), priceId: 'price_deluxe_yearly', features: [t('subscription.feature3Replies'), t('subscription.featurePersonalize'), t('subscription.featureStreak')], badge: t('subscription.discount17') },
+    { tier: 'deluxe', period: 'yearly', name: t('subscription.deluxeYearly'), price: '49,000원', periodLabel: t('subscription.perYear'), priceId: 'price_deluxe_yearly', features: [t('subscription.feature3Replies'), t('subscription.featurePersonalize'), t('subscription.featureStreak')], badge: t('subscription.discountYearly') },
     { tier: 'premium', period: 'monthly', name: t('subscription.premiumMonthly'), price: '9,900원', periodLabel: t('subscription.perMonth'), priceId: 'price_premium_monthly', features: [t('subscription.featureUnlimited'), t('subscription.featurePersonalize'), t('subscription.featureStreak'), t('subscription.featurePriority')] },
-    { tier: 'premium', period: 'yearly', name: t('subscription.premiumYearly'), price: '99,000원', periodLabel: t('subscription.perYear'), priceId: 'price_premium_yearly', features: [t('subscription.featureUnlimited'), t('subscription.featurePersonalize'), t('subscription.featureStreak'), t('subscription.featurePriority')], badge: t('subscription.discount17') },
+    { tier: 'premium', period: 'yearly', name: t('subscription.premiumYearly'), price: '99,000원', periodLabel: t('subscription.perYear'), priceId: 'price_premium_yearly', features: [t('subscription.featureUnlimited'), t('subscription.featurePersonalize'), t('subscription.featureStreak'), t('subscription.featurePriority')], badge: t('subscription.discountYearly') },
   ];
   const [selectedTier, setSelectedTier] = useState<PlanTier>('deluxe');
   const [selectedPeriod, setSelectedPeriod] = useState<PlanPeriod>('monthly');
@@ -166,6 +169,31 @@ export function SubscriptionScreenV2({ navigation }: Props) {
           </Text>
         )}
       </View>
+
+      {/* 결제 문제(PAST_DUE) — 결제 수단 관리로 유도 */}
+      {info?.status === 'PAST_DUE' && (
+        <TouchableOpacity
+          style={[styles.warnBanner, { borderRadius: theme.borderRadius.lg }]}
+          onPress={() => openManagement()}
+          activeOpacity={0.8}
+        >
+          <Text style={[theme.typography.bodySmall, { color: WARN_COLOR, flex: 1 }]}>
+            {t('subscription.pastDueBanner')}
+          </Text>
+          <Text style={[theme.typography.labelMedium, { color: WARN_COLOR, fontWeight: '600' }]}>
+            {t('subscription.pastDueAction')}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* 해지됨(CANCELED) — 만료까지 이용 가능 안내 */}
+      {info?.status === 'CANCELED' && (
+        <View style={[styles.infoBanner, { backgroundColor: theme.colors.surfaceSecondary, borderRadius: theme.borderRadius.lg }]}>
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>
+            {t('subscription.canceledBanner')}
+          </Text>
+        </View>
+      )}
 
       {/* 플랜 선택 (미구독자만) */}
       {!isSubscribed && (
@@ -327,5 +355,19 @@ const styles = StyleSheet.create({
   planDetail: {
     padding: 20,
     marginBottom: 16,
+  },
+  warnBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: WARN_COLOR,
+    backgroundColor: '#FBEDE7',
+  },
+  infoBanner: {
+    padding: 16,
+    marginBottom: 24,
   },
 });

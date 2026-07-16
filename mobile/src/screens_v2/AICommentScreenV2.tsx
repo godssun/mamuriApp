@@ -97,8 +97,13 @@ export function AICommentScreenV2({ navigation, route }: Props) {
       }
     } catch (error: any) {
       setMessages(prev => prev.filter(m => m.id !== optimisticId));
-      if (error instanceof ApiError && error.status === 429) {
-        Alert.alert(t('common.alert'), error.message || t('common.retry'));
+      if (error instanceof ApiError && (error.status === 403 || error.status === 402)) {
+        // 대화 한도 초과(403)/체험 만료(402) → 한도 반영 후 Paywall로 유도
+        setLimits(prev => (prev ? { ...prev, remainingReplies: 0 } : prev));
+        navigation.navigate('Paywall' as any);
+      } else if (error instanceof ApiError && error.status === 429) {
+        // 순간 요청 과다(레이트리밋) — 일시적이므로 잠시 후 재시도 안내
+        Alert.alert(t('diary.sendFailed'), t('common.retryLater'));
       } else {
         Alert.alert(t('diary.sendFailed'), error?.message || t('common.retry'));
       }
