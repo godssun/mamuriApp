@@ -28,6 +28,7 @@ public enum ErrorCode {
     // Diary
     DIARY_NOT_FOUND(HttpStatus.NOT_FOUND, "일기를 찾을 수 없습니다."),
     DIARY_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 일기에 접근할 수 없습니다."),
+    STICKER_NOT_FOUND(HttpStatus.NOT_FOUND, "스티커를 찾을 수 없습니다."),
 
     // Schedule
     SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "일정을 찾을 수 없습니다."),

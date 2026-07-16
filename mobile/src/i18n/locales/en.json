@@ -524,7 +524,12 @@
     "borderBlack": "Black",
     "borderShadow": "Shadow",
     "borderStyle": "Border",
-    "createNew": "Create Sticker"
+    "createNew": "Create Sticker",
+    "removingBg": "Removing the background...",
+    "bgRemovedHint": "The background was removed cleanly",
+    "bgRemovalHint": "We'll automatically remove the background from the person or object in your photo",
+    "bgRemovalUnsupported": "Automatic background removal isn't supported on this device. You can still make a sticker from your photo as is.",
+    "bgRemovalFailed": "We couldn't remove the background. We'll save the photo as is."
   },
   "welcome": {
     "greeting": "Hello,\nI'm Mamuri.",

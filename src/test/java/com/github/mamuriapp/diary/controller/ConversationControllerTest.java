@@ -1,6 +1,7 @@
 package com.github.mamuriapp.diary.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.mamuriapp.admin.service.AdminAuthService;
 import com.github.mamuriapp.diary.dto.ConversationHistoryResponse;
 import com.github.mamuriapp.diary.dto.ConversationReplyResponse;
 import com.github.mamuriapp.diary.service.ConversationService;
@@ -87,6 +88,11 @@ class ConversationControllerTest {
 
     @MockitoBean
     private ConversationService conversationService;
+
+    // AdminApiKeyFilter(@Component Filter)가 @WebMvcTest 슬라이스에 자동 등록되므로
+    // 해당 필터가 요구하는 AdminAuthService 의존성을 목으로 제공한다.
+    @MockitoBean
+    private AdminAuthService adminAuthService;
 
     private String validToken() {
         return jwtTokenProvider.createAccessToken(1L, "test@example.com");

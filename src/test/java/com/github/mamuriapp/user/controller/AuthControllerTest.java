@@ -1,6 +1,7 @@
 package com.github.mamuriapp.user.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.mamuriapp.admin.service.AdminAuthService;
 import com.github.mamuriapp.global.config.JwtConfig;
 import com.github.mamuriapp.global.config.SecurityConfig;
 import com.github.mamuriapp.global.config.UploadProperties;
@@ -87,6 +88,11 @@ class AuthControllerTest {
 
     @MockitoBean
     private SocialAuthService socialAuthService;
+
+    // AdminApiKeyFilter(@Component Filter)가 @WebMvcTest 슬라이스에 자동 등록되므로
+    // 해당 필터가 요구하는 AdminAuthService 의존성을 목으로 제공한다.
+    @MockitoBean
+    private AdminAuthService adminAuthService;
 
     // --- Signup ---
 

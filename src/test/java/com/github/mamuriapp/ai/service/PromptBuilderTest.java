@@ -1,7 +1,11 @@
 package com.github.mamuriapp.ai.service;
 
+import com.github.mamuriapp.ai.repository.UserMemoryRepository;
 import com.github.mamuriapp.diary.entity.Diary;
+import com.github.mamuriapp.diary.repository.DiaryEmotionRepository;
+import com.github.mamuriapp.diary.repository.DiaryPhotoRepository;
 import com.github.mamuriapp.diary.repository.DiaryRepository;
+import com.github.mamuriapp.diary.repository.EmotionStickerRepository;
 import com.github.mamuriapp.user.entity.User;
 import com.github.mamuriapp.user.entity.UserSettings;
 import com.github.mamuriapp.user.repository.UserSettingsRepository;
@@ -39,6 +43,18 @@ class PromptBuilderTest {
 
     @Mock
     private DiaryRepository diaryRepository;
+
+    @Mock
+    private UserMemoryRepository userMemoryRepository;
+
+    @Mock
+    private DiaryEmotionRepository diaryEmotionRepository;
+
+    @Mock
+    private DiaryPhotoRepository diaryPhotoRepository;
+
+    @Mock
+    private EmotionStickerRepository emotionStickerRepository;
 
     private User testUser;
     private Diary testDiary;

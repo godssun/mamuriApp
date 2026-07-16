@@ -318,6 +318,47 @@ AI 코멘트 재생성
 
 ---
 
+## 5. 커스텀 스티커 (Custom Stickers)
+
+### POST /stickers/custom
+
+커스텀 스티커 업로드. **인증 필수 + 프리미엄(ACTIVE/TRIALING) 전용.**
+
+- Content-Type: `multipart/form-data`
+- Body: `file` (이미지 — PNG 권장, 투명도 보존됨), `width?` (int), `height?` (int), `borderStyle?` (`none|white|black|shadow`)
+
+**Response** (201): `{ id, url, cdnUrl, fileSize, width, height, borderStyle, createdAt }`
+
+**에러**: 400 (타입/크기 검증 실패), 402 (프리미엄 아님), 429 (유저당 50개 초과)
+
+### GET /stickers/custom
+
+내 커스텀 스티커 목록. 인증 필수, 구독 상태 무관 (해지 후에도 기존 스티커 사용 가능).
+
+**Response** (200): `CustomStickerResponse[]`
+
+### DELETE /stickers/custom/{stickerId}
+
+본인 소유 스티커 삭제 (저장 파일 포함). 인증 필수, 구독 상태 무관.
+
+**Response** (200) / 404 `STICKER_NOT_FOUND`
+
+---
+
+## 6. 앱 메타 (App Meta)
+
+### GET /app/version-check
+
+앱 강제 업데이트 체크. **인증 불필요.** 클라이언트는 이 API 실패 시 통과(fail-open).
+
+- Query: `platform` (`ios|android`), `currentVersion` (예: `2.3.0`)
+
+**Response** (200): `{ minimumSupportedVersion, forceUpdate, storeUrl, message }`
+
+서버 설정: `app.version.minimum-ios`, `app.version.minimum-android`, `app.version.store-url-*`, `app.version.update-message` (환경변수로 재정의 가능, 기본값은 강제 업데이트 없음)
+
+---
+
 ## 에러 코드
 
 | HTTP | message | 설명 |
