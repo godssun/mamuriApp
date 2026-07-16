@@ -518,7 +518,12 @@
     "borderBlack": "검은색",
     "borderShadow": "그림자",
     "borderStyle": "테두리",
-    "createNew": "스티커 만들기"
+    "createNew": "스티커 만들기",
+    "removingBg": "배경을 지우고 있어요...",
+    "bgRemovedHint": "배경을 깔끔하게 지웠어요",
+    "bgRemovalHint": "사진 속 인물이나 사물의 배경을 자동으로 지워드려요",
+    "bgRemovalUnsupported": "이 기기에서는 자동 배경 제거가 지원되지 않아요. 사진을 그대로 스티커로 만들 수 있어요.",
+    "bgRemovalFailed": "배경을 지우지 못했어요. 사진을 그대로 저장할게요."
   },
   "welcome": {
     "greeting": "안녕하세요,\n저는 마무리에요.",

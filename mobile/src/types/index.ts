@@ -242,6 +242,12 @@ export interface CustomSticker {
   height: number;
   /** 테두리 스타일 */
   borderStyle?: 'none' | 'white' | 'black' | 'shadow';
+  /** 서버 스티커 ID (서버에 동기화된 경우에만 존재) */
+  serverId?: number;
+  /** 서버 공개 URL (동기화된 경우) */
+  remoteUrl?: string;
+  /** 배경 제거로 생성된 투명 PNG 여부 */
+  isCutout?: boolean;
 }
 
 // 네비게이션

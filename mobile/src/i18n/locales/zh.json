@@ -518,7 +518,12 @@
     "borderBlack": "黑色",
     "borderShadow": "阴影",
     "borderStyle": "边框",
-    "createNew": "创建贴纸"
+    "createNew": "创建贴纸",
+    "removingBg": "正在去除背景...",
+    "bgRemovedHint": "已干净地去除背景",
+    "bgRemovalHint": "我们会自动去除照片中人物或物体的背景",
+    "bgRemovalUnsupported": "此设备不支持自动去除背景。您仍可以直接用照片制作贴纸。",
+    "bgRemovalFailed": "无法去除背景。将直接保存照片。"
   },
   "welcome": {
     "greeting": "你好，\n我是Mamuri。",

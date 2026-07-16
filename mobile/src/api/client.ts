@@ -760,6 +760,55 @@ export const diaryPhotoApi = {
   },
 };
 
+// 커스텀 스티커 서버 응답 타입
+export interface CustomStickerServer {
+  id: number;
+  url: string;
+  cdnUrl: string;
+  fileSize: number;
+  width: number | null;
+  height: number | null;
+  borderStyle: string | null;
+  createdAt: string;
+}
+
+// 커스텀 스티커 API (프리미엄 전용 생성, 조회/삭제는 인증만)
+export const customStickerApi = {
+  /** 커스텀 스티커 업로드 (multipart). 투명도 보존을 위해 PNG 우선. */
+  async upload(
+    imageUri: string,
+    meta?: { width?: number; height?: number; borderStyle?: string },
+  ): Promise<CustomStickerServer> {
+    const formData = new FormData();
+    const filename = imageUri.split('/').pop() ?? `sticker_${Date.now()}.png`;
+    const ext = filename.split('.').pop()?.toLowerCase() ?? 'png';
+    const mimeType = ext === 'jpg' || ext === 'jpeg'
+      ? 'image/jpeg'
+      : ext === 'webp' ? 'image/webp' : 'image/png';
+
+    formData.append('file', {
+      uri: imageUri,
+      name: filename,
+      type: mimeType,
+    } as unknown as Blob);
+    if (meta?.width != null) formData.append('width', String(Math.round(meta.width)));
+    if (meta?.height != null) formData.append('height', String(Math.round(meta.height)));
+    if (meta?.borderStyle) formData.append('borderStyle', meta.borderStyle);
+
+    return requestMultipart<CustomStickerServer>('/stickers/custom', formData);
+  },
+
+  /** 내 커스텀 스티커 목록 조회 */
+  async list(): Promise<CustomStickerServer[]> {
+    return request<CustomStickerServer[]>('/stickers/custom');
+  },
+
+  /** 커스텀 스티커 삭제 (본인 소유만) */
+  async delete(stickerId: number): Promise<void> {
+    await request<void>(`/stickers/custom/${stickerId}`, { method: 'DELETE' });
+  },
+};
+
 // 일기 데코레이션 API
 export const diaryDecorationApi = {
   async save(diaryId: number, decorations: { assetType: string; positionX: number; positionY: number; scale: number; rotation: number; zIndex: number }[]): Promise<void> {

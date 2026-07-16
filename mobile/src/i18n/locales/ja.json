@@ -518,7 +518,12 @@
     "borderBlack": "黒",
     "borderShadow": "影",
     "borderStyle": "ボーダー",
-    "createNew": "ステッカー作成"
+    "createNew": "ステッカー作成",
+    "removingBg": "背景を消しています...",
+    "bgRemovedHint": "背景をきれいに消しました",
+    "bgRemovalHint": "写真の人物や物の背景を自動で消します",
+    "bgRemovalUnsupported": "この端末では自動背景除去に対応していません。写真をそのままステッカーにできます。",
+    "bgRemovalFailed": "背景を消せませんでした。写真をそのまま保存します。"
   },
   "welcome": {
     "greeting": "こんにちは、\nマムリです。",

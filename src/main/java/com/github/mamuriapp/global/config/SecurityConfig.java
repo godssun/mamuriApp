@@ -58,6 +58,8 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
+                        // 커스텀 스티커는 인증 필수 — 아래 /api/stickers/** permitAll 보다 먼저 매칭되어야 한다.
+                        .requestMatchers("/api/stickers/custom", "/api/stickers/custom/**").authenticated()
                         .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/refresh", "/api/auth/social", "/api/stripe/webhook", "/api/stickers/**").permitAll()
                         .requestMatchers("/api/app/version-check").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
