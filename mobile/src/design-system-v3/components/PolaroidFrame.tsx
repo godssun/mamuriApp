@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
   vintageOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: vintagePhotoEffect.overlayColor,
   },
   caption: {

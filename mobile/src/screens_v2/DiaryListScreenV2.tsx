@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
   },
   polaroidPhoto: { width: '100%', height: 180, borderRadius: 1 },
   vintageOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(180, 150, 120, 0.05)',
     margin: 8, marginBottom: 28,
   },

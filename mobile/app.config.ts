@@ -9,12 +9,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
-    newArchEnabled: true,
-    splash: {
-      image: './assets/splash-icon.png',
-      resizeMode: 'contain',
-      backgroundColor: '#F4EFEA',
-    },
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.mamuri.app',
@@ -29,7 +23,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#F4EFEA',
       },
-      edgeToEdgeEnabled: true,
       softwareKeyboardLayoutMode: 'resize',
       package: 'com.junsapps.mamuri',
       googleServicesFile: './google-services.json',
@@ -44,6 +37,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID || '908613731863-qfgpuffbveivnde0n8p6gs83qr07hgf5.apps.googleusercontent.com',
     },
     plugins: [
+      [
+        // SDK 56에서 최상위 `splash` 설정이 제거되어 플러그인으로 이전.
+        // enableFullScreenImage_legacy: 기존 top-level splash(contain, 전체 화면)
+        // 동작을 보존하기 위해 설정.
+        'expo-splash-screen',
+        {
+          image: './assets/splash-icon.png',
+          resizeMode: 'contain',
+          backgroundColor: '#F4EFEA',
+          enableFullScreenImage_legacy: true,
+        },
+      ],
       'expo-secure-store',
       'expo-font',
       '@react-native-firebase/app',
@@ -54,7 +59,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'expo-build-properties',
         {
           ios: {
-            deploymentTarget: '15.1',
+            deploymentTarget: '16.4',
             useFrameworks: 'static',
           },
         },

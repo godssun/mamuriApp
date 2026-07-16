@@ -99,7 +99,7 @@ export function GlassBottomSheet({
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.overlayDim,
     zIndex: zIndex.canvasOverlay,
   },
