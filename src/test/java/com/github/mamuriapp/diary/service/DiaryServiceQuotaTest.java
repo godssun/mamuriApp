@@ -2,11 +2,15 @@ package com.github.mamuriapp.diary.service;
 
 import com.github.mamuriapp.ai.dto.AiCommentResponse;
 import com.github.mamuriapp.ai.service.AiCommentService;
+import com.github.mamuriapp.ai.service.MemoryExtractionService;
 import com.github.mamuriapp.ai.service.SafetyCheckService;
 import com.github.mamuriapp.diary.dto.DiaryCreateRequest;
 import com.github.mamuriapp.diary.dto.DiaryResponse;
 import com.github.mamuriapp.diary.entity.Diary;
+import com.github.mamuriapp.diary.repository.DiaryEmotionRepository;
+import com.github.mamuriapp.diary.repository.DiaryPhotoRepository;
 import com.github.mamuriapp.diary.repository.DiaryRepository;
+import com.github.mamuriapp.diary.repository.EmotionStickerRepository;
 import com.github.mamuriapp.global.config.FeatureFlags;
 import com.github.mamuriapp.global.exception.CustomException;
 import com.github.mamuriapp.global.exception.ErrorCode;
@@ -65,6 +69,27 @@ class DiaryServiceQuotaTest {
 
     @Mock
     private FeatureFlags featureFlags;
+
+    @Mock
+    private MemoryExtractionService memoryExtractionService;
+
+    @Mock
+    private DiaryEmotionRepository diaryEmotionRepository;
+
+    @Mock
+    private EmotionStickerRepository emotionStickerRepository;
+
+    @Mock
+    private DiaryPhotoService diaryPhotoService;
+
+    @Mock
+    private DecorationService decorationService;
+
+    @Mock
+    private DiaryPhotoRepository diaryPhotoRepository;
+
+    @Mock
+    private StorageService storageService;
 
     private User testUser;
     private DiaryCreateRequest request;
