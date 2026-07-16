@@ -94,14 +94,14 @@
 |---|---|---|---|
 | R-05 | CompanionSetup 기본 이름 '마음이' 하드코딩 | HIGH | i18n |
 | R-06 | DIARY_FONT_OPTIONS label 번역 미적용 (labelKey 패턴 필요) | HIGH | i18n |
-| R-07 | PAST_DUE/CANCELED 구독 상태 UI 미처리 | HIGH | 수익 |
-| R-08 | ReportDetail 화면에 프리미엄 게이트 미연결 | MEDIUM | 수익 |
-| R-09 | 프리미엄 폰트 구독 해지 후 다운그레이드 미처리 | MEDIUM | 수익 |
-| R-10 | forgotPassword 버튼 onPress 없음 (데드엔드) | MEDIUM | UX |
+| ~~R-07~~ | ~~PAST_DUE/CANCELED 구독 상태 UI 미처리~~ | ~~HIGH~~ | **수정됨(2026-07-16)** — SubscriptionScreenV2 상태 배너 + 스토어 관리 연결 |
+| ~~R-08~~ | ~~ReportDetail 화면에 프리미엄 게이트 미연결~~ | ~~MEDIUM~~ | **수정됨(2026-07-16)** — locked 파라미터 + PremiumGate, 무료 1개는 유지 |
+| ~~R-09~~ | ~~프리미엄 폰트 구독 해지 후 다운그레이드 미처리~~ | ~~MEDIUM~~ | **수정됨(2026-07-16)** — ThemeContext 적용 시점 폴백(재구독 시 복원) |
+| ~~R-10~~ | ~~forgotPassword 버튼 onPress 없음 (데드엔드)~~ | ~~MEDIUM~~ | **수정됨(2026-07-16)** — 지원 이메일 안내 Alert + mailto |
 | R-11 | en.json/ja.json settings 섹션 중복 정의 | MEDIUM | 구조 |
 | R-12 | HomeStickerScreenV3/SettingsScreenV2 '마음이' fallback 하드코딩 | MEDIUM | i18n |
 | ~~R-13~~ | ~~커스텀 스티커 → 일기 에디터 연결 없음~~ | ~~HIGH~~ | **수정됨** — StickerPickerSheet "내 스티커" 탭 + 에디터 연결 |
-| R-14 | CompanionChatV3에 useSubscription 미임포트 (AI 쿼터 게이트 없음) | HIGH | 수익 |
+| ~~R-14~~ | ~~CompanionChatV3에 useSubscription 미임포트 (AI 쿼터 게이트 없음)~~ | ~~HIGH~~ | **수정됨(2026-07-16)** — 정정: 실 전송 화면은 DiaryPageDetailV3/AICommentScreenV2. 403/402→Paywall, 429→재시도 안내 |
 | R-15 | RelationshipProgressBar maxLevel 계산 버그 | MEDIUM | UX |
 
 ### P2 — 개선 사항
@@ -117,7 +117,7 @@
 | R-22 | appVersion locale 파일에 하드코딩 | 유지보수 |
 | R-23 | Sticker addSticker stale closure 문제 | 데이터 |
 | R-24 | Sticker 고아 파일 정리 로직 없음 | 데이터 |
-| R-25 | subscription.yearly "17% 할인" → 실제 31% | 카피 |
+| ~~R-25~~ | ~~subscription.yearly "17% 할인" → 실제 31%~~ | **수정됨(2026-07-16)** — 4로케일 31% 통일, discount17→discountYearly. 주의: 레거시 SubscriptionScreenV2(비활성 Stripe 화면)의 표시가격은 17% 기준이라 재활성화 시 가격 갱신 필요 |
 
 ---
 

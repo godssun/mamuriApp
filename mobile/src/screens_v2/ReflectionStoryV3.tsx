@@ -201,11 +201,15 @@ export default function ReflectionStoryV3() {
         {reports.length > 0 && (
           <View style={s.section}>
             <Text style={s.sectionLabel}>{t('reflect.reports')}</Text>
-            {reports.slice(0, entitlements.canViewAdvancedReports ? 5 : 1).map((r: any) => (
+            {reports.slice(0, entitlements.canViewAdvancedReports ? 5 : 1).map((r: any, idx: number) => (
               <TouchableOpacity
                 key={r.id}
                 style={s.reportItem}
-                onPress={() => nav.navigate('ReportDetail', { reportId: r.id })}
+                onPress={() => nav.navigate('ReportDetail', {
+                  reportId: r.id,
+                  // 무료 사용자는 첫 리포트(idx 0)만 열람 가능. 그 외는 상세에서 프리미엄 게이트.
+                  locked: !entitlements.canViewAdvancedReports && idx >= 1,
+                })}
                 activeOpacity={0.6}
               >
                 <View style={s.reportBadge}>
