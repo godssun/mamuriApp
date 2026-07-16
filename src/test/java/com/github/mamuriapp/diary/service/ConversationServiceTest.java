@@ -87,6 +87,10 @@ class ConversationServiceTest {
         // Feature flag 활성화
         lenient().when(featureFlags.isConversationEnabled()).thenReturn(true);
 
+        // 티어별 일일 제한 검증이 이 테스트의 대상이므로 쿼터 적용을 활성화한다.
+        // (프로덕션에서 제한 로직이 quotaEnforcementEnabled 플래그 뒤로 게이팅됨)
+        lenient().when(featureFlags.isQuotaEnforcementEnabled()).thenReturn(true);
+
         // 안전 검사 기본값: 안전
         lenient().when(safetyCheckService.checkText(anyString())).thenReturn(true);
 
