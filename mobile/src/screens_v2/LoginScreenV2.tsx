@@ -40,6 +40,9 @@ const LANGUAGES: { code: SupportedLanguage; label: string }[] = [
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
+// 비밀번호 재설정 API가 없어 고객 지원 이메일로 안내 (web/privacy.html 연락처와 동일)
+const SUPPORT_EMAIL = 'sunjunapps@gmail.com';
+
 export function LoginScreenV2({ navigation }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -75,6 +78,17 @@ export function LoginScreenV2({ navigation }: Props) {
       if (isCancelledError(error)) return;
       Alert.alert(t('common.error'), (error instanceof Error ? error.message : null) || t('auth.socialLoginFailed'));
     } finally { setSocialLoading(null); }
+  };
+
+  const handleForgotPassword = () => {
+    Alert.alert(
+      t('auth.forgotPasswordTitle'),
+      t('auth.forgotPasswordGuide', { email: SUPPORT_EMAIL }),
+      [
+        { text: t('common.confirm'), style: 'cancel' },
+        { text: t('auth.contactSupport'), onPress: () => Linking.openURL(`mailto:${SUPPORT_EMAIL}`) },
+      ],
+    );
   };
 
   const handleLogin = async () => {
@@ -161,7 +175,7 @@ export function LoginScreenV2({ navigation }: Props) {
 
           <Button label={t('auth.login')} onPress={handleLogin} loading={loading} fullWidth size="lg" />
 
-          <TouchableOpacity style={s.forgotBtn}>
+          <TouchableOpacity style={s.forgotBtn} onPress={handleForgotPassword}>
             <Text style={s.forgotText}>{t('auth.forgotPassword')}</Text>
           </TouchableOpacity>
         </Animated.View>

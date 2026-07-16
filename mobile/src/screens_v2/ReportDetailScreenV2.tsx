@@ -22,25 +22,46 @@ import { PaperBackground } from '../design-system-v3/components/PaperBackground'
 import { reportApi2 } from '../api/client';
 import { EMOTION_COLORS, EMOTION_LABELS } from '../constants/stickers';
 import { EmotionStickerView } from './components/EmotionStickerView';
+import { useSubscription } from '../contexts/SubscriptionContext';
+import { PremiumGate } from './components/PremiumGate';
 
 type Props = NativeStackScreenProps<any, 'ReportDetail'>;
 
 export default function ReportDetailScreenV2({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { entitlements } = useSubscription();
   const reportId = route.params?.reportId;
+  // Reflect 목록에서 무료 열람 범위를 벗어난 리포트로 진입한 경우 잠금 표시
+  const locked = route.params?.locked === true && !entitlements.canViewAdvancedReports;
 
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (reportId) {
+    if (reportId && !locked) {
       reportApi2.getDetail(reportId)
         .then(setReport)
         .catch(() => {})
         .finally(() => setLoading(false));
     }
-  }, [reportId]);
+  }, [reportId, locked]);
+
+  // 프리미엄 게이트 — Reflect 목록과 동일한 UX (PremiumGate)
+  if (locked) {
+    return (
+      <PaperBackground variant="plain" color="cream" style={{ paddingTop: insets.top }}>
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+            <Text style={s.backArrow}>←</Text>
+          </TouchableOpacity>
+          <Text style={s.headerTitle}>{t('reportDetail.header')}</Text>
+          <View style={{ width: 44 }} />
+        </View>
+        <PremiumGate feature="advancedReports">{null}</PremiumGate>
+      </PaperBackground>
+    );
+  }
 
   if (loading) {
     return (
