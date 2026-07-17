@@ -87,7 +87,8 @@ public class AdminDashboardService {
 
         // Engagement
         long totalDiaries = diaryRepository.count();
-        Object[] streakStats = userRepository.findStreakStats();
+        List<Object[]> streakRows = userRepository.findStreakStats();
+        Object[] streakStats = streakRows.isEmpty() ? new Object[]{null, null, null} : streakRows.get(0);
         double avgCurrentStreak = streakStats[0] != null ? ((Number) streakStats[0]).doubleValue() : 0;
         int maxCurrentStreak = streakStats[1] != null ? ((Number) streakStats[1]).intValue() : 0;
         double avgLongestStreak = streakStats[2] != null ? ((Number) streakStats[2]).doubleValue() : 0;

@@ -107,8 +107,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /**
      * 평균 스트릭 통계를 조회한다.
      */
+    // 반환 타입을 Object[]로 선언하면 단일 행이 Object[]{Object[]{...}}로 중첩되어
+    // 호출부 캐스팅이 ClassCastException을 던진다. List로 받아 첫 행을 사용할 것.
     @Query("SELECT AVG(u.currentStreak), MAX(u.currentStreak), AVG(u.longestStreak) FROM User u")
-    Object[] findStreakStats();
+    List<Object[]> findStreakStats();
 
     /**
      * 검색/필터 가능한 사용자 목록을 페이징 조회한다.
