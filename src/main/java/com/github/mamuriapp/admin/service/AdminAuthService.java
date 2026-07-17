@@ -6,6 +6,8 @@ import com.github.mamuriapp.admin.dto.AdminMeResponse;
 import com.github.mamuriapp.admin.entity.AdminRole;
 import com.github.mamuriapp.admin.entity.AdminUser;
 import com.github.mamuriapp.admin.repository.AdminUserRepository;
+import com.github.mamuriapp.global.exception.CustomException;
+import com.github.mamuriapp.global.exception.ErrorCode;
 import com.github.mamuriapp.global.security.JwtTokenProvider;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -63,14 +65,14 @@ public class AdminAuthService {
     @Transactional
     public AdminLoginResponse login(AdminLoginRequest request) {
         AdminUser admin = adminUserRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("잘못된 이메일 또는 비밀번호입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_CREDENTIALS));
 
         if (!admin.isEnabled()) {
-            throw new IllegalArgumentException("비활성화된 계정입니다.");
+            throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
         }
 
         if (!passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
-            throw new IllegalArgumentException("잘못된 이메일 또는 비밀번호입니다.");
+            throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
         }
 
         admin.updateLastLogin();
