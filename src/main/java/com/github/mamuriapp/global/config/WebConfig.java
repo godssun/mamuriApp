@@ -27,16 +27,19 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
-                .allowedOrigins(allowedOrigins.split(","))
+        // Admin API CORS — admin.mamuri.app 전용.
+        // 반드시 /api/** 보다 먼저 등록해야 한다: 패턴 매칭이 등록 순서대로 첫 일치를
+        // 사용하므로, /api/**가 앞서면 /api/admin/** 요청까지 앱 origin 목록으로
+        // 검사되어 admin 대시보드가 403(Invalid CORS request)으로 차단된다.
+        registry.addMapping("/api/admin/**")
+                .allowedOrigins(adminAllowedOrigins.split(","))
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH")
                 .allowedHeaders("Content-Type", "Authorization")
                 .allowCredentials(true)
                 .maxAge(3600);
 
-        // Admin API CORS — admin.mamuri.app 전용
-        registry.addMapping("/api/admin/**")
-                .allowedOrigins(adminAllowedOrigins.split(","))
+        registry.addMapping("/api/**")
+                .allowedOrigins(allowedOrigins.split(","))
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH")
                 .allowedHeaders("Content-Type", "Authorization")
                 .allowCredentials(true)
